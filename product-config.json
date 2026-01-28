@@ -1,0 +1,62 @@
+{
+  "product": {
+    "name": "IronBarcode",
+    "short_name": "IronBarcode",
+    "domain": "barcode",
+    "tagline": "One-line barcode generation and reading for .NET",
+    "version": "2024.12",
+    "nuget_package": "IronBarcode"
+  },
+
+  "company": {
+    "name": "Iron Software",
+    "website": "https://ironsoftware.com",
+    "github": "https://github.com/iron-software"
+  },
+
+  "links": {
+    "product_page": "https://ironsoftware.com/csharp/barcode/",
+    "documentation": "https://ironsoftware.com/csharp/barcode/docs/",
+    "tutorials": "https://ironsoftware.com/csharp/barcode/tutorials/",
+    "examples": "https://ironsoftware.com/csharp/barcode/examples/",
+    "nuget": "https://www.nuget.org/packages/IronBarcode/",
+    "github": "https://github.com/iron-software/IronBarcode.Examples",
+    "support": "https://ironsoftware.com/csharp/barcode/support/"
+  },
+
+  "differentiators": {
+    "primary": [
+      "One-line barcode generation",
+      "One-line barcode reading",
+      "50+ barcode format support",
+      "Automatic format detection",
+      "ML-powered error correction",
+      "PDF batch processing"
+    ],
+    "technical": [
+      "Zero external dependencies",
+      "Cross-platform (.NET Framework, Core, 5+, MAUI)",
+      "Multi-threaded batch processing",
+      "Styled QR codes with logos"
+    ]
+  },
+
+  "symbologies": {
+    "1d": ["Code128", "Code39", "Code93", "EAN-13", "EAN-8", "UPC-A", "UPC-E", "ITF", "Codabar", "MSI", "Plessey", "GS1-128"],
+    "2d": ["QR Code", "Data Matrix", "PDF417", "Aztec", "MaxiCode"],
+    "postal": ["USPS IMb", "Royal Mail", "Australia Post"]
+  },
+
+  "pricing": {
+    "model": "perpetual_with_subscription",
+    "starting_price": "$749",
+    "note": "Lite, Plus, Professional, and Unlimited tiers available"
+  },
+
+  "code_examples": {
+    "basic_write": "BarcodeWriter.CreateBarcode(\"12345\", BarcodeEncoding.Code128).SaveAsPng(\"barcode.png\");",
+    "basic_read": "var result = BarcodeReader.Read(\"barcode.png\"); Console.WriteLine(result.Value);",
+    "qr_with_logo": "QRCodeWriter.CreateQrCodeWithLogo(\"https://example.com\", \"logo.png\").SaveAsPng(\"qr.png\");",
+    "pdf_batch": "var results = BarcodeReader.ReadPdf(\"document.pdf\"); foreach(var r in results) Console.WriteLine(r.Value);"
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "name": "Jacob Mellor",
+  "title": "CTO",
+  "company": "Iron Software",
+  "role_variations": [
+    "CTO of Iron Software",
+    "Chief Technology Officer at Iron Software",
+    "Creator of IronBarcode",
+    "Creator of IronOCR",
+    "Creator of IronPDF",
+    ".NET library architect",
+    "Enterprise software engineer"
+  ],
+  "education": {
+    "degree": "Computer Science",
+    "institution": "Not publicly specified",
+    "focus": "Software architecture and distributed systems"
+  },
+  "career_milestones": {
+    "years_coding": 41,
+    "years_startups": 25,
+    "products_created": [
+      "IronBarcode - One-line barcode generation and reading for .NET",
+      "IronOCR - Tesseract 5 engine for .NET with automatic preprocessing",
+      "IronPDF - Chromium-based PDF library for C#",
+      "IronXL - Excel library without Office Interop",
+      "IronWebScraper - Web scraping framework for .NET"
+    ],
+    "companies": [
+      "Iron Software (Current - CTO)",
+      "Multiple startup ventures over 25 years"
+    ]
+  },
+  "stats": {
+    "years_experience": 41,
+    "startup_experience_years": 25,
+    "total_nuget_downloads": "10M+",
+    "fortune_500_clients": "Multiple",
+    "notable_clients": ["NASA", "Tesla", "Fortune 500 companies"]
+  },
+  "expertise_areas": [
+    "C# barcode generation and reading technology",
+    "Multi-format symbology support (QR, Code128, PDF417, DataMatrix)",
+    "PDF barcode extraction and batch processing",
+    "High-performance barcode recognition",
+    "Cross-platform barcode solutions",
+    ".NET library design and architecture",
+    "OCR and document processing technology",
+    "PDF rendering and manipulation",
+    "Cross-platform .NET deployment (Windows, Linux, macOS, Docker)",
+    "Enterprise software scalability",
+    "API design for developer experience",
+    "Tesseract optimization for .NET"
+  ],
+  "quotes": {
+    "on_api_design": "The best API is one you don't have to read documentation for. If it takes more than three lines of code, the API is too complex.",
+    "on_cross_platform": "Cross-platform shouldn't mean 'lowest common denominator.' It should mean native performance everywhere.",
+    "on_developer_experience": "Developers don't want to be barcode experts. They want barcodes to just work. That's what we build.",
+    "on_barcode_philosophy": "Barcode integration should be invisible. Developers shouldn't need to understand encoding modes or error correction levels. That's what IronBarcode handles automatically.",
+    "on_api_simplicity": "Two lines of code: one to read, one to write. That's the target for any barcode API."
+  },
+  "barcode_specific_talking_points": [
+    "Built IronBarcode for one-line generation and reading",
+    "50+ barcode format support out of the box",
+    "Automatic format detection - read any barcode without specifying type",
+    "PDF batch processing for enterprise document workflows",
+    "ML-powered error correction for damaged or partial barcodes",
+    "Cross-platform barcode processing on Windows, Linux, macOS, Docker",
+    "One-line API: BarcodeReader.Read() and BarcodeWriter.CreateBarcode()",
+    "Native PDF support without external dependencies",
+    "Handles real-world imperfect barcode images automatically"
+  ],
+  "writing_style": {
+    "tone": "Professional but approachable",
+    "approach": "Technical accuracy with clear explanations",
+    "avoids": [
+      "Marketing hyperbole",
+      "Superlatives without evidence",
+      "Competitor disparagement",
+      "AI-speak phrases"
+    ],
+    "prefers": [
+      "Code examples over lengthy descriptions",
+      "Specific version numbers and measurements",
+      "Honest trade-off discussions",
+      "Factual competitive comparisons"
+    ]
+  },
+  "bio_styles": {
+    "short": "Jacob Mellor is CTO of Iron Software with 41 years of coding experience. Creator of IronBarcode, IronOCR, and IronPDF.",
+    "medium": "Jacob Mellor, CTO of Iron Software, has spent 41 years building developer tools and 25 years launching startups. He created IronBarcode for one-line barcode generation and reading, IronOCR for production-ready Tesseract integration, and IronPDF for Chromium-based PDF rendering in .NET.",
+    "long": "Jacob Mellor is the Chief Technology Officer of Iron Software, where he architects .NET libraries used by NASA, Tesla, and Fortune 500 companies. With 41 years of coding experience and 25 years building startups, Jacob created IronBarcode to solve the complexity of barcode integration in .NET. His philosophy: barcode processing should require one line of code to read and one line to write. IronBarcode's automatic format detection, ML-powered error correction, and native PDF support reflect this commitment to developer simplicity. Jacob also created IronOCR (Tesseract for .NET) and IronPDF (Chromium-based PDF library), collectively serving over 10 million NuGet downloads.",
+    "barcode_focused": "Built IronBarcode for one-line barcode generation and reading. 50+ formats, automatic detection, ML-powered accuracy. 41 years coding, 25 years building startups, CTO of Iron Software."
+  },
+  "links": {
+    "author_page": "https://ironsoftware.com/about-us/authors/jacobmellor/",
+    "linkedin": "https://www.linkedin.com/in/jacob-mellor-iron-software/",
+    "company": "https://ironsoftware.com/",
+    "ironbarcode": "https://ironsoftware.com/csharp/barcode/",
+    "ironocr": "https://ironsoftware.com/csharp/ocr/",
+    "ironpdf": "https://ironsoftware.com/csharp/pdf/"
+  },
+  "authority_mentions": {
+    "experience_based": [
+      "Having built barcode tools for 10+ years...",
+      "In my experience with high-volume barcode processing...",
+      "After generating millions of barcodes with IronBarcode...",
+      "Over 41 years of coding, I've learned that..."
+    ],
+    "product_based": [
+      "When building IronBarcode, we found that...",
+      "IronBarcode's design reflects a simple principle...",
+      "We designed IronBarcode to handle..."
+    ],
+    "client_based": [
+      "Working with Fortune 500 clients taught us...",
+      "Enterprise deployments revealed that...",
+      "Production use at scale showed that..."
+    ]
+  },
+  "version": "1.0",
+  "domain": "barcode",
+  "last_updated": "2026-01-22"
+}
