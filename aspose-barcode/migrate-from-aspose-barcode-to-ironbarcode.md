@@ -1,14 +1,80 @@
 # Migrating from Aspose.BarCode to IronBarcode
 
-Two things change in this migration: the reading pattern (no more `DecodeType` specification) and the pricing model (perpetual option replaces annual subscription). Everything else is mostly mechanical — property names, constructor calls, namespace imports. None of it is architecturally complex, but there is enough of it across a real codebase that it pays to be systematic.
+This guide provides a complete migration path from Aspose.BarCode to IronBarcode, with step-by-step instructions, code comparisons, and practical examples for .NET developers evaluating this transition. Two things change in this migration: the reading pattern (no more `DecodeType` specification) and the pricing model (perpetual option replaces annual subscription). Everything else is mostly mechanical — property names, constructor calls, namespace imports. None of it is architecturally complex, but there is enough of it across a real codebase that it pays to be systematic.
 
-## Quick Start
+## Why Migrate from Aspose.BarCode
 
-### Step 1: Swap the NuGet Packages
+Teams migrating from Aspose.BarCode report these triggers:
+
+**Format Specification Overhead:** Every read operation in Aspose.BarCode requires specifying `DecodeType` explicitly. In production systems where the barcode format of incoming documents is not controlled — supplier invoices, user uploads, scanned archives — teams end up maintaining a growing list of `DecodeType` values that needs updating whenever a new format source appears.
+
+**PDF Support Costs Double:** Aspose.BarCode has no native PDF support. Reading barcodes from PDF documents requires Aspose.PDF, a separate subscription at $999–$4,995 per year. Teams discover this limitation after their initial Aspose.BarCode purchase, when stakeholders request support for PDF-formatted documents. The combined cost ($1,998–$9,990/yr) exceeds what most teams budgeted for barcode functionality.
+
+**Annual Subscription Accumulation:** Aspose.BarCode is subscription-only with no perpetual option. At the Site license tier ($4,995/yr for 10 developers), five years of subscriptions cost $24,975 — for a library that does not include PDF support. IronBarcode's Professional tier ($2,999 one-time) covers the same team size, includes PDF reading, and does not require annual renewal.
+
+**Instance Management Burden:** Both `BarCodeReader` and `BarcodeGenerator` implement `IDisposable`. Forgetting a `using` block results in a resource leak. In parallel processing code, each thread requires its own `BarCodeReader` instance. IronBarcode's static API eliminates the disposable pattern entirely.
+
+**Deployment Complexity for Containers:** Aspose.BarCode activates via a `.lic` file that must be present at a known path at runtime. In Docker and Kubernetes environments, this means either embedding the license file in the container image or mounting it as a secret volume — both of which add infrastructure steps. IronBarcode uses a string key compatible with standard environment variable secrets.
+
+### The Fundamental Problem
+
+Aspose.BarCode forces every read operation to declare what it is looking for. When the format is unknown or variable, the fallback is `DecodeType.AllSupportedTypes` — which is documented by Aspose itself as significantly slower than a targeted list:
+
+```csharp
+// Aspose.BarCode: must specify format, or accept a slow exhaustive scan
+using Aspose.BarCode.BarCodeRecognition;
+
+using var reader = new BarCodeReader("document.png");
+reader.SetBarCodeReadType(DecodeType.AllSupportedTypes); // slow path
+foreach (var result in reader.ReadBarCodes())
+{
+    Console.WriteLine($"{result.CodeTypeName}: {result.CodeText}");
+}
+```
+
+IronBarcode uses the same call regardless of format — no slow path, no format list to maintain:
+
+```csharp
+// IronBarcode: same call for any format — auto-detection always on
+using IronBarCode;
+
+var results = BarcodeReader.Read("document.png");
+foreach (var result in results)
+{
+    Console.WriteLine($"{result.Format}: {result.Value}");
+}
+```
+
+## IronBarcode vs Aspose.BarCode: Feature Comparison
+
+| Feature | Aspose.BarCode | IronBarcode |
+|---|---|---|
+| **Format detection** | Manual `DecodeType` required | Automatic |
+| **Symbology count** | 60+ | 50+ |
+| **PDF reading** | No — requires separate Aspose.PDF ($999–$4,995/yr) | Yes — native, included in base package |
+| **API style** | Instance-based, `IDisposable` | Static factory methods |
+| **Thread safety** | Per-thread instances required | Stateless — naturally concurrent |
+| **License model** | Subscription only — $999–$4,995/yr | Perpetual — from $749 one-time |
+| **Perpetual option** | Not available | Yes, all tiers |
+| **Single developer** | $999/yr | $749 one-time |
+| **10 developers** | $4,995/yr (Site) | $2,999 one-time (Professional) |
+| **Unlimited developers** | $14,985/yr (OEM) | $5,999 one-time (Unlimited) |
+| **Docker license** | `.lic` file must be mounted or copied | Environment variable string |
+| **QR logo overlay** | Manual GDI+ composition | `.AddBrandLogo()` built in |
+| **Performance tuning** | 12+ `QualitySettings` parameters | `ReadingSpeed` enum — three levels |
+| **.NET support** | .NET Framework, .NET Core, .NET 5+ | .NET 4.6.2+, .NET Core 3.1+, .NET 5–9 |
+| **Platform** | Windows, Linux, macOS | Windows x64/x86, Linux x64, macOS x64/ARM, Docker, Azure, AWS Lambda |
+
+## Quick Start: Aspose.BarCode to IronBarcode Migration
+
+The migration can begin immediately with these foundational steps.
+
+### Step 1: Replace NuGet Package
+
+Remove Aspose.BarCode:
 
 ```bash
 dotnet remove package Aspose.BarCode
-dotnet add package IronBarcode
 ```
 
 If you added Aspose.PDF solely to support barcode extraction from PDFs, remove it too:
@@ -17,9 +83,15 @@ If you added Aspose.PDF solely to support barcode extraction from PDFs, remove i
 dotnet remove package Aspose.PDF
 ```
 
-IronBarcode reads barcodes directly from PDF files with no additional dependency.
+Install IronBarcode:
 
-### Step 2: Replace the Namespaces
+```bash
+dotnet add package IronBarcode
+```
+
+### Step 2: Update Namespaces
+
+Replace Aspose.BarCode namespaces with the IronBarCode namespace:
 
 ```csharp
 // Remove
@@ -30,13 +102,7 @@ using Aspose.BarCode.BarCodeRecognition;
 using IronBarCode;
 ```
 
-### Step 3: Set the License Key
-
-```csharp
-// NuGet: dotnet add package IronBarcode
-// Add once at application startup — Program.cs or your DI configuration
-IronBarCode.License.LicenseKey = "YOUR-KEY";
-```
+### Step 3: Initialize License
 
 Remove the Aspose license initialization:
 
@@ -48,6 +114,12 @@ license.SetLicense("Aspose.BarCode.lic");
 // Or if using metered licensing, remove this
 var metered = new Aspose.BarCode.Metered();
 metered.SetMeteredKey("publicKey", "privateKey");
+```
+
+Add IronBarcode license initialization at application startup — Program.cs or your DI configuration:
+
+```csharp
+IronBarCode.License.LicenseKey = "YOUR-KEY";
 ```
 
 In production, read the IronBarcode key from your secrets manager or environment:
@@ -64,7 +136,7 @@ IronBarCode.License.LicenseKey =
 
 Aspose.BarCode uses a `BarcodeGenerator` class with a `Parameters` hierarchy for configuration. IronBarcode uses a static factory method with a fluent API for customization.
 
-**Before — Aspose.BarCode generation:**
+**Aspose.BarCode Approach:**
 
 ```csharp
 using Aspose.BarCode.Generation;
@@ -76,7 +148,7 @@ generator.Parameters.Barcode.CodeTextParameters.Location = CodeLocation.Below;
 generator.Save("barcode.png", BarCodeImageFormat.Png);
 ```
 
-**After — IronBarcode generation:**
+**IronBarcode Approach:**
 
 ```csharp
 using IronBarCode;
@@ -86,9 +158,7 @@ BarcodeWriter.CreateBarcode("ITEM-12345", BarcodeEncoding.Code128)
     .SaveAsPng("barcode.png");
 ```
 
-The `XDimension`, `BarHeight`, and `CodeTextParameters.Location` settings in Aspose.BarCode configure dimensions and text placement. IronBarcode's `ResizeTo(width, height)` covers the dimension side. Default text placement is handled automatically and looks correct for most uses — if you need fine-grained control, IronBarcode provides additional fluent methods.
-
-To get bytes instead of saving to disk (common for API responses and database storage):
+The `XDimension`, `BarHeight`, and `CodeTextParameters.Location` settings in Aspose.BarCode configure dimensions and text placement. IronBarcode's `ResizeTo(width, height)` covers the dimension side. Default text placement is handled automatically. To get bytes instead of saving to disk — common for API responses and database storage:
 
 ```csharp
 using IronBarCode;
@@ -97,11 +167,11 @@ byte[] pngBytes = BarcodeWriter.CreateBarcode("ITEM-12345", BarcodeEncoding.Code
     .ToPngBinaryData();
 ```
 
-### Reading with a Known Format
+### Reading Barcodes from Images
 
-When you know the barcode format, Aspose.BarCode lets you pass the decode type to the constructor. IronBarcode uses the same one-liner regardless of whether you know the format — it auto-detects.
+When you know the barcode format, Aspose.BarCode lets you pass the decode type to the constructor. IronBarcode uses the same one-liner regardless of whether you know the format.
 
-**Before — Aspose.BarCode reading with known format:**
+**Aspose.BarCode Approach:**
 
 ```csharp
 using Aspose.BarCode.BarCodeRecognition;
@@ -117,7 +187,7 @@ public string ReadCode128(string imagePath)
 }
 ```
 
-**After — IronBarcode reading (auto-detects format):**
+**IronBarcode Approach:**
 
 ```csharp
 using IronBarCode;
@@ -129,68 +199,13 @@ public string ReadBarcode(string imagePath)
 }
 ```
 
-The `using var reader` pattern disappears entirely. `BarcodeReader.Read` is a static method that returns a result collection directly — no disposable object to manage. If the image contains a Code 128, you get a Code 128 result. The format is in `result.Format` if you need it.
-
-### Reading with Unknown Format
-
-This is where the migration saves the most operational overhead. Aspose.BarCode's `DecodeType.AllSupportedTypes` is the fallback for format-unknown scenarios; IronBarcode uses the same API call for everything.
-
-**Before — Aspose.BarCode with AllSupportedTypes:**
-
-```csharp
-using Aspose.BarCode.BarCodeRecognition;
-
-public List<string> ReadUnknownFormat(string imagePath)
-{
-    var values = new List<string>();
-
-    // AllSupportedTypes is slower — exhaustive scan through all decode types
-    using var reader = new BarCodeReader(imagePath);
-    reader.SetBarCodeReadType(DecodeType.AllSupportedTypes);
-
-    foreach (var result in reader.ReadBarCodes())
-    {
-        values.Add(result.CodeText);
-    }
-
-    return values;
-}
-```
-
-**After — IronBarcode (same call, always auto-detects):**
-
-```csharp
-using IronBarCode;
-
-public List<string> ReadBarcode(string imagePath)
-{
-    var results = BarcodeReader.Read(imagePath);
-    return results.Select(r => r.Value).ToList();
-}
-```
-
-There is no "AllSupportedTypes" equivalent in IronBarcode because it is not needed. The auto-detection runs the same algorithm regardless of format. To tune performance versus accuracy, use `ReadingSpeed`:
-
-```csharp
-using IronBarCode;
-
-var options = new BarcodeReaderOptions
-{
-    Speed = ReadingSpeed.Faster,        // High throughput, clean images
-    // Speed = ReadingSpeed.Balanced,   // Default
-    // Speed = ReadingSpeed.Detailed,   // Low-quality or damaged images
-    ExpectMultipleBarcodes = true,
-    MaxParallelThreads = 4
-};
-
-var results = BarcodeReader.Read(imagePath, options);
-```
+The `using var reader` pattern disappears entirely. `BarcodeReader.Read` is a static method that returns a result collection directly — no disposable object to manage. If the image contains a Code 128, you get a Code 128 result. The format is available in `result.Format` if you need it. See the [IronBarcode image reading documentation](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) for options including multi-barcode detection and image pre-processing.
 
 ### Reading Barcodes from PDFs
 
 This is typically the most impactful part of the migration for teams that handle PDF documents. If you were using Aspose.PDF to render pages before scanning with Aspose.BarCode, that entire pipeline collapses into one IronBarcode call.
 
-**Before — Aspose.PDF + Aspose.BarCode two-package workflow:**
+**Aspose.BarCode Approach:**
 
 ```csharp
 using Aspose.Pdf;
@@ -226,7 +241,7 @@ public List<string> ReadBarcodesFromPdf(string pdfPath)
 }
 ```
 
-**After — IronBarcode native PDF reading:**
+**IronBarcode Approach:**
 
 ```csharp
 using IronBarCode;
@@ -254,15 +269,11 @@ public Dictionary<int, List<string>> ReadBarcodesFromPdfByPage(string pdfPath)
 }
 ```
 
-Remove `Aspose.PDF` from the project if it was only there for this use case:
-
-```bash
-dotnet remove package Aspose.PDF
-```
+Remove `Aspose.PDF` from the project if it was only there for this use case. The [IronBarcode PDF reading documentation](https://ironsoftware.com/csharp/barcode/how-to/read-barcode-from-pdf/) covers multi-page batch processing and page-range filtering options.
 
 ### QR Code Generation
 
-**Before — Aspose.BarCode QR generation:**
+**Aspose.BarCode Approach:**
 
 ```csharp
 using Aspose.BarCode.Generation;
@@ -277,7 +288,7 @@ generator.Parameters.BackColor = Color.White;
 generator.Save("qr.png", BarCodeImageFormat.Png);
 ```
 
-**After — IronBarcode QR generation:**
+**IronBarcode Approach:**
 
 ```csharp
 using IronBarCode;
@@ -301,11 +312,11 @@ QRCodeWriter.CreateQrCode("https://example.com", 500)
     .SaveAsPng("qr-branded.png");
 ```
 
-The Aspose approach for adding a logo to a QR code requires generating the barcode image, then using `System.Drawing.Graphics` to manually composite the logo into the center. IronBarcode's `AddBrandLogo` handles that internally and automatically selects appropriate error correction.
+The Aspose approach for adding a logo to a QR code requires generating the barcode image, then using `System.Drawing.Graphics` to manually composite the logo into the center. IronBarcode's `AddBrandLogo` handles that internally and automatically selects appropriate error correction. See the [IronBarcode QR code guide](https://ironsoftware.com/csharp/barcode/how-to/create-qr-barcode/) for styling and logo options.
 
 ### Batch Processing
 
-**Before — Aspose.BarCode batch with per-instance readers:**
+**Aspose.BarCode Approach:**
 
 ```csharp
 using Aspose.BarCode.BarCodeRecognition;
@@ -341,7 +352,7 @@ public Dictionary<string, List<string>> ProcessBatch(string[] imagePaths)
 }
 ```
 
-**After — IronBarcode parallel batch:**
+**IronBarcode Approach:**
 
 ```csharp
 using IronBarCode;
@@ -362,64 +373,16 @@ public Dictionary<string, List<string>> ProcessBatch(string[] imagePaths)
 }
 ```
 
-Because `BarcodeReader.Read` is a stateless static method, there is no need to construct a new reader per thread. The `using var reader` pattern disappears, as does the explicit `DecodeType` list. Formats are detected automatically.
+Because `BarcodeReader.Read` is a stateless static method, there is no need to construct a new reader per thread. The `using var reader` pattern disappears, as does the explicit `DecodeType` list. Formats are detected automatically across all parallel invocations.
 
-## Common Migration Issues
+## Aspose.BarCode API to IronBarcode Mapping Reference
 
-### result.CodeText to result.Value
-
-This is the most common compile error after swapping packages. Every place you access `result.CodeText` needs to become `result.Value`.
-
-```bash
-grep -r "\.CodeText" --include="*.cs" .
-```
-
-Replace all occurrences: `result.CodeText` becomes `result.Value`.
-
-### result.CodeTypeName to result.Format.ToString()
-
-If you use the format name string (for logging, display, or routing logic):
-
-```bash
-grep -r "\.CodeTypeName" --include="*.cs" .
-```
-
-Replace: `result.CodeTypeName` becomes `result.Format.ToString()`.
-
-The `result.Format` property is a `BarcodeEncoding` enum value, which gives you a typed comparison if you need it:
-
-```csharp
-if (result.Format == BarcodeEncoding.QRCode)
-{
-    // Handle QR code specifically
-}
-```
-
-### Remove DecodeType Hardcoding Throughout the Codebase
-
-Search for all `DecodeType.` usages:
-
-```bash
-grep -r "DecodeType\." --include="*.cs" .
-```
-
-Every one of these can be removed. IronBarcode always auto-detects. If a specific `DecodeType` was listed to improve performance on a known format, `ReadingSpeed.Faster` in `BarcodeReaderOptions` provides a similar benefit without format knowledge requirements:
-
-```csharp
-var options = new BarcodeReaderOptions { Speed = ReadingSpeed.Faster };
-var results = BarcodeReader.Read(imagePath, options);
-```
-
-### Remove EncodeTypes References in Generation Code
-
-```bash
-grep -r "EncodeTypes\." --include="*.cs" .
-```
-
-Map these to `BarcodeEncoding` equivalents:
-
-| Aspose `EncodeTypes` | IronBarcode `BarcodeEncoding` |
+| Aspose.BarCode | IronBarcode |
 |---|---|
+| `new BarCodeGenerator(EncodeTypes.Code128, "data")` | `BarcodeWriter.CreateBarcode("data", BarcodeEncoding.Code128)` |
+| `generator.Save("file.png", BarCodeImageFormat.Png)` | `.SaveAsPng("file.png")` |
+| `generator.Save("file.jpg", BarCodeImageFormat.Jpeg)` | `.SaveAsJpeg("file.jpg")` |
+| `generator.GenerateBarCodeImage()` | `.ToPngBinaryData()` or `.ToBitmap()` |
 | `EncodeTypes.Code128` | `BarcodeEncoding.Code128` |
 | `EncodeTypes.Code39` | `BarcodeEncoding.Code39` |
 | `EncodeTypes.QR` | `BarcodeEncoding.QRCode` |
@@ -428,39 +391,72 @@ Map these to `BarcodeEncoding` equivalents:
 | `EncodeTypes.EAN13` | `BarcodeEncoding.EAN13` |
 | `EncodeTypes.UPCA` | `BarcodeEncoding.UPCA` |
 | `EncodeTypes.Aztec` | `BarcodeEncoding.Aztec` |
+| `new BarCodeReader(path, DecodeType.Code128)` | `BarcodeReader.Read(path)` |
+| `DecodeType.AllSupportedTypes` | Automatic — always on, same call for all formats |
+| `reader.ReadBarCodes()` | (part of `BarcodeReader.Read` — returns results directly) |
+| `reader.FoundBarCodes` | Return value of `BarcodeReader.Read` |
+| `result.CodeText` | `result.Value` |
+| `result.CodeTypeName` | `result.Format.ToString()` |
+| `result.Confidence` | `result.Confidence` |
+| `Aspose.BarCode + Aspose.PDF for PDF reading` | `BarcodeReader.Read("doc.pdf")` — one package |
+| `license.SetLicense("Aspose.BarCode.lic")` | `IronBarCode.License.LicenseKey = "key"` |
+| `new Aspose.BarCode.Metered()` + `.SetMeteredKey()` | (not needed — single key covers all environments) |
+| `QREncodeMode.Auto` + `QRErrorLevel.LevelH` + manual logo overlay | `QRCodeWriter.CreateQrCode().AddBrandLogo()` |
 
-Note that `EncodeTypes.QR` maps to `BarcodeEncoding.QRCode` — the naming difference is where teams most often get the first compile error.
+## Common Migration Issues and Solutions
 
-### Remove BarCodeImageFormat References
+### Issue 1: result.CodeText Compile Error
+
+**Aspose.BarCode:** Reading results expose the barcode value via `result.CodeText` and the format name via `result.CodeTypeName`.
+
+**Solution:** Run a codebase-wide search and replace both properties:
 
 ```bash
-grep -r "BarCodeImageFormat\." --include="*.cs" .
+grep -r "\.CodeText" --include="*.cs" .
+grep -r "\.CodeTypeName" --include="*.cs" .
 ```
 
-Replace with the format-specific save method:
-
-| Aspose | IronBarcode |
-|---|---|
-| `.Save("file.png", BarCodeImageFormat.Png)` | `.SaveAsPng("file.png")` |
-| `.Save("file.jpg", BarCodeImageFormat.Jpeg)` | `.SaveAsJpeg("file.jpg")` |
-| `.GenerateBarCodeImage()` | `.ToBitmap()` or `.ToPngBinaryData()` |
-
-### Remove License File Handling
-
-```bash
-grep -r "SetLicense\|Aspose.BarCode.License\|Aspose.BarCode.Metered" --include="*.cs" .
-grep -r "SetLicense\|\.lic" --include="*.cs" .
-```
-
-Remove all blocks that load a `.lic` file or configure metered keys. Replace with:
+Replace `result.CodeText` with `result.Value`. Replace `result.CodeTypeName` with `result.Format.ToString()`. The `result.Format` property is a `BarcodeEncoding` enum value, which also enables typed comparisons:
 
 ```csharp
-IronBarCode.License.LicenseKey = "YOUR-KEY";
+if (result.Format == BarcodeEncoding.QRCode)
+{
+    // Handle QR code specifically
+}
 ```
 
-### Docker: License File to Environment Variable
+### Issue 2: DecodeType References Throughout the Codebase
 
-**Before — Aspose.BarCode Docker setup:**
+**Aspose.BarCode:** `DecodeType.*` values appear at every read site — in constructors, in `SetBarCodeReadType()` calls, and in conditional logic that routes to different readers based on expected format.
+
+**Solution:** Remove all `DecodeType.*` references. IronBarcode auto-detection covers all cases:
+
+```bash
+grep -r "DecodeType\." --include="*.cs" .
+```
+
+If a specific `DecodeType` was listed to improve performance on a known format, use `ReadingSpeed.Faster` in `BarcodeReaderOptions` instead:
+
+```csharp
+var options = new BarcodeReaderOptions { Speed = ReadingSpeed.Faster };
+var results = BarcodeReader.Read(imagePath, options);
+```
+
+### Issue 3: EncodeTypes Naming Differences
+
+**Aspose.BarCode:** Generation code uses `EncodeTypes.QR` for QR codes. The IronBarcode equivalent is `BarcodeEncoding.QRCode` — the naming difference is where teams most often get the first compile error after migrating generation code.
+
+**Solution:** Search and replace:
+
+```bash
+grep -r "EncodeTypes\." --include="*.cs" .
+```
+
+Map `EncodeTypes.QR` to `BarcodeEncoding.QRCode`. All other standard symbologies map directly with consistent naming (`EncodeTypes.Code128` → `BarcodeEncoding.Code128`, `EncodeTypes.DataMatrix` → `BarcodeEncoding.DataMatrix`, and so on).
+
+### Issue 4: License File in Docker and CI/CD
+
+**Aspose.BarCode:** Deployment pipelines copy a `.lic` file into the container image or mount it as a secret volume:
 
 ```dockerfile
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
@@ -470,13 +466,7 @@ COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "MyApp.dll"]
 ```
 
-```csharp
-// In startup
-var license = new Aspose.BarCode.License();
-license.SetLicense(Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH"));
-```
-
-**After — IronBarcode Docker setup:**
+**Solution:** Remove the file copy and replace with an environment variable:
 
 ```dockerfile
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
@@ -491,21 +481,28 @@ IronBarCode.License.LicenseKey =
     Environment.GetEnvironmentVariable("IRONBARCODE_LICENSE");
 ```
 
-Remove the `COPY Aspose.BarCode.lic` line and the corresponding `ENV ASPOSE_LICENSE_PATH`. In CI/CD, replace the file-based secret with a string secret containing the license key.
+Remove the `COPY Aspose.BarCode.lic` line, the `ASPOSE_LICENSE_PATH` environment variable, and the `.lic` file from the repository. In CI/CD, replace the file-based secret with a string secret containing the license key.
 
-### Remove Quality Settings Code
+### Issue 5: QualitySettings Code Removal
 
-Aspose.BarCode provides an extensive `QualitySettings` API for tuning recognition on damaged or low-quality images:
+**Aspose.BarCode:** Recognition quality on damaged or low-quality images is tuned through a `QualitySettings` API with 12+ parameters including `AllowMedianSmoothing`, `MedianSmoothingWindowSize`, and `AllowSaltAndPaper`.
+
+**Solution:** Remove all `QualitySettings` configuration blocks. IronBarcode handles image quality internally. Use `ReadingSpeed.Detailed` if recognition issues arise on difficult images:
 
 ```bash
 grep -r "QualitySettings\|AllowMedianSmoothing\|MedianSmoothingWindowSize\|AllowSaltAndPaper" --include="*.cs" .
 ```
 
-Remove all of this. IronBarcode handles image quality internally without manual parameter tuning. Use `ReadingSpeed.Detailed` if you encounter recognition issues on difficult images — that is the only adjustment needed.
+```csharp
+var options = new BarcodeReaderOptions { Speed = ReadingSpeed.Detailed };
+var results = BarcodeReader.Read(imagePath, options);
+```
 
-## Migration Checklist
+## Aspose.BarCode Migration Checklist
 
-Run these grep patterns first to get a complete inventory before making any changes:
+### Pre-Migration Tasks
+
+Run these grep patterns first to build a complete inventory before making any changes:
 
 ```bash
 # Find all Aspose.BarCode usages
@@ -522,76 +519,56 @@ grep -r "QualitySettings" --include="*.cs" .
 grep -r "using Aspose.BarCode" --include="*.cs" .
 ```
 
-### Pre-Migration
+- Note all `DecodeType` values in use — these all become auto-detected (no changes needed in logic, just remove the specification)
+- Identify whether Aspose.PDF is used exclusively for barcode extraction — if so, it can be removed entirely
+- Verify IronBarcode supports all symbologies your application uses (50+ formats; all standard symbologies are covered)
+- Obtain your IronBarcode license key and add it to your secrets manager or environment
 
-- [ ] Run all grep patterns above and build a list of every affected file
-- [ ] Note all `DecodeType` values in use — these all become auto-detected (no changes needed in logic, just remove the specification)
-- [ ] Identify whether Aspose.PDF is used exclusively for barcode extraction — if so, it can be removed entirely
-- [ ] Verify IronBarcode supports all symbologies your application uses (50+ formats; most standard symbologies are covered)
-- [ ] Obtain your IronBarcode license key and add it to your secrets manager / environment
+### Code Update Tasks
 
-### Package and Namespace Changes
+1. Remove `Aspose.BarCode` from all `.csproj` files
+2. Remove `Aspose.PDF` from `.csproj` files if used only for barcode PDF extraction
+3. Add `IronBarcode` to all `.csproj` files that need barcode functionality
+4. Replace `using Aspose.BarCode.Generation;` and `using Aspose.BarCode.BarCodeRecognition;` with `using IronBarCode;`
+5. Add `IronBarCode.License.LicenseKey = ...` to application startup
+6. Replace `new BarcodeGenerator(EncodeTypes.X, "data")` with `BarcodeWriter.CreateBarcode("data", BarcodeEncoding.X)`
+7. Replace `.Save("file.png", BarCodeImageFormat.Png)` with `.SaveAsPng("file.png")`
+8. Replace `.GenerateBarCodeImage()` with `.ToPngBinaryData()` or `.ToBitmap()`
+9. Replace `EncodeTypes.QR` with `BarcodeEncoding.QRCode` (naming difference — easy to miss)
+10. Replace remaining `EncodeTypes.*` with corresponding `BarcodeEncoding.*` values
+11. Remove `Parameters.Barcode.*` configuration chains (use `ResizeTo()` if dimensions matter)
+12. For QR codes with logos: replace manual GDI+ overlay code with `.AddBrandLogo("logo.png")`
+13. Replace `new BarCodeReader(path, DecodeType.X)` with `BarcodeReader.Read(path)`
+14. Remove all `DecodeType.*` specifications and `SetBarCodeReadType()` calls
+15. Remove `reader.ReadBarCodes()` calls — results come directly from `BarcodeReader.Read()`
+16. Replace `result.CodeText` with `result.Value` and `result.CodeTypeName` with `result.Format.ToString()`
+17. Remove all `using var reader = new BarCodeReader(...)` disposable patterns
+18. For PDF reading: remove Aspose.PDF rendering pipeline and replace with `BarcodeReader.Read("file.pdf")`
+19. Remove all `QualitySettings.*` configuration blocks
+20. Remove Aspose `.lic` file from repository and build artifacts
+21. Remove `COPY Aspose.BarCode.lic` from Dockerfiles and replace with `ENV IRONBARCODE_LICENSE`
+22. Update CI/CD pipeline secrets — remove Aspose license file secret, add `IRONBARCODE_LICENSE` string secret
 
-- [ ] Remove `Aspose.BarCode` from all `.csproj` files
-- [ ] Remove `Aspose.PDF` from `.csproj` files if used only for barcode PDF extraction
-- [ ] Add `IronBarcode` to all `.csproj` files that need barcode functionality
-- [ ] Replace `using Aspose.BarCode.Generation;` with `using IronBarCode;`
-- [ ] Replace `using Aspose.BarCode.BarCodeRecognition;` with `using IronBarCode;`
-- [ ] Remove any remaining `using Aspose.*` statements not needed for other purposes
-- [ ] Add `IronBarCode.License.LicenseKey = ...` to application startup
+### Post-Migration Testing
 
-### Generation Code Changes
+- Build the solution and fix any remaining compile errors from renamed types and properties
+- Run unit tests for all barcode generation code paths
+- Run unit tests for all barcode reading code paths
+- If the application reads PDFs, test with multi-page PDF documents and verify `result.PageNumber` is populated
+- Test batch processing — verify parallel execution works correctly with no instance management
+- Deploy to a staging environment and confirm the license key resolves from the environment variable
+- Compare barcode read accuracy on your actual production document samples against Aspose results
 
-- [ ] Replace `new BarcodeGenerator(EncodeTypes.X, "data")` with `BarcodeWriter.CreateBarcode("data", BarcodeEncoding.X)`
-- [ ] Replace `.Save("file.png", BarCodeImageFormat.Png)` with `.SaveAsPng("file.png")`
-- [ ] Replace `.GenerateBarCodeImage()` with `.ToPngBinaryData()` or `.ToBitmap()`
-- [ ] Replace `EncodeTypes.QR` with `BarcodeEncoding.QRCode` (naming difference — easy to miss)
-- [ ] Replace remaining `EncodeTypes.*` with corresponding `BarcodeEncoding.*` values
-- [ ] Remove `Parameters.Barcode.*` configuration chains (use `ResizeTo()` if dimensions matter)
-- [ ] For QR codes with logos: replace manual GDI+ overlay code with `.AddBrandLogo("logo.png")`
-- [ ] For colored QR codes: replace `generator.Parameters.Barcode.BarColor = ...` with `.ChangeBarCodeColor(Color.X)`
+## Key Benefits of Migrating to IronBarcode
 
-### Reading Code Changes
+**Eliminated Format Specification Maintenance:** IronBarcode auto-detects barcode formats on every read. When new barcode format sources appear in production — a new supplier, a new document type — no code change is needed. The `DecodeType` list that Aspose.BarCode codebases accumulate over time simply does not exist in IronBarcode.
 
-- [ ] Replace `new BarCodeReader(path, DecodeType.X)` with `BarcodeReader.Read(path)`
-- [ ] Remove `reader.SetBarCodeReadType(DecodeType.AllSupportedTypes)` — auto-detection is always on
-- [ ] Remove all `DecodeType.*` specifications — no longer needed
-- [ ] Remove `reader.ReadBarCodes()` calls — results come directly from `BarcodeReader.Read()`
-- [ ] Remove `reader.FoundBarCodes` references — use the return value of `BarcodeReader.Read()` directly
-- [ ] Replace `result.CodeText` with `result.Value`
-- [ ] Replace `result.CodeTypeName` with `result.Format.ToString()`
-- [ ] Remove all `using var reader = new BarCodeReader(...)` disposable patterns
-- [ ] For PDF reading: remove Aspose.PDF rendering pipeline and replace with `BarcodeReader.Read("file.pdf")`
-- [ ] Remove all `QualitySettings.*` configuration blocks
+**Native PDF Reading Included:** IronBarcode reads barcodes directly from PDF files without any additional package or rendering pipeline. The Aspose.PDF subscription that many teams add specifically for PDF barcode extraction can be removed, along with the rendering loop and memory stream management code it requires.
 
-### Infrastructure Changes
+**Perpetual License with No Renewal:** A one-time IronBarcode purchase covers the current team size permanently. At the Professional tier ($2,999 for 10 developers), the license pays for itself within the first year compared to Aspose.BarCode's Site subscription. Future .NET version updates are included without additional cost.
 
-- [ ] Remove Aspose `.lic` file from repository and build artifacts
-- [ ] Remove `COPY Aspose.BarCode.lic` from Dockerfiles
-- [ ] Remove `ASPOSE_LICENSE_PATH` environment variable references
-- [ ] Add `IRONBARCODE_LICENSE` environment variable to Docker, Kubernetes, and CI/CD configs
-- [ ] Update CI/CD pipeline secrets — remove Aspose license file secret, add `IRONBARCODE_LICENSE` string secret
-- [ ] Remove Aspose license from Kubernetes `ConfigMap` or `Secret` if mounted as a file
+**Simplified Concurrency:** IronBarcode's static API is stateless by design. Parallel processing code does not require per-thread reader instances or `IDisposable` management. The `Parallel.ForEach` pattern becomes straightforward with no instance lifecycle to track.
 
-### Post-Migration Verification
+**Streamlined Container Deployment:** Replacing a `.lic` file with a string environment variable removes the most operationally fragile part of Aspose.BarCode deployments. License keys can be managed through the same secrets infrastructure used for database passwords and API keys — no file mounts, no volume configurations, no risk of the license file being committed to source control.
 
-- [ ] Build the solution — fix any remaining compile errors from renamed types and properties
-- [ ] Run unit tests for all barcode generation code paths
-- [ ] Run unit tests for all barcode reading code paths
-- [ ] If the application reads PDFs, test with multi-page PDF documents and verify `result.PageNumber` is populated
-- [ ] Test batch processing — verify parallel execution works correctly (no instance management needed)
-- [ ] Deploy to a staging environment and confirm the license key resolves from the environment variable
-- [ ] Compare barcode read accuracy on your actual production document samples against Aspose results
-
-## Pricing Reference
-
-| IronBarcode Tier | Price | Coverage |
-|---|---|---|
-| Lite | $749 perpetual | 1 developer, 1 project |
-| Plus | $1,499 perpetual | 3 developers |
-| Professional | $2,999 perpetual | 10 developers |
-| Unlimited | $5,999 perpetual | Unlimited developers |
-
-All tiers include Windows x64/x86, Linux x64, macOS x64/ARM, Docker, Azure App Service, AWS Lambda, .NET Framework 4.6.2+, .NET Core 3.1+, .NET 5/6/7/8/9. No annual renewal required. PDF reading is included in the base package — no additional purchase needed.
-
-The `DecodeType` removal is the change that saves the most future maintenance. Every time a new barcode format appears in your document sources, an Aspose.BarCode codebase requires a code change to add the new `DecodeType` to every reader. IronBarcode handles new formats without any code change. That is the reading pattern change the migration brief describes — and it compounds in value as your application's input sources grow.
+**Reduced API Surface to Learn:** IronBarcode's fluent generation API and single-call reading pattern reduce the learning curve for new team members. The deep `Parameters.Barcode.*` hierarchy of Aspose.BarCode requires memorization that IronBarcode's method chain does not.

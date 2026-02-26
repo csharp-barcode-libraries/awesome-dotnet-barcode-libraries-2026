@@ -72,7 +72,6 @@ Console.WriteLine(results.First().Value);
 | Static read API | No (requires instance) | Yes |
 | Standalone NuGet package | No — UI suite required | Yes |
 | Perpetual license | No — subscription | Yes — from $749 |
-| 5-year TCO (10 devs) | ~$73,450 | ~$2,999 |
 
 ## Quick Start
 
@@ -176,11 +175,13 @@ string imgSrc = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
 
 The `BarcodeEncoding` enum covers the same symbologies as Telerik's `Symbology` enum. Switching to QR code generation changes only the enum argument. For the full range of [2D barcode generation options](https://ironsoftware.com/csharp/barcode/how-to/create-2d-barcodes/), including QR error correction levels and DataMatrix dimensions, the IronBarcode documentation provides complete examples.
 
-### Reading 1D Barcodes: WPF Desktop
+### Reading Barcodes from Desktop Applications
 
-Telerik's WPF reading requires a `RadBarcodeReader` instance, explicit `DecodeType` configuration, a `BitmapImage` object loaded from a URI, and a call to `reader.Decode()`. The result property is `.Text`.
+Telerik provides two separate reader classes for desktop platforms — `RadBarcodeReader` for WPF and `BarCodeReader` for WinForms — with different class names, different property names, and different input types. IronBarcode replaces both with a single static call that works identically in either project type.
 
-**Telerik Approach:**
+**Telerik WPF Approach:**
+
+WPF reading requires a `RadBarcodeReader` instance, explicit `DecodeType` configuration, a `BitmapImage` object loaded from a URI, and a call to `reader.Decode()`. The result property is `.Text`.
 
 ```csharp
 using Telerik.Windows.Controls.Barcode;
@@ -208,26 +209,9 @@ public string ReadProductBarcode(string imagePath)
 }
 ```
 
-**IronBarcode Approach:**
+**Telerik WinForms Approach:**
 
-```csharp
-// NuGet: dotnet add package IronBarcode
-using IronBarCode;
-
-public string ReadProductBarcode(string imagePath)
-{
-    var results = BarcodeReader.Read(imagePath);
-    return results.FirstOrDefault()?.Value ?? "No barcode found";
-}
-```
-
-`BarcodeReader.Read()` is a static method — no reader instance is needed. It accepts a file path string directly without requiring a `BitmapImage` load. Format detection is automatic across all 50+ supported types. The result property is `.Value` rather than `.Text`. This same method call also reads QR codes, DataMatrix, and any other format present in the image.
-
-### Reading 1D Barcodes: WinForms Desktop
-
-The WinForms `BarCodeReader` class uses a different name, different property name (`DecodeType` singular rather than `DecodeTypes` plural), and takes a `System.Drawing.Image` rather than a `BitmapImage`.
-
-**Telerik Approach:**
+The WinForms `BarCodeReader` class uses a different name, a different property name (`DecodeType` singular rather than `DecodeTypes` plural), and takes a `System.Drawing.Image` rather than a `BitmapImage`.
 
 ```csharp
 using Telerik.WinControls.UI.Barcode;
@@ -256,14 +240,14 @@ public string ReadShippingLabel(string imagePath)
 // NuGet: dotnet add package IronBarcode
 using IronBarCode;
 
-public string ReadShippingLabel(string imagePath)
+public string ReadProductBarcode(string imagePath)
 {
     var results = BarcodeReader.Read(imagePath);
     return results.FirstOrDefault()?.Value ?? "No barcode found";
 }
 ```
 
-The IronBarcode call is identical to the WPF example above. There is no WinForms-specific variant. The same method handles the same operation regardless of which project type is calling it, and the result works without a `System.Drawing.Image` dependency.
+`BarcodeReader.Read()` is a static method — no reader instance is needed. It accepts a file path string directly without requiring a `BitmapImage` or `System.Drawing.Image` load. Format detection is automatic across all 50+ supported types. The result property is `.Value` rather than `.Text`. This same call works without modification in both WPF and WinForms applications — there is no platform-specific variant. It also reads QR codes, DataMatrix, and any other format present in the image, unlike the Telerik readers which are restricted to 1D formats.
 
 ### Reading QR Codes: Previously Impossible with Telerik
 
