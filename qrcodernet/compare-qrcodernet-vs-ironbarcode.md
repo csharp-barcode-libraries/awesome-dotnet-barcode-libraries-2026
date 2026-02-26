@@ -1,77 +1,26 @@
-## Table of Contents
+QRCoder does one thing exceptionally well: it generates QR codes in pure C# with zero external dependencies, an unrestricted MIT licence, and a thoughtful API that handles everything from standard payload formatting to a variety of output renderers. With over 8 million NuGet downloads, its reputation is earned. The comparison with IronBarcode is not a quality judgement — it is a scope question. IronBarcode covers over 50 barcode formats, reads as well as writes, and integrates with PDF documents through a single consistent API. For teams whose requirements extend beyond QR generation, understanding where QRCoder's design intentionally stops is essential.
 
-1. [What Makes QRCoder Good](#what-makes-qrcoder-good)
-2. [The Scope Boundary](#the-scope-boundary)
-3. [Feature Comparison](#feature-comparison)
-4. [Side-by-Side Code](#side-by-side-code)
-5. [The Multi-Library Accumulation Problem](#the-multi-library-accumulation-problem)
-6. [Cost Comparison](#cost-comparison)
-7. [When to Use Each](#when-to-use-each)
----
+## Understanding QRCoder
 
-## What Makes QRCoder Good
+QRCoder was created by Raffael Herrmann in 2013 and is now maintained by Shane32. The library is written entirely in C# with zero external dependencies — no SkiaSharp version conflicts, no ImageSharp commercial licence concerns, no native binaries to deploy. It runs on any platform where .NET runs.
 
-QRCoder was created by Raffael Herrmann in 2013 and is now maintained by Shane32. It has accumulated over 8 million NuGet downloads, and that number is earned. The library is pure C# with zero external dependencies — no SkiaSharp version conflicts, no ImageSharp commercial license to worry about, no native binaries to deploy. It runs anywhere .NET runs.
+The MIT licence is genuinely unrestricted. Unlike some popular libraries where a revenue threshold triggers a commercial licence requirement, QRCoder carries no hidden commercial restrictions. That distinction matters for teams building commercial applications.
 
-Its MIT license is genuinely unrestricted. Unlike some popular libraries where a revenue threshold triggers a commercial license requirement, QRCoder carries no hidden commercial restrictions. That is worth stating plainly.
+The `PayloadGenerator` class adds significant practical value: it handles common QR code data formats — WiFi credentials, contact cards (vCard), calendar events, SMS messages, and geolocation points — so developers do not need to memorize the wire format for each standard. The renderer variety is also strong across multiple output types.
 
-The `PayloadGenerator` class is a thoughtful addition that handles common QR code data formats — WiFi credentials, contact cards (vCard), calendar events, SMS messages, geolocation points — so developers do not have to memorize the wire format for each standard. The renderer variety is also strong: PNG bytes, SVG, ASCII art, Base64, BMP. For QR codes specifically, this breadth of output options is useful.
+Key architectural characteristics:
 
-When comparing QR-specific capabilities, QRCoder holds its own against any library. It supports all four error correction levels (L, M, Q, H), logo embedding, color customization, and quiet zone control. It even supports Micro QR, a compact variant that IronBarcode does not currently implement. For developers who need only QR codes, the honest answer is that QRCoder will serve them well.
+- **Zero External Dependencies:** Pure C# with no third-party runtime requirements, simplifying deployment in containerized or restricted environments
+- **MIT Licence with No Revenue Restriction:** Genuinely free for commercial use without revenue thresholds or commercial triggers
+- **PayloadGenerator Helpers:** Built-in formatters for WiFi, vCard, CalendarEvent, SMS, Geo, and other common QR payload standards
+- **Renderer Variety:** PNG bytes, SVG string, ASCII art, Base64, BMP, and several additional output formats
+- **Full Error Correction Control:** All four ECC levels (L, M, Q, H) are exposed
+- **Micro QR Support:** Compact QR variant for space-constrained labels, not available in all barcode libraries
+- **QR-Only Design:** The API surface covers exclusively QR code generation — no 1D formats, no DataMatrix, no barcode reading
 
----
+### The QR-Only Design
 
-## The Scope Boundary
-
-The limitation is structural, not qualitative. QRCoder's `QRCodeGenerator` class has one creation method: `CreateQrCode(string data, ECCLevel level)`. There is no `CreateCode128`, no `CreateDataMatrix`, no `CreateEAN13`. The library was built for a specific purpose and adheres to it completely.
-
-This matters because barcode requirements in real projects tend to expand. An e-commerce platform starts with QR codes for marketing campaigns, then the shipping team needs Code128 labels, then the warehouse needs to scan incoming shipments. Each step requires a different library.
-
-The [IronBarcode documentation on 2D barcodes](https://ironsoftware.com/csharp/barcode/how-to/create-2d-barcodes/) illustrates the contrast well: one API covers QR codes, DataMatrix, PDF417, Aztec, and all 1D formats through the same `BarcodeEncoding` parameter. There is no separate reading library to install.
-
-QRCoder also has no reading API at all. It cannot decode a QR code from an image. Generation only. This means any application that needs to both generate and process QR codes requires a second library from the start — typically ZXing.Net, which brings its own set of integration concerns.
-
----
-
-## Feature Comparison
-
-### Core Capabilities
-
-| Feature | QRCoder | IronBarcode |
-|---|---|---|
-| QR Code Generation | Yes (excellent) | Yes |
-| 1D Barcodes (Code128, EAN, UPC, etc.) | No | Yes (30+) |
-| Other 2D Formats (DataMatrix, PDF417, Aztec) | No | Yes |
-| Barcode Reading / Decoding | No | Yes |
-| PDF Barcode Extraction | No | Yes |
-| Logo Embedding in QR | Yes | Yes |
-| Color Customization | Yes | Yes |
-| SVG Output | Yes | Yes |
-| ASCII Art Output | Yes | No |
-| PayloadGenerator Helpers | Yes (built-in) | Manual string construction |
-| Micro QR | Yes | No |
-| Error Correction Control | L, M, Q, H | L, M, Q, H |
-| Zero External Dependencies | Yes | Self-contained |
-| License | MIT (genuinely free) | Commercial ($749 one-time) |
-
-### Format Support at a Glance
-
-| Library | 1D Formats | 2D Formats | Can Read |
-|---|---|---|---|
-| QRCoder | 0 | 1 (QR only) | No |
-| IronBarcode | 30+ | 8+ | Yes |
-
-For the specific case of QR generation, both libraries are on equal footing. The divergence begins the moment any other format enters the picture.
-
----
-
-## Side-by-Side Code
-
-### Basic QR Code Generation
-
-Both libraries generate QR codes, but the APIs reflect different design philosophies. QRCoder separates the data-creation step from the rendering step, which gives fine-grained control. IronBarcode collapses this into a fluent chain.
-
-**QRCoder:**
+QRCoder separates the data creation step from the rendering step. A `QRCodeGenerator` produces a `QRCodeData` intermediate object, which is then passed to a renderer class. This pattern gives precise control over the output format at the cost of additional objects:
 
 ```csharp
 using QRCoder;
@@ -82,62 +31,191 @@ var qrCodeData = qrGenerator.CreateQrCode(
     "https://example.com",
     QRCodeGenerator.ECCLevel.M
 );
-var qrCode = new PngByteQRCode(qrCodeData);
-byte[] pngBytes = qrCode.GetGraphic(20); // 20px per module
+
+// PNG bytes via PngByteQRCode
+var pngQR = new PngByteQRCode(qrCodeData);
+byte[] pngBytes = pngQR.GetGraphic(20); // 20px per module
 File.WriteAllBytes("qr.png", pngBytes);
+
+// SVG string via SvgQRCode
+string svgContent = new SvgQRCode(qrCodeData).GetGraphic(10);
+File.WriteAllText("qr.svg", svgContent);
 ```
 
-**IronBarcode:**
+The `QRCodeGenerator.CreateQrCode` method is the sole entry point for code creation — there is no `CreateCode128`, no `CreateDataMatrix`, no `CreateEAN13`. The library adheres completely to its intended scope.
 
-```csharp
-using IronBarCode;
+## Understanding IronBarcode
 
-BarcodeWriter.CreateBarcode("https://example.com", BarcodeEncoding.QRCode)
-    .ResizeTo(200, 200)
-    .SaveAsPng("qr.png");
-```
+IronBarcode is a commercial .NET barcode library from Iron Software that covers generation and reading of over 50 barcode formats through a single, consistent API. Rather than maintaining separate libraries for different format families, IronBarcode exposes all formats through `BarcodeEncoding` parameters on the same static `BarcodeWriter` and `BarcodeReader` entry points.
 
-### QR Code with Logo and Color Styling
+The library uses a static API model: `BarcodeWriter.CreateBarcode` requires no instance setup, and `BarcodeReader.Read` accepts file paths, streams, byte arrays, and `System.Drawing.Bitmap` objects with automatic multi-format detection. PDF document support — both reading barcodes from PDF pages and embedding barcodes into PDFs — is included without external dependencies.
 
-QRCoder supports logo embedding and color customization through its renderer options. IronBarcode exposes these through a dedicated `QRCodeWriter` that provides [QR code style customization](https://ironsoftware.com/csharp/barcode/how-to/customize-qr-code-style/) including logo overlay and color changes as first-class operations.
+Key characteristics:
 
-**QRCoder:**
+- **50+ Barcode Formats:** QR Code, Code 128, EAN-13, UPC-A, DataMatrix, PDF417, Aztec, MaxiCode, and many more through a single `BarcodeEncoding` parameter
+- **Integrated Reading API:** `BarcodeReader.Read` handles images, PDFs, and streams with automatic format detection — no second library required
+- **QR Code Customisation:** Logo embedding, colour changes, and quiet zone control through `QRCodeWriter` methods
+- **PDF Integration:** Read barcodes from PDF pages and stamp barcodes into existing PDF documents
+- **Static API Model:** No generator instance required — `BarcodeWriter` is a static class
+- **Commercial Licence:** Starting at $749 for a single-developer licence with no per-format restrictions
+
+## Feature Comparison
+
+The following table summarises the fundamental differences between QRCoder and IronBarcode:
+
+| Feature | QRCoder | IronBarcode |
+|---|---|---|
+| **QR Code Generation** | Yes — excellent | Yes |
+| **1D Barcode Generation** | No | Yes (30+ formats) |
+| **Other 2D Formats** | No | Yes (DataMatrix, PDF417, Aztec, etc.) |
+| **Barcode Reading** | No | Yes — auto-detection |
+| **PDF Support** | No | Yes — read and stamp |
+| **Licence** | MIT — genuinely free | Commercial ($749 single developer) |
+
+### Detailed Feature Comparison
+
+| Feature | QRCoder | IronBarcode |
+|---|---|---|
+| **Generation** | | |
+| QR Code | Yes | Yes |
+| Micro QR | Yes | No |
+| Code 128 | No | Yes |
+| EAN-13 / UPC-A | No | Yes |
+| DataMatrix | No | Yes |
+| PDF417 | No | Yes |
+| Aztec | No | Yes |
+| Total formats | 1 | 50+ |
+| **QR Code Features** | | |
+| Error correction (L/M/Q/H) | Yes | Yes |
+| Logo embedding | Yes | Yes |
+| Colour customisation | Yes | Yes |
+| SVG output | Yes | Yes |
+| ASCII art output | Yes | No |
+| Base64 output | Yes | No |
+| PayloadGenerator helpers | Yes | No — manual string construction |
+| **Reading** | | |
+| Decode from image | No | Yes |
+| Decode from PDF | No | Yes |
+| Auto format detection | No | Yes |
+| **Integration** | | |
+| PDF barcode stamping | No | Yes |
+| Zero external dependencies | Yes | Self-contained |
+| **Licensing** | | |
+| Licence type | MIT | Commercial |
+| Revenue restrictions | None | None |
+| Per-format pricing | None | None |
+
+## QR Code Generation
+
+Both libraries generate QR codes, but their APIs reflect different design philosophies in how the generation step and rendering step relate to each other.
+
+### QRCoder Approach
+
+QRCoder uses a two-phase pattern: `QRCodeGenerator.CreateQrCode` produces a `QRCodeData` intermediate object encoding the data and error correction level, and a separate renderer class converts that intermediate into the desired output format. The ECC level is a required parameter with no default — developers must choose explicitly:
 
 ```csharp
 using QRCoder;
+using System.IO;
 
 var qrGenerator = new QRCodeGenerator();
-var qrCodeData = qrGenerator.CreateQrCode("https://example.com", QRCodeGenerator.ECCLevel.H);
+var qrCodeData = qrGenerator.CreateQrCode(
+    "https://example.com",
+    QRCodeGenerator.ECCLevel.M
+);
 
-// Logo via QRCode renderer (requires System.Drawing)
-var qrCode = new QRCode(qrCodeData);
-var logo = new System.Drawing.Bitmap("logo.png");
-var qrBitmap = qrCode.GetGraphic(10, System.Drawing.Color.Black,
-    System.Drawing.Color.White, logo);
-qrBitmap.Save("qr-logo.png");
+var qrCode = new PngByteQRCode(qrCodeData);
+byte[] pngBytes = qrCode.GetGraphic(20); // pixels per module
+File.WriteAllBytes("qr.png", pngBytes);
 ```
 
-**IronBarcode:**
+This pattern has the benefit of reusing the `qrCodeData` object for multiple output formats without regenerating the code data. Renderer classes include `PngByteQRCode`, `SvgQRCode`, `AsciiQRCode`, `Base64QRCode`, and `BitmapByteQRCode`, among others.
+
+### IronBarcode Approach
+
+IronBarcode collapses generation and rendering into a fluent chain on the static `BarcodeWriter` class. The `BarcodeEncoding.QRCode` parameter selects the format, and terminal methods such as `SaveAsPng` or `ToPngBinaryData` determine the output:
 
 ```csharp
 using IronBarCode;
 
-var qr = QRCodeWriter.CreateQrCode("https://example.com", 500,
-    QRCodeWriter.QrErrorCorrectionLevel.Highest);
+// Single fluent call — no intermediate objects
+BarcodeWriter.CreateBarcode("https://example.com", BarcodeEncoding.QRCode)
+    .ResizeTo(400, 400)
+    .SaveAsPng("qr.png");
+```
+
+For cases requiring explicit error correction control, the `QRCodeWriter` class provides format-specific options:
+
+```csharp
+using IronBarCode;
+
+var qr = QRCodeWriter.CreateQrCode(
+    "https://example.com",
+    500,
+    QRCodeWriter.QrErrorCorrectionLevel.Medium
+);
+qr.SaveAsPng("qr.png");
+```
+
+The [IronBarcode 2D barcode creation guide](https://ironsoftware.com/csharp/barcode/how-to/create-2d-barcodes/) covers all supported 2D formats including QR Code, DataMatrix, PDF417, and Aztec through the same `BarcodeWriter` entry point.
+
+## QR Code Customisation
+
+Both libraries support logo embedding and colour changes on QR codes, but the approach differs in which system types are required.
+
+### QRCoder Approach
+
+QRCoder logo embedding routes through the `QRCode` renderer class (distinct from `PngByteQRCode`), which exposes a `GetGraphic` overload accepting a `System.Drawing.Bitmap`. This means the calling code must work with `System.Drawing` directly to load the logo file:
+
+```csharp
+using QRCoder;
+using System.Drawing;
+
+var qrGenerator = new QRCodeGenerator();
+var qrCodeData = qrGenerator.CreateQrCode(
+    "https://example.com",
+    QRCodeGenerator.ECCLevel.H // High ECC required when logo occludes part of the code
+);
+
+var qrCode = new QRCode(qrCodeData);
+var logoBitmap = new Bitmap("logo.png");
+var qrBitmap = qrCode.GetGraphic(10, Color.Black, Color.White, logoBitmap);
+qrBitmap.Save("qr-logo.png", System.Drawing.Imaging.ImageFormat.Png);
+```
+
+Colour customisation follows a similar pattern through the `GetGraphic` overload's `darkColor` and `lightColor` parameters.
+
+### IronBarcode Approach
+
+IronBarcode exposes logo embedding and colour changes as named methods on the `QRCodeWriter` result object. The `AddBrandLogo` method accepts a file path, and `ChangeBarCodeColor` accepts a `Color` value:
+
+```csharp
+using IronBarCode;
+using System.Drawing;
+
+// Logo embedding
+var qr = QRCodeWriter.CreateQrCode(
+    "https://example.com",
+    500,
+    QRCodeWriter.QrErrorCorrectionLevel.Highest
+);
 qr.AddBrandLogo("logo.png");
 qr.SaveAsPng("qr-logo.png");
 
-// Colored QR
-var qr2 = QRCodeWriter.CreateQrCode("https://example.com", 500);
-qr2.ChangeBarCodeColor(Color.DarkBlue);
-qr2.SaveAsPng("colored-qr.png");
+// Colour customisation
+var coloredQr = QRCodeWriter.CreateQrCode("https://example.com", 500);
+coloredQr.ChangeBarCodeColor(Color.DarkBlue);
+coloredQr.SaveAsPng("colored-qr.png");
 ```
 
-### Reading a QR Code
+The [QR code style customisation guide](https://ironsoftware.com/csharp/barcode/how-to/customize-qr-code-style/) covers logo sizing, colour combinations, and quiet zone control in detail.
 
-This is where the scope boundary becomes concrete. QRCoder cannot decode barcodes. There is no method to call.
+## Barcode Reading
 
-**QRCoder:**
+Barcode reading represents the sharpest capability difference between the two libraries.
+
+### QRCoder Approach
+
+QRCoder has no barcode reading API. The `QRCodeGenerator` class and all renderer classes are generation-only. There is no method to decode a QR code from an image, file, or stream. Applications that need to both generate and read QR codes must add a separate library — typically ZXing.Net — with its own API, its own namespace, and its own maintenance cycle:
 
 ```csharp
 // QRCoder has no reading API.
@@ -145,86 +223,55 @@ This is where the scope boundary becomes concrete. QRCoder cannot decode barcode
 //   qrGenerator.Decode("image.png");
 //   QRCodeReader.Read("image.png");
 //
-// You need a separate library — typically ZXing.Net.
+// A separate library (e.g., ZXing.Net) is required for decoding.
 ```
 
-**IronBarcode:**
+This is a design decision, not an oversight — QRCoder is explicitly a generation library.
+
+### IronBarcode Approach
+
+IronBarcode includes a reading API in the same package. `BarcodeReader.Read` accepts image files, PDF files, streams, and `System.Drawing.Bitmap` objects. It automatically detects barcode formats without requiring the caller to specify which format to look for, and returns all barcodes found in the image:
 
 ```csharp
 using IronBarCode;
 
-// Reading is built in — no additional library required
+// Reading a QR code — no separate library required
 var results = BarcodeReader.Read("qr.png");
 foreach (var result in results)
 {
-    Console.WriteLine(result.Text);       // decoded value
-    Console.WriteLine(result.BarcodeType); // QRCode, Code128, etc.
+    Console.WriteLine(result.Text);        // decoded value
+    Console.WriteLine(result.BarcodeType); // QRCode, Code128, EAN13, etc.
 }
 ```
 
-The [barcode reading documentation](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) covers reading from images, PDFs, streams, and multi-page documents through the same `BarcodeReader.Read` entry point.
+The [barcode reading from images guide](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) covers reading from PDFs, multi-page documents, streams, and low-resolution or noisy images through the same entry point.
 
-### WiFi QR Code
+## Format Scope Beyond QR
 
-QRCoder's `PayloadGenerator.WiFi` is a convenience class that formats the standardized WiFi QR string. The format itself is a public standard, which means it can be constructed directly when switching libraries.
+### QRCoder Approach
 
-**QRCoder:**
+QRCoder generates QR codes exclusively — this is by design. The `QRCodeGenerator.CreateQrCode` method is the only generation entry point the library provides. Projects that begin with QR codes and later require Code 128 shipping labels, EAN-13 product codes, or DataMatrix pharmaceutical compliance codes must introduce a second library to cover each additional format:
 
 ```csharp
 using QRCoder;
 
-var wifiPayload = new PayloadGenerator.WiFi(
-    ssid: "MyNetwork",
-    password: "SecurePass123",
-    authenticationMode: PayloadGenerator.WiFi.Authentication.WPA
-);
-// Produces: WIFI:T:WPA;S:MyNetwork;P:SecurePass123;;
-
-var qrGenerator = new QRCodeGenerator();
-var qrData = qrGenerator.CreateQrCode(wifiPayload.ToString(), QRCodeGenerator.ECCLevel.M);
-var qrCode = new PngByteQRCode(qrData);
-File.WriteAllBytes("wifi.png", qrCode.GetGraphic(10));
-```
-
-**IronBarcode:**
-
-```csharp
-using IronBarCode;
-
-// WiFi QR format is a public standard — construct it directly
-string wifiData = "WIFI:T:WPA;S:MyNetwork;P:SecurePass123;;";
-BarcodeWriter.CreateBarcode(wifiData, BarcodeEncoding.QRCode)
-    .SaveAsPng("wifi.png");
-```
-
-### Multi-Format Generation (Where QRCoder Cannot Follow)
-
-The most significant code comparison is one QRCoder simply cannot participate in.
-
-**QRCoder:**
-
-```csharp
-// QRCoder is limited to QR. For any other format, a second library is required.
-using QRCoder;
+// QRCoder is limited to QR — other formats require separate packages
 var qrGenerator = new QRCodeGenerator();
 var qr = qrGenerator.CreateQrCode("scan-to-track", QRCodeGenerator.ECCLevel.M);
 
-// Now shipping needs Code128 — add NetBarcode
-using NetBarcode;
-var code128 = new Barcode("SHIP-12345", Type.Code128);
-
-// Now warehouse needs to scan — add ZXing.Net
-using ZXing;
-var reader = new BarcodeReaderGeneric();
-// ... different API, different patterns, three maintenance obligations
+// Code 128 requires a different library (e.g., NetBarcode)
+// DataMatrix requires yet another library
+// Reading any format requires yet another library
 ```
 
-**IronBarcode:**
+### IronBarcode Approach
+
+IronBarcode covers all format families through the same `BarcodeWriter.CreateBarcode` entry point. Switching from QR code to Code 128 to DataMatrix requires only changing the `BarcodeEncoding` parameter — no additional packages, no new namespaces, no separate APIs:
 
 ```csharp
 using IronBarCode;
 
-// One library, one API, all formats
+// All formats — one API, one package
 BarcodeWriter.CreateBarcode("scan-to-track", BarcodeEncoding.QRCode)
     .SaveAsPng("campaign-qr.png");
 
@@ -236,65 +283,81 @@ BarcodeWriter.CreateBarcode("5901234123457", BarcodeEncoding.EAN13)
 
 BarcodeWriter.CreateBarcode("LOT-ABC-123", BarcodeEncoding.DataMatrix)
     .SaveAsPng("pharma-code.png");
-
-var results = BarcodeReader.Read("incoming-shipment.png");
 ```
 
----
+## API Mapping Reference
 
-## The Multi-Library Accumulation Problem
+| QRCoder | IronBarcode |
+|---|---|
+| `new QRCodeGenerator()` | Static class — no instance needed |
+| `qrGenerator.CreateQrCode(data, ECCLevel.M)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.QRCode)` |
+| `new PngByteQRCode(qrCodeData)` | Not needed — rendering is part of the chain |
+| `qrCode.GetGraphic(20)` | `.ToPngBinaryData()` with `.ResizeTo(w, h)` |
+| `new SvgQRCode(qrCodeData).GetGraphic(10)` | `.SaveAsSvg(path)` |
+| `new QRCode(qrCodeData).GetGraphic(...)` | `QRCodeWriter.CreateQrCode(data, size, level)` |
+| `QRCodeGenerator.ECCLevel.L` | `QRCodeWriter.QrErrorCorrectionLevel.Low` |
+| `QRCodeGenerator.ECCLevel.M` | `QRCodeWriter.QrErrorCorrectionLevel.Medium` |
+| `QRCodeGenerator.ECCLevel.Q` | `QRCodeWriter.QrErrorCorrectionLevel.Quartile` |
+| `QRCodeGenerator.ECCLevel.H` | `QRCodeWriter.QrErrorCorrectionLevel.Highest` |
+| `PayloadGenerator.WiFi(...).ToString()` | `"WIFI:T:WPA;S:{ssid};P:{pass};;"` |
+| No reading API | `BarcodeReader.Read(path)` |
+| QR format only | 50+ formats via `BarcodeEncoding.*` |
 
-QRCoder works fine in month one of a project that only needs QR codes. The problem tends to arrive gradually. Month three, the shipping team asks for Code128 labels. Month six, the warehouse asks whether the app can scan incoming barcodes. Month nine, a pharmaceutical product line needs DataMatrix for compliance.
+## When Teams Consider Moving from QRCoder to IronBarcode
 
-Each step requires another library:
+For teams whose projects are definitively QR-only and will remain so, QRCoder is a well-maintained library that continues to serve its purpose well. The scenarios below describe the conditions that cause teams to re-evaluate that posture.
 
-- QRCoder for QR generation
-- NetBarcode (or similar) for 1D formats
-- ZXing.Net for reading
-- Possibly another package for DataMatrix or PDF417
+### Format Requirements Expand Beyond QR
 
-Four NuGet packages, four APIs to learn, four sets of documentation, four update cycles to monitor, and four potential version conflicts on every .NET upgrade. The libraries have no common types — a `BarcodeResult` from ZXing.Net is entirely unrelated to anything QRCoder produces.
+Most barcode requirements begin with QR codes, and QRCoder handles that initial scope reliably. The tension arrives when a second format enters the conversation. Logistics teams that need Code 128 labels for shipping, retail operations that require EAN-13 product codes, pharmaceutical workflows that mandate DataMatrix for serialisation — each new format pushes a team toward adding another NuGet dependency. The integration cost of each additional library includes a new namespace to learn, a new release cycle to monitor, and a new point of potential version conflict on .NET upgrades.
 
-This is not a failure of any individual library. It is the expected outcome of assembling multiple single-purpose tools. IronBarcode sidesteps this by covering all cases with one consistent API before requirements expand.
+### Barcode Reading Becomes Necessary
 
----
+An application that generates outbound QR codes for a campaign is a generation-only system. An application that also processes inbound shipments, verifies product codes on arrival, or validates tickets at an event is a generation-and-reading system. QRCoder has no reading capability by design — that gap must be filled by a second library. The introduction of a reading library changes the integration footprint of the barcode subsystem considerably, particularly if the reading library imposes format-specification requirements or thread-safety constraints of its own.
 
-## Cost Comparison
+### Multi-Library Maintenance Burden
 
-QRCoder's MIT license is genuinely free with no revenue thresholds or hidden commercial restrictions. That is a real advantage over libraries that appear free but have commercial triggers buried in their license terms. If your project truly only needs QR code generation and you are certain that will not change, QRCoder costs nothing.
+The natural accumulation pattern for a QRCoder-based project follows a predictable path: QRCoder for QR generation, a 1D barcode library for shipping labels, a reading library for decoding. Each library carries its own documentation, its own versioning cadence, and its own breaking-change history. A .NET version upgrade that is minor for one library may coincide with a breaking change in another. Teams that manage this accumulation over years report that the hidden cost is not in the initial integration but in the compounding maintenance overhead across multiple upgrade cycles.
 
-The calculation changes when requirements expand. [IronBarcode licensing](https://ironsoftware.com/csharp/barcode/licensing/) starts at $749 for a single developer license with no format restrictions and no per-format add-ons.
+### PDF Document Support
 
-| Scenario | QRCoder Path | IronBarcode Path |
-|---|---|---|
-| QR-only, forever | $0 | $749 |
-| QR now, Code128 later | $0 + ~4 hrs integration | $749, zero extra work |
-| QR + reading + multiple formats | $0 + ~20 hrs multi-library setup | $749 |
+Generating barcodes to embed in PDF reports, or extracting barcodes from incoming PDF documents in a document processing pipeline, is not possible with QRCoder. PDF support requires either a full PDF library with barcode capabilities or a dedicated combination of libraries. Teams building document-centric workflows — invoice processing, compliance reporting, label generation from templated PDFs — find that QRCoder's scope boundary intersects with PDF requirements early in a project's lifecycle.
 
-The developer-time math shifts the comparison on any scenario beyond QR-only. Four hours of integration at $100/hr is $400. Twenty hours across multiple libraries is $2,000. Neither figure includes ongoing maintenance.
+## Common Migration Considerations
 
----
+### PayloadGenerator String Format
 
-## When to Use Each
+QRCoder's `PayloadGenerator` helper classes produce strings that conform to public QR code payload standards. The WiFi format, for example, produces `WIFI:T:WPA;S:NetworkName;P:Password;;`. These strings can be constructed directly in IronBarcode without a helper class, since the format is a public standard documented by the QR code specification. Teams with many `PayloadGenerator` usages should plan to write small static helper methods that replicate the string construction.
 
-### Choose QRCoder when:
+### ECCLevel Enum Mapping
 
-**Your requirement is definitively, permanently QR-only.** A standalone QR code generator utility, a 2FA enrollment page, a marketing campaign tool — applications where the scope genuinely will not expand. QRCoder is excellent in this role. The zero-dependency footprint is a real benefit in containerized environments.
+QRCoder uses `QRCodeGenerator.ECCLevel` with values L, M, Q, H. IronBarcode uses `QRCodeWriter.QrErrorCorrectionLevel` with values `Low`, `Medium`, `Quartile`, and `Highest`. The mapping is direct, but enum references must be updated across all call sites. Where QRCoder required explicit ECC selection on every `CreateQrCode` call, IronBarcode applies a sensible default when the `BarcodeWriter.CreateBarcode` path is used.
 
-**Your budget is zero and your scope is certain.** The MIT license is genuinely unrestricted. If you know QR codes are all you will ever need, QRCoder is the right answer.
+### Renderer Class Removal
 
-**You need ASCII art or Base64 QR output.** QRCoder's renderer variety in these niche formats has no direct equivalent in IronBarcode.
+QRCoder's renderer classes — `PngByteQRCode`, `SvgQRCode`, `AsciiQRCode`, `Base64QRCode`, `QRCode` — become unnecessary after migration. IronBarcode builds rendering into the fluent chain on `GeneratedBarcode`, so the intermediate renderer object pattern does not carry over. Code that instantiates these renderer classes can be replaced with terminal method calls on the `BarcodeWriter` result.
 
-### Choose IronBarcode when:
+## Additional IronBarcode Capabilities
 
-**There is any realistic chance your format requirements will expand.** "Just QR codes" has a way of becoming "QR codes plus Code128 plus reading" once the shipping and warehouse teams see the initial implementation.
+The following IronBarcode capabilities were not covered in the comparison sections above:
 
-**You need to read barcodes.** Any application that both generates and processes barcodes needs a reading library. IronBarcode includes one.
+- **[Barcode Stamping into PDFs](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-pdf/):** Embed barcodes directly into existing PDF documents at specified page coordinates
+- **[Multi-Barcode Detection](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/):** Read all barcodes present in a single image in one call, regardless of format mix
+- **[Stream and Byte Array Input](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/):** `BarcodeReader.Read` accepts `Stream`, `byte[]`, and `System.Drawing.Bitmap` inputs without requiring file I/O
+- **[Barcode Annotation and Margins](https://ironsoftware.com/csharp/barcode/how-to/create-barcode-images/):** Add human-readable text annotations and configure margin widths on generated barcodes
+- **[Image Format Variety](https://ironsoftware.com/csharp/barcode/how-to/create-barcode-images/):** Output to PNG, JPEG, TIFF, BMP, GIF, HTML, and SVG from the same generation chain
+- **[Noisy Image Preprocessing](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/):** Automatic image preprocessing to improve read rates on blurry, skewed, or low-contrast inputs
 
-**You are building for an industry with mixed format requirements** — retail (EAN/UPC), logistics (Code128, MaxiCode), healthcare (DataMatrix), government documents (PDF417). No combination of single-format open-source libraries matches the integration cost of one unified library.
+## .NET Compatibility and Future Readiness
 
-**You want a single API across all barcode operations.** Consistency matters for onboarding, code review, and long-term maintainability.
+IronBarcode maintains active development with regular updates targeting current and upcoming .NET releases. The library supports .NET 8, .NET 9, and compatibility updates for .NET 10 (expected in late 2026) are part of Iron Software's ongoing release schedule. QRCoder is also actively maintained and runs on all current .NET targets; its zero-dependency design makes forward compatibility straightforward. Both libraries are suitable for long-term .NET projects. For teams choosing IronBarcode, the commercial support model provides direct access to technical assistance and prioritised bug resolution.
 
----
+## Conclusion
 
-For a broader look at the QRCoder landscape, the [QRCoder C# alternatives guide](https://ironsoftware.com/csharp/barcode/blog/compare-to-other-components/qrcoder-csharp-alternatives/) covers additional context on where QR-only libraries fall short in production environments.
+QRCoder and IronBarcode address the same initial requirement — QR code generation — from different architectural starting points. QRCoder is a purpose-built, single-format library whose design intentionally ends at QR. IronBarcode is a multi-format library that covers generation, reading, and PDF integration across more than 50 barcode formats. The comparison is not between a good library and a better one; it is between a specialised tool and a general-purpose one.
+
+QRCoder is the right choice for projects where QR code generation is a permanent, bounded requirement. Its zero-dependency footprint, unrestricted MIT licence, and `PayloadGenerator` helpers make it an excellent selection for a 2FA enrollment workflow, a marketing campaign QR generator, or any context where the barcode scope is definitively fixed. The library is well-maintained, widely used, and performs its stated function reliably. Teams with these characteristics gain nothing by switching.
+
+IronBarcode becomes the more practical choice when a project's barcode requirements extend — or are likely to extend — beyond QR generation. Applications that need to read codes from incoming shipments or scanned documents, generate Code 128 labels alongside QR campaigns, or produce barcodes embedded in PDF reports benefit from a single consistent API across all of those tasks. The [QRCoder C# alternatives guide](https://ironsoftware.com/csharp/barcode/blog/compare-to-other-components/qrcoder-csharp-alternatives/) provides additional context on where QR-only libraries reach their boundary in production environments. Licensing starts at $749 and is covered in full on the [IronBarcode licensing page](https://ironsoftware.com/csharp/barcode/licensing/).
+
+The honest evaluation is that the right tool depends entirely on the scope of the project. For permanent QR-only requirements, QRCoder provides everything needed without cost. For requirements that span multiple formats, reading, or PDF integration, IronBarcode removes the need to manage multiple single-purpose libraries as the project evolves.

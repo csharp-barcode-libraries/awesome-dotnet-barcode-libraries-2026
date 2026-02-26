@@ -1,244 +1,351 @@
-NetBarcode's `Type` enum doesn't include QR Code. When the shipping label project adds a QR code requirement on month three, developers add a second library. That library has its own API, its own bugs, and its own ImageSharp version that may conflict with the first.
+NetBarcode's `Type` enum has no QR Code entry. When a shipping label project adds a QR code requirement in month three, developers reach for a second library. That second library brings its own API surface, its own release schedule, and a shared SixLabors.ImageSharp dependency whose version may drift out of alignment with the version NetBarcode already requires. This comparison examines what NetBarcode is, where it fits well, and where [IronBarcode](https://ironsoftware.com/csharp/barcode/) covers the gaps without adding a second or third package.
 
-That's the real story of using NetBarcode in a project with growing requirements. The library itself is well-built for what it does — clean API, good 1D format coverage, MIT license. The problem isn't NetBarcode. The problem is that modern applications outgrow 1D-only generators faster than developers expect, and the exit cost is measured in library integrations rather than license fees.
+## Understanding NetBarcode
 
-This comparison examines where NetBarcode fits well, where it stops, and how [IronBarcode](https://ironsoftware.com/csharp/barcode/) covers the gaps without requiring a second or third package.
+NetBarcode is an open-source .NET barcode generation library published under the MIT license. It was built to produce linear barcode images from string data, and it fulfils that purpose cleanly. The library targets Code128, EAN-13, UPC-A, and ten other 1D formats — all exposed through a simple constructor and a small set of output methods. Its dependency on SixLabors.ImageSharp provides the image rendering layer, and since version 1.8 that dependency is reflected in the public API through the `Image<Rgba32>` return type on `GetImage()`.
 
----
+NetBarcode does not attempt to be a general-purpose barcode toolkit. It has no reading capability and no 2D format support. These are deliberate scope decisions. The library is well-suited to applications that need 1D barcodes and nothing else, and its MIT license makes adoption straightforward in open-source contexts.
 
-## The `Type` Enum Gap
+Key architectural characteristics:
 
-Open NetBarcode's source and look at the `Type` enum. You'll find Code128, Code128A, Code128B, Code128C, Code39, Code39Extended, Code93, EAN8, EAN13, UPCA, UPCE, Codabar, ITF, and MSI. Fourteen entries — all 1D.
+- **MIT License:** The library itself is MIT-licensed, though its SixLabors.ImageSharp dependency carries a split commercial licence that applies at a revenue threshold
+- **1D-Only Design:** The `Type` enum defines exactly 14 barcode formats, all linear; there are no 2D entries
+- **SixLabors.ImageSharp Dependency:** Image rendering is delegated to ImageSharp, and since v1.8 the `GetImage()` method returns `Image<Rgba32>`, exposing ImageSharp's type directly in the public API
+- **Constructor-Based API:** Barcodes are created with `new Barcode(data, Type.X)` and saved or retrieved with `SaveImageFile()` or `GetImage()`
+- **No Reading API:** NetBarcode is generation-only; there is no method or class for decoding barcode images
+- **No Batch Processing:** Each barcode is an independent constructor call; no built-in enumeration or batch pipeline
 
-There is no `Type.QRCode`. There is no `Type.DataMatrix`. There is no `Type.PDF417`.
+### The Type Enum Design Boundary
 
-This isn't a bug or a missing feature waiting on a pull request. It's the library's design boundary. NetBarcode was built to generate linear barcodes, and it does that well. The consequence is that any application requiring 2D formats must bring in a second package.
-
-The typical workaround looks like this:
+The `Type` enum is the authoritative list of what NetBarcode can generate. Inspecting it reveals the scope of the library:
 
 ```csharp
-// NetBarcode for 1D
-using NetBarcode;
-var code128 = new Barcode("12345", Type.Code128);
-code128.SaveImageFile("label.png");
+// NetBarcode Type enum — complete list as of v1.8
+public enum Type
+{
+    Code128,
+    Code128A,
+    Code128B,
+    Code128C,
+    Code39,
+    Code39Extended,
+    Code93,
+    EAN8,
+    EAN13,
+    UPCA,
+    UPCE,
+    Codabar,
+    ITF,
+    MSI
+}
 
-// QRCoder added separately for QR — two APIs, two packages
-using QRCoder;
-var qrGenerator = new QRCodeGenerator();
-var qrCode = qrGenerator.CreateQrCode("data", QRCodeGenerator.ECCLevel.M);
-var png = new PngByteQRCode(qrCode).GetGraphic(20);
-File.WriteAllBytes("qr.png", png);
+// These entries do not exist — attempting to use them produces a CS0117 compile error:
+// Type.QRCode      — does not exist
+// Type.DataMatrix  — does not exist
+// Type.PDF417      — does not exist
+// Type.Aztec       — does not exist
 ```
 
-Now the codebase has two barcode dependencies with two APIs. When QRCoder releases a new version, you update and retest. When NetBarcode updates SixLabors.ImageSharp, you check whether it conflicts with whatever version QRCoder expects. If you later need to read barcodes back from images — scanning a supplier invoice, validating a generated label — that's a third library. ZXing.Net is the usual answer, and it brings a third API surface.
+This is not a missing feature pending a pull request. The enum has fourteen entries, all 1D, and that reflects the library's intended scope. Any application requiring QR codes, DataMatrix, PDF417, or Aztec must obtain a separate package to supply those formats.
 
-IronBarcode handles all three scenarios with a single import:
+## Understanding IronBarcode
+
+IronBarcode is a commercial .NET barcode library that covers both generation and reading in a single package. It is developed and maintained by Iron Software with regular updates targeting current .NET versions. The library's static API surface is designed so that switching from one barcode format to another requires only changing a single constant — the same `BarcodeWriter.CreateBarcode` call that generates Code128 also generates QR codes, DataMatrix, PDF417, and Aztec.
+
+IronBarcode handles barcode reading through the `BarcodeReader` class, which accepts image files and PDF documents and returns decoded results with format identification. This means generation and reading share a single dependency, a single license, and a single set of release notes to track.
+
+Key characteristics:
+
+- **Unified Generation and Reading:** Both `BarcodeWriter` and `BarcodeReader` are included in a single NuGet package
+- **50+ Supported Formats:** 1D formats include all NetBarcode equivalents; 2D formats include QR Code, DataMatrix, PDF417, Aztec, and others
+- **Fluent Chain API:** `BarcodeWriter.CreateBarcode(data, encoding)` returns a `GeneratedBarcode` object with output methods including `SaveAsPng()`, `SaveAsJpeg()`, `ToPngBinaryData()`, and stream-based overloads
+- **No ImageSharp Dependency:** IronBarcode's image rendering is self-contained; no SixLabors transitive dependency is introduced
+- **PDF Support:** The reading API accepts `.pdf` files directly in addition to image formats
+- **Commercial License:** A license key is required; trial mode is available and removes watermarks upon purchase
+
+## Feature Comparison
+
+| Feature | NetBarcode | IronBarcode |
+|---|---|---|
+| 1D barcode generation | Yes | Yes |
+| 2D barcode generation | No | Yes |
+| Barcode reading | No | Yes |
+| PDF support | No | Yes |
+| Total symbologies | 14 | 50+ |
+| ImageSharp dependency | Yes (split licence) | No |
+| License model | MIT (+ ImageSharp conditions) | Commercial |
+
+### Detailed Feature Comparison
+
+| Feature | NetBarcode | IronBarcode |
+|---|---|---|
+| **Generation** | | |
+| Code128, EAN-13, UPC-A, Code39 | Yes | Yes |
+| EAN-8, UPC-E, Code93, Codabar, ITF, MSI | Yes | Yes |
+| QR Code | No | Yes |
+| DataMatrix | No | Yes |
+| PDF417 | No | Yes |
+| Aztec | No | Yes |
+| GS1-128, GS1 DataBar | No | Yes |
+| Postal formats (Intelligent Mail, Royal Mail) | No | Yes |
+| SVG output | No | Yes |
+| **Reading** | | |
+| Decode barcode images | No | Yes |
+| Read from PDF documents | No | Yes |
+| Multi-barcode detection | No | Yes |
+| Automatic format detection | No | Yes |
+| **API Design** | | |
+| Constructor-based creation | Yes | No (static method) |
+| Fluent output chain | No | Yes |
+| Batch processing support | Manual | Built-in |
+| **Licensing and Dependencies** | | |
+| Library licence | MIT | Commercial |
+| ImageSharp dependency | Yes | No |
+| Commercial support | Community | Professional |
+
+## Format Coverage
+
+### NetBarcode Approach
+
+NetBarcode provides 14 linear barcode formats through the `Type` enum. Within that scope, format selection is straightforward — pass the appropriate enum member to the constructor. The boundary is equally clear: attempting to use a format outside the enum produces a compile-time error.
+
+```csharp
+// NetBarcode — formats that compile and produce output
+using NetBarcode;
+
+var code128 = new Barcode("12345678901234", Type.Code128);
+code128.SaveImageFile("shipping.png");
+
+var ean13 = new Barcode("5901234123457", Type.EAN13);
+ean13.SaveImageFile("product.png");
+
+// NetBarcode — formats that produce CS0117 compile errors
+// var qr     = new Barcode("data", Type.QRCode);     // error CS0117
+// var dm     = new Barcode("data", Type.DataMatrix);  // error CS0117
+// var p417   = new Barcode("data", Type.PDF417);      // error CS0117
+// var aztec  = new Barcode("data", Type.Aztec);       // error CS0117
+```
+
+Industries where this boundary becomes a constraint include pharmaceutical tracking (DataMatrix required under FDA 2D barcode mandates), airline boarding passes (Aztec), logistics manifests (PDF417), and mobile marketing (QR Code). Each of these requirements eliminates NetBarcode as a standalone solution.
+
+### IronBarcode Approach
+
+IronBarcode exposes all supported formats through the same `BarcodeWriter.CreateBarcode` method. The API surface does not change when moving from a 1D format to a 2D format — only the `BarcodeEncoding` constant differs.
 
 ```csharp
 using IronBarCode;
 
-// 1D — same as NetBarcode's strongest use case
-BarcodeWriter.CreateBarcode("12345", BarcodeEncoding.Code128)
-    .SaveAsPng("label.png");
-
-// QR — same API, just change the encoding
-BarcodeWriter.CreateBarcode("https://example.com", BarcodeEncoding.QRCode)
-    .SaveAsPng("qr.png");
-
-// Reading — no second library required
-var result = BarcodeReader.Read("label.png").First();
-Console.WriteLine($"{result.Value} ({result.Format})");
-```
-
-For teams needing [2D barcode generation](https://ironsoftware.com/csharp/barcode/how-to/create-2d-barcodes/) alongside their existing 1D workflow, the API is identical — swap the encoding constant and the method works.
-
----
-
-## Generation Comparison: Side by Side
-
-For the 1D formats both libraries share, the code is similar in shape. Here is Code128 in both:
-
-**NetBarcode:**
-
-```csharp
-using NetBarcode;
-using SixLabors.ImageSharp;
-
-var barcode = new Barcode("12345678901234", Type.Code128);
-barcode.SaveImageFile("code128.png");
-
-// GetImage() returns Image<Rgba32> — requires SixLabors.ImageSharp import
-Image<Rgba32> image = barcode.GetImage();
-```
-
-**IronBarcode:**
-
-```csharp
-using IronBarCode;
-
+// 1D formats — identical API to the 2D examples below
 BarcodeWriter.CreateBarcode("12345678901234", BarcodeEncoding.Code128)
-    .SaveAsPng("code128.png");
-```
+    .SaveAsPng("shipping.png");
 
-The functional difference is minor for this use case. The structural difference is that NetBarcode's `GetImage()` method returns a `SixLabors.ImageSharp.Image<Rgba32>` object — which means any code that processes the returned image must import and understand the ImageSharp API. IronBarcode's fluent chain keeps image handling internal.
+BarcodeWriter.CreateBarcode("5901234123457", BarcodeEncoding.EAN13)
+    .SaveAsPng("product.png");
 
-For [1D barcode generation](https://ironsoftware.com/csharp/barcode/how-to/create-1d-barcodes/) specifically, NetBarcode is a reasonable tool. The divergence shows up when the format list needs to expand.
-
----
-
-## Generation Comparison: The Formats NetBarcode Cannot Generate
-
-```csharp
-// NetBarcode — these fail at compile time because the Type enum has no entry
-// var qr = new Barcode("data", Type.QRCode);          // CS0117 error
-// var dm = new Barcode("data", Type.DataMatrix);       // CS0117 error
-// var p417 = new Barcode("data", Type.PDF417);         // CS0117 error
-
-// IronBarcode — same syntax as Code128
+// 2D formats — same method, different encoding constant
 BarcodeWriter.CreateBarcode("https://example.com", BarcodeEncoding.QRCode)
     .SaveAsPng("qr.png");
 
 BarcodeWriter.CreateBarcode("01034531200000111719112510ABCD1234", BarcodeEncoding.DataMatrix)
-    .SaveAsPng("datamatrix.png");
+    .SaveAsPng("pharma-label.png");
 
 BarcodeWriter.CreateBarcode("M1DOE/JOHN MR ABC123 JFKLHR 0012 123Y015A0001 100", BarcodeEncoding.Aztec)
     .SaveAsPng("boarding-pass.png");
 ```
 
-The compile errors in the NetBarcode block are the entire story. There is no workaround within the library — you either add QRCoder or you choose a different library from the start.
+The complete list of supported constants is available in the [supported barcode formats](https://ironsoftware.com/csharp/barcode/get-started/supported-barcode-formats/) reference, covering all [2D barcode generation](https://ironsoftware.com/csharp/barcode/how-to/create-2d-barcodes/) formats alongside the full 1D set.
 
-Industries where this matters most: pharmaceutical tracking requires DataMatrix under FDA 2D barcode mandates; airline boarding passes use Aztec; FedEx and IATA shipping manifests use PDF417; mobile payment integrations and marketing links require QR Code. Any of these requirements eliminates NetBarcode as a standalone solution. The full [supported barcode formats](https://ironsoftware.com/csharp/barcode/get-started/supported-barcode-formats/) in IronBarcode cover all of these without additional packages.
+## Generation API Design
 
----
+### NetBarcode Approach
 
-## No Reading API
-
-NetBarcode is generation-only. There is no method to decode a barcode image back to its data. This is a deliberate scope choice, not an oversight.
-
-For projects that only generate barcodes and never read them, this is fine. For projects that need to scan incoming documents, validate printed labels, or process supplier barcodes, a second library becomes necessary before the project is complete.
-
-```csharp
-// NetBarcode — no reading capability exists
-// var result = barcode.Read("image.png");  // method does not exist
-
-// IronBarcode — reading is built in
-var results = BarcodeReader.Read("invoice.pdf");
-foreach (var r in results)
-{
-    Console.WriteLine($"{r.BarcodeType}: {r.Value}");
-}
-```
-
-IronBarcode's reader works across image files and PDF documents with automatic format detection. A full walkthrough of the reading options is available in the [read barcodes from images](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) guide.
-
----
-
-## The ImageSharp Commercial License
-
-NetBarcode depends on SixLabors.ImageSharp for image rendering. The ImageSharp project uses a split license: free for open-source projects and companies under $1M annual gross revenue, but a commercial license is required above that threshold.
-
-This means NetBarcode's "free MIT" status has a dependency with a commercial restriction embedded in the package tree. A company processing retail barcodes at scale — which is precisely the use case NetBarcode targets — may be operating above the ImageSharp revenue threshold without realizing it.
-
-The dependency chain in the `.csproj` file looks harmless:
-
-```xml
-<PackageReference Include="NetBarcode" Version="1.8.2" />
-```
-
-But this pulls in `SixLabors.ImageSharp` and `SixLabors.Fonts`, both under the split license. The ImageSharp license requirement is not surfaced by NuGet during installation.
-
-IronBarcode has no ImageSharp dependency. Its licensing is transparent and up front — details are on the [IronBarcode licensing page](https://ironsoftware.com/csharp/barcode/licensing/).
-
----
-
-## The v1.8 Breaking Change
-
-NetBarcode 1.8 changed the return type of `GetImage()` from an internal bitmap representation to `SixLabors.ImageSharp.Image<Rgba32>`. Existing code that called `GetImage()` and passed the result to other methods broke at compile time. Projects also needed to add explicit `using SixLabors.ImageSharp;` and `using SixLabors.ImageSharp.PixelFormats;` imports that were not previously required.
-
-**Before NetBarcode 1.8:**
-
-```csharp
-using NetBarcode;
-
-var barcode = new Barcode("12345", Type.Code128);
-var image = barcode.GetImage();  // returned internal type, worked fine
-```
-
-**After NetBarcode 1.8:**
+NetBarcode's generation model is constructor-based. A `Barcode` object is instantiated with the data string and a `Type` enum value. Output is either saved directly with `SaveImageFile()` or retrieved as an `Image<Rgba32>` via `GetImage()`. Since version 1.8, the return type of `GetImage()` is the SixLabors.ImageSharp type, which means any code that stores or processes the return value must import and work within the ImageSharp API.
 
 ```csharp
 using NetBarcode;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.Fonts;
 
-var barcode = new Barcode("12345", Type.Code128);
-Image<Rgba32> image = barcode.GetImage();  // now returns ImageSharp type
+// Constructor-based creation
+var barcode = new Barcode("12345678901234", Type.Code128);
+
+// Save to file — straightforward
+barcode.SaveImageFile("code128.png");
+
+// GetImage() returns Image<Rgba32> — ImageSharp import required
+Image<Rgba32> image = barcode.GetImage();
+
+// Further processing requires familiarity with the ImageSharp API
+using var stream = new MemoryStream();
+image.SaveAsPng(stream);
+byte[] bytes = stream.ToArray();
 ```
 
-Any code that stored, passed, or processed the result of `GetImage()` without explicit typing worked before and failed after. This is not a criticism of the NetBarcode maintainer — it's the expected cost of a library that exposes a third-party type in its public API. When ImageSharp's API evolves, so does NetBarcode's interface.
+The `GetImage()` method's return type ties downstream code to the ImageSharp library. Any method that accepts or stores the result must declare it as `Image<Rgba32>`, introducing a transitive dependency into calling code.
 
----
+### IronBarcode Approach
 
-## Feature Comparison Table
+IronBarcode uses a fluent chain. `BarcodeWriter.CreateBarcode` returns a `GeneratedBarcode` object that carries multiple output methods. Image handling is internal — no ImageSharp type is exposed to the calling code.
 
-| Feature | NetBarcode | IronBarcode |
+```csharp
+using IronBarCode;
+
+// Fluent generation — save directly to file
+BarcodeWriter.CreateBarcode("12345678901234", BarcodeEncoding.Code128)
+    .SaveAsPng("code128.png");
+
+// Multiple output options on the same GeneratedBarcode object
+var barcode = BarcodeWriter.CreateBarcode("12345678901234", BarcodeEncoding.Code128);
+barcode.SaveAsPng("code128.png");
+barcode.SaveAsJpeg("code128.jpg");
+byte[] bytes = barcode.ToPngBinaryData();
+
+using var stream = new MemoryStream();
+barcode.SaveAsPng(stream);
+```
+
+Detailed options for [1D barcode generation](https://ironsoftware.com/csharp/barcode/how-to/create-1d-barcodes/) including width, height, and label configuration are covered in the IronBarcode documentation.
+
+## Reading Capability
+
+### NetBarcode Approach
+
+NetBarcode has no reading API. There is no method, class, or configuration that decodes a barcode image back to its data string. This is a deliberate scope boundary, not an omission pending a release. A project that generates barcodes with NetBarcode and later needs to read them — to validate a printed label, scan a return shipment, or extract values from a supplier invoice — must introduce a separate library for that purpose.
+
+```csharp
+// NetBarcode — no reading method exists
+// The following does not compile because the method does not exist:
+// var result = barcode.Read("image.png");  // method does not exist
+
+// The typical workaround requires ZXing.Net as a third-party dependency
+```
+
+The ZXing.Net library is the most common addition for reading alongside NetBarcode, bringing a third API surface and a third package to version-manage alongside NetBarcode and any 2D library already added for QR codes.
+
+### IronBarcode Approach
+
+IronBarcode includes `BarcodeReader` in the same package as `BarcodeWriter`. The reading API accepts image files and PDF documents and returns a collection of decoded results, each with the barcode value, format type, and page number if reading from a PDF.
+
+```csharp
+using IronBarCode;
+
+// Read barcodes from an image file
+var imageResults = BarcodeReader.Read("shipping-label.png");
+foreach (var r in imageResults)
+{
+    Console.WriteLine($"{r.BarcodeType}: {r.Value}");
+}
+
+// Read barcodes from a PDF document — no additional library required
+var pdfResults = BarcodeReader.Read("invoice.pdf");
+foreach (var r in pdfResults)
+{
+    Console.WriteLine($"Page {r.PageNumber}: {r.Value}");
+}
+```
+
+The [read barcodes from images](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) guide covers speed tuning, multi-barcode detection, and image correction options available in the reading API.
+
+## Dependency and Licensing Considerations
+
+### NetBarcode and ImageSharp
+
+NetBarcode is MIT-licensed. The SixLabors.ImageSharp library it depends on uses a different model: free for open-source projects and for companies with annual gross revenue below a defined threshold, but a commercial license is required above that threshold. This split applies regardless of whether ImageSharp is listed explicitly in a project's `.csproj` or arrives transitively through NetBarcode.
+
+```xml
+<!-- This single reference pulls in SixLabors.ImageSharp and SixLabors.Fonts
+     under their respective split licences. NuGet does not surface the
+     commercial licence condition during package installation. -->
+<PackageReference Include="NetBarcode" Version="1.8.2" />
+```
+
+For a retail or logistics company processing barcodes at scale — the primary use case NetBarcode targets — annual revenue is often above the threshold at which the ImageSharp commercial licence applies. A compliance audit may reveal this obligation embedded in the package tree.
+
+The v1.8 release introduced an additional consequence of the ImageSharp dependency: the return type of `GetImage()` changed from an internal representation to `SixLabors.ImageSharp.Image<Rgba32>`. Existing code that called `GetImage()` without explicit typing broke at compile time, and new `using` directives for `SixLabors.ImageSharp` and `SixLabors.ImageSharp.PixelFormats` became required. When ImageSharp's own API evolves in future versions, NetBarcode's public API surface is affected in turn.
+
+### IronBarcode
+
+IronBarcode has no SixLabors.ImageSharp dependency. Its licensing terms are stated directly on the [IronBarcode licensing page](https://ironsoftware.com/csharp/barcode/licensing/) with no split threshold or transitive commercial obligation. A trial key is available for evaluation; purchased licenses remove the trial watermark from generated output.
+
+## API Mapping Reference
+
+| NetBarcode | IronBarcode | Notes |
 |---|---|---|
-| 1D barcode generation | Yes | Yes |
-| 2D barcode generation (QR, DataMatrix, PDF417, Aztec) | No | Yes |
-| Barcode reading / decoding | No | Yes |
-| PDF reading and generation | No | Yes |
-| 1D format count | ~14 | 30+ |
-| 2D format count | 0 | 8+ |
-| Total symbologies | ~14 | 50+ |
-| GS1-128, GS1 DataBar | No | Yes |
-| Postal formats (Intelligent Mail, Royal Mail) | No | Yes |
-| SVG output | No | Yes |
-| Batch processing | Manual | Built-in |
-| ImageSharp dependency | Yes (split license) | No |
-| Reading API | None | `BarcodeReader.Read()` |
-| PDF barcode extraction | None | Built-in |
-| Commercial support | Community only | Professional |
-| License cost | $0 (+ ImageSharp for >$1M) | $749 one-time |
+| `new Barcode(data, Type.Code128)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code128)` | Constructor → static method |
+| `new Barcode(data, Type.EAN13)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.EAN13)` | Direct mapping |
+| `new Barcode(data, Type.UPCA)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.UPCA)` | Direct mapping |
+| `new Barcode(data, Type.Code39)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code39)` | Direct mapping |
+| `new Barcode(data, Type.EAN8)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.EAN8)` | Direct mapping |
+| `new Barcode(data, Type.UPCE)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.UPCE)` | Direct mapping |
+| `new Barcode(data, Type.ITF)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.ITF)` | Direct mapping |
+| `new Barcode(data, Type.Codabar)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Codabar)` | Direct mapping |
+| `barcode.SaveImageFile("x.png")` | `.SaveAsPng("x.png")` | Method rename |
+| `barcode.SaveImageFile("x.jpg")` | `.SaveAsJpeg("x.jpg")` | Method rename |
+| `barcode.GetImage()` → `Image<Rgba32>` | `.ToPngBinaryData()` or `.SaveAsPng()` | No ImageSharp type exposed |
+| No `Type.QRCode` | `BarcodeEncoding.QRCode` | New capability |
+| No `Type.DataMatrix` | `BarcodeEncoding.DataMatrix` | New capability |
+| No `Type.PDF417` | `BarcodeEncoding.PDF417` | New capability |
+| No `Type.Aztec` | `BarcodeEncoding.Aztec` | New capability |
+| No reading API | `BarcodeReader.Read(path)` | New capability |
+| `using NetBarcode;` | `using IronBarCode;` | Namespace replacement |
+| `using SixLabors.ImageSharp;` | Remove | No longer needed |
 
----
+The complete format reference is available in the [supported barcode formats](https://ironsoftware.com/csharp/barcode/get-started/supported-barcode-formats/) documentation.
 
-## Total Cost of Ownership
+## When Teams Consider Moving from NetBarcode to IronBarcode
 
-The "free" label on NetBarcode is accurate for projects that stay within 1D generation and stay under the ImageSharp revenue threshold. It becomes misleading when requirements expand.
+### QR Code and 2D Format Requirements
 
-A realistic e-commerce or logistics project timeline:
+The most frequent trigger for evaluating an alternative to NetBarcode is a new requirement for QR codes. Applications that begin with 1D barcode generation for retail labels or shipping manifests commonly receive a follow-on requirement for QR codes — contactless links, mobile app deep links, marketing campaigns. Because the `Type` enum has no QR entry, this requirement cannot be met within NetBarcode. Teams that add a separate QR library to address the gap then face a second evaluation when DataMatrix is required for a pharmaceutical integration, or PDF417 for a logistics carrier that mandates it on shipping labels.
 
-| Timeline | Requirement | NetBarcode Path | IronBarcode Path |
-|---|---|---|---|
-| Launch | Product UPC codes | Works — $0 | Works — $749 |
-| Month 3 | QR codes for mobile app | Add QRCoder — ~8 hrs dev time | Change encoding constant — 10 min |
-| Month 6 | Read incoming supplier barcodes | Add ZXing.Net — ~12 hrs dev time | `BarcodeReader.Read()` — 30 min |
-| Month 12 | Process PDF invoices with barcodes | Add PDF library — ~16 hrs dev time | Built-in — 30 min |
-| Ongoing | Maintain 3 libraries, manage version conflicts | ~20 hrs/year | 1 library to update |
+### Barcode Reading Becomes Necessary
 
-At $100/hr developer time, the NetBarcode "free" path accumulates approximately $5,600 in integration and maintenance cost over two years. IronBarcode totals $749 plus minimal integration time.
+Some projects begin with pure generation and later add a validation or document-processing requirement: confirm that a printed barcode matches its source data, extract barcode values from incoming supplier invoices, or scan return shipment labels. NetBarcode provides no path for this. The addition of ZXing.Net or a comparable reading library introduces a third API to learn and maintain in the same codebase that already holds NetBarcode and a QR library. Projects that anticipate reading requirements, even in a future phase, often find it more efficient to select a library that handles both concerns from the start.
 
----
+### ImageSharp Commercial Licence Audit
 
-## When NetBarcode Is the Right Choice
+Legal and compliance reviews of third-party dependencies occasionally surface the SixLabors.ImageSharp commercial licence condition embedded in the NetBarcode package tree. For companies whose annual gross revenue exceeds the threshold, the obligation applies whether ImageSharp was selected deliberately or arrived transitively through NetBarcode. Teams that discover this during an audit — rather than before adoption — face a retroactive remediation rather than a planned migration. Evaluating the dependency licence before starting a project is the cleaner path.
 
-NetBarcode fits well in a narrow set of situations:
+### Reducing Multi-Library Complexity
 
-**Genuinely 1D-only projects** — A point-of-sale system that generates UPC-A and EAN-13 codes for traditional retail scanners, with no mobile component, no QR requirement, and no reading need. If the requirements document explicitly rules out 2D formats and the project has a defined end date, NetBarcode delivers everything necessary at no cost.
+Teams that have accumulated NetBarcode for 1D generation, a QR-specific library for 2D output, and ZXing.Net for reading find themselves maintaining version compatibility across three separate packages. Each upgrade cycle requires checking whether the three libraries agree on their shared ImageSharp version. Each new developer on the project encounters three different APIs for what is conceptually one concern. Consolidation to a single barcode library simplifies onboarding, reduces version conflict surface, and concentrates maintenance to one release cycle.
 
-**Legacy integrations** — Systems connecting to older industrial scanners that accept only Code39 or Code128, where the integration spec explicitly prohibits 2D formats.
+## Common Migration Considerations
 
-**Zero-budget prototypes** — Throwaway tools or internal scripts where the total lifespan is measured in weeks and requirements will not evolve.
+### Package Swap and Transitive Dependency Cleanup
 
-If there is any ambiguity about whether QR codes might be needed — and the answer from stakeholders is usually "we'll add that later" — NetBarcode starts a clock that runs out the moment that requirement lands.
+Removing NetBarcode with `dotnet remove package NetBarcode` is the first step. The SixLabors.ImageSharp package may reappear in the dependency tree if other packages in the project also pull it in transitively. After removal, inspect the restored package list with `dotnet list package --include-transitive` to confirm whether ImageSharp is still present and whether its commercial licence condition still applies.
 
-## When IronBarcode Is the Right Choice
+### GetImage() Return Type Replacement
 
-The clearer answer is IronBarcode when:
+Any code that stored the result of `GetImage()` as `Image<Rgba32>` must be updated. The ImageSharp type has no direct equivalent in IronBarcode; the replacement depends on how the image was used downstream. Code that saved the image to a stream can be replaced with `.SaveAsPng(stream)` directly on the `GeneratedBarcode` object. Code that retrieved raw bytes can use `.ToPngBinaryData()`. Code that performed further ImageSharp manipulations on the returned image will need those operations evaluated individually.
 
-- The project needs any 2D format, now or in the future
-- Barcode reading from images or documents is required
-- The application serves industries with DataMatrix mandates (pharmaceutical, aerospace, automotive)
-- Reducing the number of third-party dependencies is a priority
-- The company's revenue is above $1M and the ImageSharp commercial license applies
+### Namespace Update
+
+Files that imported `using NetBarcode;`, `using SixLabors.ImageSharp;`, `using SixLabors.ImageSharp.PixelFormats;`, or `using SixLabors.Fonts;` need those directives replaced with `using IronBarCode;`. A project-wide search for these using statements identifies every file that requires attention before the build is attempted.
+
+## Additional IronBarcode Capabilities
+
+Beyond the core generation and reading features covered in this comparison, IronBarcode provides:
+
+- **[SVG Barcode Output](https://ironsoftware.com/csharp/barcode/how-to/create-barcode-images/):** Generate vector-format barcode images suitable for print workflows and scalable label designs
+- **[Barcode Styling](https://ironsoftware.com/csharp/barcode/how-to/create-barcode-images/):** Configure bar color, background color, annotation font, margin, and rotation on generated barcodes
+- **[GS1-128 and GS1 DataBar](https://ironsoftware.com/csharp/barcode/get-started/supported-barcode-formats/):** Application identifier-structured barcodes for retail and supply chain compliance
+- **[Postal Formats](https://ironsoftware.com/csharp/barcode/get-started/supported-barcode-formats/):** Intelligent Mail, Royal Mail, and other postal symbologies for mailing applications
+- **[PDF Barcode Extraction](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/):** Read barcodes directly from multi-page PDF documents without a separate PDF library
+- **[Batch Generation](https://ironsoftware.com/csharp/barcode/how-to/create-1d-barcodes/):** Process collections of barcode data efficiently within a single pipeline
+- **[MAUI and Mobile Targets](https://ironsoftware.com/csharp/barcode/):** IronBarcode supports .NET MAUI applications for cross-platform mobile and desktop barcode workflows
+
+## .NET Compatibility and Future Readiness
+
+IronBarcode targets .NET 8, .NET 9, and maintains compatibility with .NET Standard for projects that have not yet migrated to modern .NET. As .NET 10 is expected in late 2026, Iron Software's regular release cadence ensures that compatibility updates follow each major .NET release. NetBarcode targets .NET Standard 2.0 and is functional on current runtimes through that compatibility layer, though the library's update frequency and 2D format set are fixed by its design scope.
+
+## Conclusion
+
+NetBarcode and IronBarcode represent different positions on the spectrum of barcode library scope. NetBarcode is a focused, clean implementation of 1D barcode generation: fourteen formats, a straightforward constructor API, and an MIT license that keeps adoption frictionless for open-source projects within the ImageSharp revenue threshold. IronBarcode is a broader toolkit covering generation across 50+ formats, reading from images and PDFs, and a fluent API that treats 1D and 2D formats identically.
+
+For projects where the requirements are genuinely limited to linear barcode generation — a point-of-sale system producing EAN-13 and UPC-A codes for traditional retail scanners, or an internal tool with a fixed and short lifespan — NetBarcode delivers what is needed without introducing a commercial dependency. The library is well-built within its scope, and that scope is explicit from the first look at the `Type` enum.
+
+For projects where format scope may expand, where reading will eventually be needed, or where a compliance review of the ImageSharp transitive dependency is a concern, IronBarcode addresses all three through a single package. Teams that begin with NetBarcode for 1D generation and later add QRCoder for 2D and ZXing.Net for reading accumulate three separate library maintenance obligations; IronBarcode consolidates those into one.
+
+The choice follows directly from the project's requirements. If fourteen 1D formats and no reading capability match the specification precisely, NetBarcode is a technically sound selection. If the specification includes any 2D format, any reading workflow, or any concern about the ImageSharp licence condition, IronBarcode is the more complete answer.

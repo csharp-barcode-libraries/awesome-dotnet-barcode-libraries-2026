@@ -1,26 +1,84 @@
 # Migrating from Telerik RadBarcode to IronBarcode
 
-Most Telerik barcode migrations are triggered by one of two discoveries. The first: a requirement arrives to read QR codes, DataMatrix barcodes, or PDF417 from scanned images, and the developer finds that `RadBarcodeReader`'s `DecodeType` enum contains no QR entry, no DataMatrix entry, and no PDF417 entry. The second: the application needs barcode reading in an ASP.NET Core endpoint, a Blazor service, or a background worker, and the developer finds that `RadBarcodeReader` does not exist outside WPF and WinForms.
+This guide provides a complete migration path from Telerik RadBarcode to IronBarcode for .NET developers who have reached the limits of what `RadBarcode` and `RadBarcodeReader` can do. It covers package replacement, namespace updates, license initialization, code-level migration examples, an API mapping reference, and a checklist for verifying the migration is complete. The examples focus on the scenarios most commonly encountered during Telerik barcode migrations: XAML control replacement, reading format expansion, server-side deployment, and PDF processing.
 
-Both discoveries point to the same constraint: Telerik's barcode reading is 1D-only and desktop-only. This guide walks through replacing it with IronBarcode, which reads all 50+ formats on every .NET platform.
+## Why Migrate from Telerik RadBarcode
 
-## Why Migrate
+Telerik RadBarcode migrations are triggered by concrete technical requirements that the existing components cannot satisfy. The reasons below represent the conditions most commonly reported by teams who have completed or are evaluating this transition.
 
-The case for migrating is most concrete when listed against specific requirements:
+**2D Reading Boundary:** The `RadBarcodeReader` component in WPF and the `BarCodeReader` component in WinForms share the same reading engine, which is bounded by the `DecodeType` enum. That enum contains entries for 1D linear formats — Code128, Code39, EAN13, EAN8, UPCA, UPCE, Codabar, ITF — and nothing else. No entry exists for QR Code, DataMatrix, PDF417, or Aztec. When a new requirement arrives to process inbound QR codes or read DataMatrix labels from scanned documents, the `DecodeType` constraint becomes a hard blocker with no workaround available within the Telerik product family.
 
-**You need to read QR codes.** `RadBarcodeReader.DecodeTypes` cannot include QR Code. Telerik can generate QR codes via `RadBarcode`, but no component in the Telerik suite can read one. If a downstream workflow requires reading QR codes — validating printed labels, decoding inbound shipment codes, scanning customer-presented QR codes — Telerik cannot satisfy it.
+**Platform Code Fragmentation:** Reading with Telerik requires UI framework dependencies: `RadBarcodeReader` uses WPF types (`BitmapImage`) and `BarCodeReader` uses WinForms types (`System.Drawing.Image`). These types cannot be referenced in a shared .NET library, a console application, an ASP.NET Core project, or a Blazor server. A team that wants to centralize barcode reading logic in a shared service layer cannot do so with Telerik types — the reader implementations are permanently tied to their respective UI frameworks.
 
-**You need reading in a web or server context.** `RadBarcodeReader` is available in the `Telerik.UI.for.Wpf` and `Telerik.UI.for.WinForms` packages only. Blazor, ASP.NET Core, console, and Azure Function projects have no Telerik barcode reading component to reference.
+**PDF Processing Gap:** Many barcode workflows operate on documents rather than image files. Telerik RadBarcodeReader accepts only bitmap images. Reading a barcode embedded in a PDF page requires converting the page to an image using a separate library, then feeding that image to the Telerik reader — adding a dependency and still receiving only 1D results. For teams whose documents are primarily PDFs, this workaround adds friction at every point in the workflow.
 
-**You want consistent code across project types.** A shared service that reads barcodes cannot use Telerik types because those types only compile in platform-specific projects. IronBarcode's static `BarcodeReader.Read()` compiles identically in any .NET project.
+**Subscription Licensing:** Telerik barcode functionality is not sold as a standalone package. Access to `RadBarcode` and `RadBarcodeReader` is bundled with platform-specific UI suite subscriptions — approximately $1,149 per developer per year for WinForms or WPF, or $1,469 per developer per year for all platforms under DevCraft UI. Teams whose primary requirement is barcode functionality, and who do not use other Telerik UI controls, absorb the full suite cost for a component that represents a small fraction of what is purchased.
 
-**You want to stop paying for a UI suite to access a barcode component.** Telerik barcode functionality is not available as a standalone package. It requires purchasing WinForms (~$1,149/yr), WPF (~$1,149/yr), Blazor (~$1,099/yr), or DevCraft UI (~$1,469/yr) depending on which platform you need. IronBarcode's [perpetual licensing options](https://ironsoftware.com/csharp/barcode/licensing/) start at $749 for a single developer — a one-time purchase without an annual renewal requirement.
+### The Fundamental Problem
+
+The clearest expression of the Telerik reading limitation is that the component that generates a format cannot round-trip it through the reader:
+
+```csharp
+// Telerik — generates a QR code, then cannot read it back
+var qrBarcode = new RadBarcode();
+qrBarcode.Value = "https://example.com/order/4821";
+qrBarcode.Symbology = new QRCode { ErrorCorrectionLevel = ErrorCorrectionLevel.H };
+// Save to file...
+
+// Attempt to read the same QR code:
+var reader = new RadBarcodeReader();
+// DecodeType.QR does not exist — QR cannot be added to this list
+reader.DecodeTypes = new[] { DecodeType.Code128, DecodeType.EAN13 };
+var bitmap = new BitmapImage(new Uri("qr-output.png", UriKind.Absolute));
+var result = reader.Decode(bitmap);
+// result == null — always, for any QR code image
+```
+
+IronBarcode closes this gap. Generation and reading use the same package, and the reading engine detects QR codes, DataMatrix, PDF417, and all other formats automatically:
+
+```csharp
+// NuGet: dotnet add package IronBarcode
+using IronBarCode;
+
+IronBarCode.License.LicenseKey = "YOUR-KEY";
+
+// Generate a QR code
+BarcodeWriter.CreateBarcode("https://example.com/order/4821", BarcodeEncoding.QRCode)
+             .SaveAsPng("qr-output.png");
+
+// Read that same QR code back — no format specification needed
+var results = BarcodeReader.Read("qr-output.png");
+Console.WriteLine(results.First().Value);
+// Output: https://example.com/order/4821
+```
+
+## IronBarcode vs Telerik RadBarcode: Feature Comparison
+
+| Feature | Telerik RadBarcode | IronBarcode |
+|---|---|---|
+| 1D barcode generation | Yes (all platforms) | Yes |
+| 2D barcode generation | Yes (all platforms) | Yes |
+| 1D barcode reading | WPF + WinForms only | Yes (all platforms) |
+| QR code reading | Not available | Yes |
+| DataMatrix reading | Not available | Yes |
+| PDF417 reading | Not available | Yes |
+| Aztec reading | Not available | Yes |
+| PDF file reading | Not available | Yes (native) |
+| Auto format detection | No — DecodeType required | Yes |
+| ASP.NET Core reading | Not available | Yes |
+| Blazor reading | Not available | Yes |
+| Docker / Linux reading | Not available | Yes |
+| Shared service library | Not possible (platform types) | Yes |
+| Static read API | No (requires instance) | Yes |
+| Standalone NuGet package | No — UI suite required | Yes |
+| Perpetual license | No — subscription | Yes — from $749 |
+| 5-year TCO (10 devs) | ~$73,450 | ~$2,999 |
 
 ## Quick Start
 
-### Step 1: Remove Telerik Barcode Packages
+### Step 1: Replace NuGet Package
 
-Remove the Telerik UI package for whichever platform you are on. You may have one or several:
+Remove the Telerik UI package for the platform or platforms in your project:
 
 ```bash
 # WPF
@@ -34,95 +92,101 @@ dotnet remove package Telerik.UI.for.WinForms.Barcode
 dotnet remove package Telerik.UI.for.Blazor
 ```
 
-If your project also uses Telerik components other than barcode, only remove the packages that are exclusively for barcode functionality. If the same package is shared with other Telerik controls, leave it in place and proceed to step 2 — you will simply stop calling the barcode-specific APIs.
+If your project also uses other Telerik controls from the same package, leave the package in place and proceed to step 2. You will remove the barcode-specific API calls without removing the shared package.
 
-### Step 2: Install IronBarcode
+Install IronBarcode:
 
 ```bash
 dotnet add package IronBarcode
 ```
 
-One package. Works in WPF, WinForms, ASP.NET Core, Blazor Server, console applications, Docker containers, Azure Functions, and AWS Lambda without any platform-specific configuration. The [full platform compatibility details](https://ironsoftware.com/csharp/barcode/features/compatibility/) cover the exact .NET versions and OS targets that are supported.
+One package covers WPF, WinForms, ASP.NET Core, Blazor Server, console applications, Docker, Azure Functions, and AWS Lambda. The [full platform compatibility details](https://ironsoftware.com/csharp/barcode/features/compatibility/) document the exact .NET versions and operating system targets supported.
 
-### Step 3: Replace Namespace Imports and License
+### Step 2: Update Namespaces
 
-Remove Telerik barcode namespace imports and license initialization, then add the IronBarcode equivalents:
+Remove Telerik barcode namespace imports and replace them with the IronBarcode namespace:
 
 ```csharp
-// Remove these:
-// using Telerik.Windows.Controls.Barcode;      // WPF reader/generator
-// using Telerik.WinControls.UI;                // WinForms
-// using Telerik.WinControls.UI.Barcode;        // WinForms barcode
-// Telerik.WinControls.TelerikLicenseManager.InstallLicense("key");
+// Remove these namespace imports:
+// using Telerik.Windows.Controls.Barcode;      // WPF reader and generator
+// using Telerik.Windows.Controls;              // WPF general
+// using Telerik.WinControls.UI;               // WinForms
+// using Telerik.WinControls.UI.Barcode;        // WinForms barcode reader
 
 // Add this:
 using IronBarCode;
-// At application startup (Program.cs, App.xaml.cs, or composition root):
+```
+
+### Step 3: Initialize License
+
+Replace the Telerik license initialization with the IronBarcode key assignment at application startup:
+
+```csharp
+// Remove:
+// Telerik.WinControls.TelerikLicenseManager.InstallLicense("key");
+
+// Add at application startup (Program.cs, App.xaml.cs, or composition root):
 IronBarCode.License.LicenseKey = "YOUR-KEY";
 ```
 
-The license key line goes once at application startup. There is no license file to deploy, no per-platform configuration, and no separate Blazor-vs-WPF initialization path.
+The key assignment goes once in the application entry point. There is no license file to deploy, no per-platform initialization path, and no separate configuration for WPF versus ASP.NET Core.
 
 ## Code Migration Examples
 
-### Example 1: WPF XAML Generation to Code-Based Generation
+### Generating a Barcode: XAML Control to Code-Based API
 
-Telerik's generation in WPF uses XAML controls. IronBarcode generates barcodes in code and returns an image object you can save or display. The same API handles both 1D and 2D formats — see the [2D barcode generation guide](https://ironsoftware.com/csharp/barcode/how-to/create-2d-barcodes/) for QR, DataMatrix, and PDF417 generation options.
+Telerik's generation in WPF is declarative — the `RadBarcode` XAML element renders directly in the UI tree. IronBarcode generates barcodes in code and returns a `GeneratedBarcode` object that can be saved as a file or converted to a `BitmapSource` for WPF display.
 
-**Before (Telerik WPF XAML):**
+**Telerik Approach:**
 
 ```xml
-<telerik:RadBarcode Value="12345678" Symbology="Code128" />
+<!-- WPF XAML — RadBarcode renders inline in the UI -->
+<Window xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation">
+    <telerik:RadBarcode Value="PROD-2026-00184" Symbology="Code128" />
+</Window>
 ```
-
-**After (IronBarcode):**
-
-```csharp
-using IronBarCode;
-
-// Generate and save to file
-BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
-             .SaveAsPng("barcode.png");
-
-// For display in WPF, get as BitmapSource
-var barcodeImage = BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
-                                .ToBitmapSource();
-barcodeImageControl.Source = barcodeImage;
-```
-
-For Blazor component replacement:
-
-**Before (Telerik Blazor):**
 
 ```razor
-<TelerikBarcode Value="12345678" Type="@BarcodeType.Code128" />
+@* Blazor — TelerikBarcode renders as a Razor component *@
+<TelerikBarcode Value="PROD-2026-00184" Type="@BarcodeType.Code128" />
 ```
 
-**After (IronBarcode — server-side generation, served as image):**
+**IronBarcode Approach:**
 
 ```csharp
-// In a controller or Blazor page code-behind
+// NuGet: dotnet add package IronBarcode
 using IronBarCode;
 
-byte[] barcodeBytes = BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
-                                   .ResizeTo(400, 100)
-                                   .ToPngBinaryData();
-// Return as image response or embed as base64 src
-string base64 = Convert.ToBase64String(barcodeBytes);
-string imgSrc = $"data:image/png;base64,{base64}";
+// Save to file — replaces XAML generation + manual export
+BarcodeWriter.CreateBarcode("PROD-2026-00184", BarcodeEncoding.Code128)
+             .ResizeTo(400, 100)
+             .SaveAsPng("barcode.png");
+
+// Display in WPF — assign to an Image control's Source property
+var bitmapSource = BarcodeWriter.CreateBarcode("PROD-2026-00184", BarcodeEncoding.Code128)
+                                .ToBitmapSource();
+barcodeImageControl.Source = bitmapSource;
+
+// Serve in Blazor or ASP.NET Core — return as base64 src attribute
+byte[] bytes = BarcodeWriter.CreateBarcode("PROD-2026-00184", BarcodeEncoding.Code128)
+                            .ResizeTo(400, 100)
+                            .ToPngBinaryData();
+string imgSrc = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
 ```
 
-### Example 2: WPF Barcode Reading
+The `BarcodeEncoding` enum covers the same symbologies as Telerik's `Symbology` enum. Switching to QR code generation changes only the enum argument. For the full range of [2D barcode generation options](https://ironsoftware.com/csharp/barcode/how-to/create-2d-barcodes/), including QR error correction levels and DataMatrix dimensions, the IronBarcode documentation provides complete examples.
 
-This is the migration that reduces the most code. Telerik's WPF reading requires a reader instance, explicit `DecodeType` specification, a `BitmapImage` load, and direct bitmap passing to `Decode()`.
+### Reading 1D Barcodes: WPF Desktop
 
-**Before (Telerik RadBarcodeReader — WPF only):**
+Telerik's WPF reading requires a `RadBarcodeReader` instance, explicit `DecodeType` configuration, a `BitmapImage` object loaded from a URI, and a call to `reader.Decode()`. The result property is `.Text`.
+
+**Telerik Approach:**
 
 ```csharp
 using Telerik.Windows.Controls.Barcode;
 using System.Windows.Media.Imaging;
 
-public string ReadBarcode(string imagePath)
+public string ReadProductBarcode(string imagePath)
 {
     var reader = new RadBarcodeReader();
     reader.DecodeTypes = new DecodeType[]
@@ -135,7 +199,6 @@ public string ReadBarcode(string imagePath)
         DecodeType.UPCE,
         DecodeType.Codabar,
         DecodeType.ITF
-        // No QR, DataMatrix, PDF417 available
     };
 
     var bitmap = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
@@ -145,39 +208,39 @@ public string ReadBarcode(string imagePath)
 }
 ```
 
-**After (IronBarcode — any platform):**
+**IronBarcode Approach:**
 
 ```csharp
+// NuGet: dotnet add package IronBarcode
 using IronBarCode;
 
-public string ReadBarcode(string imagePath)
+public string ReadProductBarcode(string imagePath)
 {
     var results = BarcodeReader.Read(imagePath);
     return results.FirstOrDefault()?.Value ?? "No barcode found";
 }
 ```
 
-`BarcodeReader.Read()` is static — no instance to create. It accepts a file path string directly — no `BitmapImage` load required. Format detection is automatic across all 50+ types — no `DecodeType` list to maintain. The `result.Value` property replaces `result.Text`.
+`BarcodeReader.Read()` is a static method — no reader instance is needed. It accepts a file path string directly without requiring a `BitmapImage` load. Format detection is automatic across all 50+ supported types. The result property is `.Value` rather than `.Text`. This same method call also reads QR codes, DataMatrix, and any other format present in the image.
 
-### Example 3: WinForms Barcode Reading
+### Reading 1D Barcodes: WinForms Desktop
 
-The WinForms reader class is named `BarCodeReader` (note the capital C) and takes a `System.Drawing.Image` rather than a WPF `BitmapImage`.
+The WinForms `BarCodeReader` class uses a different name, different property name (`DecodeType` singular rather than `DecodeTypes` plural), and takes a `System.Drawing.Image` rather than a `BitmapImage`.
 
-**Before (Telerik WinForms BarCodeReader):**
+**Telerik Approach:**
 
 ```csharp
 using Telerik.WinControls.UI.Barcode;
 using System.Drawing;
 
-public string ReadBarcode(string imagePath)
+public string ReadShippingLabel(string imagePath)
 {
     var reader = new BarCodeReader();
     reader.DecodeType = new DecodeType[]
     {
         DecodeType.Code128,
-        DecodeType.Code39,
-        DecodeType.EAN13,
-        DecodeType.ITF
+        DecodeType.ITF,
+        DecodeType.EAN13
     };
 
     using var image = Image.FromFile(imagePath);
@@ -187,58 +250,78 @@ public string ReadBarcode(string imagePath)
 }
 ```
 
-**After (IronBarcode — same code as WPF, or any other platform):**
+**IronBarcode Approach:**
 
 ```csharp
+// NuGet: dotnet add package IronBarcode
 using IronBarCode;
 
-public string ReadBarcode(string imagePath)
+public string ReadShippingLabel(string imagePath)
 {
     var results = BarcodeReader.Read(imagePath);
     return results.FirstOrDefault()?.Value ?? "No barcode found";
 }
 ```
 
-The IronBarcode call is identical to the WPF example above. This is intentional — the same method handles the same operation regardless of which project type is calling it. There is no need for a `BitmapImage` variant for WPF and a `System.Drawing.Image` variant for WinForms.
+The IronBarcode call is identical to the WPF example above. There is no WinForms-specific variant. The same method handles the same operation regardless of which project type is calling it, and the result works without a `System.Drawing.Image` dependency.
 
-### Example 4: Reading QR Codes (Previously Impossible with Telerik)
+### Reading QR Codes: Previously Impossible with Telerik
 
-This scenario has no Telerik equivalent. If your codebase has a comment like `// QR reading not supported — use different library`, this is the replacement:
+If your codebase contains a comment or a `NotSupportedException` documenting that QR reading is unavailable, this is its replacement. No configuration path exists in Telerik that enables QR reading — this scenario has no Telerik equivalent.
 
-**Before (Telerik — not possible):**
+**Telerik Approach:**
 
 ```csharp
 // RadBarcodeReader does not support QR codes.
 // DecodeType.QR does not exist in the Telerik enum.
-// This method throws to document the limitation.
 public string ReadQrCode(string imagePath)
 {
     throw new NotSupportedException(
         "Telerik RadBarcodeReader cannot read QR codes. " +
-        "Use a different library for QR reading.");
+        "DecodeType.QR is not a valid enum value.");
 }
 ```
 
-**After (IronBarcode):**
+**IronBarcode Approach:**
 
 ```csharp
+// NuGet: dotnet add package IronBarcode
 using IronBarCode;
 
 public string ReadQrCode(string imagePath)
 {
-    // QR codes are detected automatically — no special configuration
+    // QR codes, DataMatrix, PDF417, and Aztec are all detected automatically
     var results = BarcodeReader.Read(imagePath);
     return results.FirstOrDefault()?.Value ?? "No QR code found";
 }
 ```
 
-The same `BarcodeReader.Read()` call handles QR, DataMatrix, PDF417, Aztec, and every other 2D format automatically. For a complete list of [supported barcode formats](https://ironsoftware.com/csharp/barcode/get-started/supported-barcode-formats/) across read and write operations, the IronBarcode documentation covers all 50+ entries.
+The same `BarcodeReader.Read()` call that reads EAN-13 barcodes reads QR codes. There is no separate configuration for 2D formats. For a complete list of [supported barcode formats](https://ironsoftware.com/csharp/barcode/get-started/supported-barcode-formats/) across reading and generation, the IronBarcode documentation covers all 50+ entries with format-specific notes.
 
-### Example 5: Barcode Reading in ASP.NET Core (Previously Impossible with Telerik)
+### Reading Barcodes in an ASP.NET Core Endpoint
 
-Telerik provides no barcode reading capability for ASP.NET Core or Blazor. If your application was routing uploaded images to a desktop service for reading because the web layer had no Telerik reader, that workaround is no longer needed.
+Telerik provides no barcode reading component for ASP.NET Core or Blazor. If an existing application routes uploaded images to a desktop service for reading because the web layer had no Telerik reader, that workaround is replaced by direct reading in the web layer.
+
+**Telerik Approach:**
 
 ```csharp
+// No Telerik reading API available in ASP.NET Core.
+// Workaround: forward uploaded file to a WPF or WinForms service
+// that can reference Telerik.Windows.Controls.Barcode.
+[HttpPost("read")]
+public async Task<IActionResult> ReadBarcode(IFormFile imageFile)
+{
+    // Must proxy to desktop service — no Telerik reader available here
+    var bytes = await ReadAllBytesAsync(imageFile);
+    var result = await _desktopBridgeService.ReadAsync(bytes);
+    return Ok(result);
+}
+```
+
+**IronBarcode Approach:**
+
+```csharp
+// NuGet: dotnet add package IronBarcode
 using IronBarCode;
 using Microsoft.AspNetCore.Mvc;
 
@@ -250,7 +333,6 @@ public class BarcodeController : ControllerBase
     public IActionResult ReadBarcode(IFormFile imageFile)
     {
         using var stream = imageFile.OpenReadStream();
-        // BarcodeReader.Read() accepts a Stream — no temp file needed
         var results = BarcodeReader.Read(stream);
         return Ok(results.Select(r => new
         {
@@ -270,129 +352,202 @@ public class BarcodeController : ControllerBase
 }
 ```
 
-`BarcodeReader.Read()` accepts a `Stream` directly — the uploaded file stream can be passed without writing to disk. This works in an ASP.NET Core application deployed to Linux, Docker, or Azure App Service in exactly the same way as on Windows.
+`BarcodeReader.Read()` accepts a `Stream` directly, so the uploaded file stream is passed without writing to disk. This controller deploys to Linux, Docker, or Azure App Service without modification.
 
-### Example 6: Reading Barcodes from PDFs
+### Reading Barcodes from PDF Files
 
-Telerik has no PDF barcode reading capability. IronBarcode reads barcodes from PDF files natively, with page number tracking:
+Telerik has no PDF barcode reading capability. Adding PDF reading to an existing Telerik-based codebase requires a PDF rendering library to convert pages to images before passing them to `RadBarcodeReader`. IronBarcode reads PDF files directly.
+
+**Telerik Approach:**
 
 ```csharp
-using IronBarCode;
+// No direct PDF reading support in RadBarcodeReader.
+// Workaround: use a separate PDF library to extract page images
+using SomePdfLibrary; // third-party dependency
+using Telerik.Windows.Controls.Barcode;
 
-// All barcodes from every page of a PDF document
-var results = BarcodeReader.Read("invoice.pdf");
-foreach (var barcode in results)
+public List<string> ReadBarcodesFromPdf(string pdfPath)
 {
-    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.BarcodeType} — {barcode.Value}");
+    var results = new List<string>();
+    var pages = PdfRenderer.ExtractPages(pdfPath); // third-party call
+
+    foreach (var pageImage in pages)
+    {
+        var reader = new RadBarcodeReader();
+        reader.DecodeTypes = new[] { DecodeType.Code128, DecodeType.EAN13 };
+        var bitmap = ConvertToBitmapImage(pageImage); // conversion required
+        var result = reader.Decode(bitmap);
+        if (result != null)
+            results.Add(result.Text); // 1D only — QR codes on PDF pages are missed
+    }
+    return results;
 }
 ```
 
-No separate PDF conversion step, no page-by-page image extraction. Pass the PDF path and IronBarcode handles the rest.
+**IronBarcode Approach:**
 
-## API Mapping
+```csharp
+// NuGet: dotnet add package IronBarcode
+using IronBarCode;
 
-| Telerik | IronBarcode |
+public List<string> ReadBarcodesFromPdf(string pdfPath)
+{
+    var results = BarcodeReader.Read(pdfPath);
+    return results.Select(r =>
+        $"Page {r.PageNumber}: {r.BarcodeType} — {r.Value}").ToList();
+}
+```
+
+No separate PDF library is needed. No page extraction step. No image conversion. Pass the PDF path and IronBarcode processes all pages, returning all barcodes with page number tracking. Both 1D and 2D barcodes on PDF pages are detected.
+
+## Telerik RadBarcode API to IronBarcode Mapping Reference
+
+| Telerik RadBarcode | IronBarcode |
 |---|---|
 | `TelerikLicenseManager.InstallLicense("key")` | `IronBarCode.License.LicenseKey = "key"` |
 | `<telerik:RadBarcode Value="..." Symbology="Code128" />` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code128)` |
 | `<TelerikBarcode Type="@BarcodeType.Code128" />` | Server-side generation returning `ToPngBinaryData()` |
 | `Symbology.Code128` | `BarcodeEncoding.Code128` |
 | `Symbology.QRCode` | `BarcodeEncoding.QRCode` |
-| `new RadBarcodeReader()` | Static class — no instance needed |
+| `new RadBarcodeReader()` (WPF) | Static class — no instance needed |
 | `new BarCodeReader()` (WinForms) | Static class — no instance needed |
-| `reader.DecodeTypes = new DecodeType[] { ... }` | Auto-detection — no specification needed |
+| `reader.DecodeTypes = new DecodeType[] { ... }` (WPF) | Auto-detection — no specification needed |
+| `reader.DecodeType = new DecodeType[] { ... }` (WinForms) | Auto-detection — no specification needed |
 | `reader.Decode(bitmapImage)` (WPF) | `BarcodeReader.Read(imagePath)` |
 | `reader.Read(drawingImage)` (WinForms) | `BarcodeReader.Read(imagePath)` |
 | `result.Text` | `result.Value` |
-| 1D formats only (no QR, DataMatrix, PDF417) | 50+ formats including all 2D types |
+| `result.Symbology` | `result.BarcodeType` |
+| `BitmapImage` required as input (WPF) | File path, `Stream`, or byte array accepted |
+| `System.Drawing.Image` required as input (WinForms) | File path, `Stream`, or byte array accepted |
+| 1D formats only in reading | 50+ formats including all 2D types |
 | WPF and WinForms reading only | All .NET platforms |
-| `BitmapImage` required as input (WPF) | File path, byte array, or `Stream` accepted |
-| `System.Drawing.Image` required as input (WinForms) | File path, byte array, or `Stream` accepted |
+| No PDF reading support | `BarcodeReader.Read("file.pdf")` — native |
 
-### Property Name Changes
+## Common Migration Issues and Solutions
 
-The most common substitution in reading code is `result.Text` → `result.Value`. In Telerik's WPF `RadBarcodeReaderResult`, the decoded string is exposed as `.Text`. In IronBarcode's `BarcodeResult`, it is `.Value`.
+### Issue 1: XAML Barcode Control Replacement
 
-Similarly, the barcode type/format on the result object changes:
+**Telerik:** `<telerik:RadBarcode>` is a visual control that renders directly in the WPF UI element tree. It cannot be replaced with an `Image` element without code-behind changes.
 
-| Telerik | IronBarcode |
-|---|---|
-| `result.Text` | `result.Value` |
-| `result.Symbology` (on result) | `result.BarcodeType` |
+**Solution:** Replace the `<telerik:RadBarcode>` element with an `<Image>` control and generate the barcode in code-behind. Bind the `Image.Source` to a `BitmapSource` generated by IronBarcode:
 
-## Migration Checklist
+```csharp
+// In code-behind or ViewModel
+using IronBarCode;
 
-Use these patterns to find all Telerik barcode usage in your codebase before migrating:
+var generated = BarcodeWriter.CreateBarcode(barcodeValue, BarcodeEncoding.Code128)
+                             .ResizeTo(400, 100);
+BarcodeImage.Source = generated.ToBitmapSource();
+```
+
+For Blazor, replace `<TelerikBarcode>` with an `<img>` element whose `src` attribute receives a base64-encoded PNG generated server-side.
+
+### Issue 2: DecodeType Removal Side Effects
+
+**Telerik:** The `DecodeTypes` (WPF) or `DecodeType` (WinForms) property filters which formats the reader attempts to detect. Removing this filter in an IronBarcode migration means IronBarcode will now return results for all formats present in the image, including formats that were previously excluded by the filter.
+
+**Solution:** Remove the `DecodeType` assignment block entirely. If the additional detected formats cause unexpected results in downstream logic — for example, if code assumed only one barcode format would ever be returned — add optional filtering using `BarcodeReaderOptions`:
+
+```csharp
+using IronBarCode;
+
+var options = new BarcodeReaderOptions
+{
+    ExpectedBarcodeTypes = BarcodeEncoding.Code128 | BarcodeEncoding.EAN13
+};
+var results = BarcodeReader.Read(imagePath, options);
+```
+
+This is optional. The default behavior (detect all formats) is correct for most use cases and produces results that the previous Telerik implementation could not.
+
+### Issue 3: TelerikLicenseManager Cleanup
+
+**Telerik:** `Telerik.WinControls.TelerikLicenseManager.InstallLicense(key)` calls appear at application startup, typically in `Program.cs` (WinForms) or `App.xaml.cs` (WPF). The key is often stored in app settings, a configuration file, or hardcoded in the startup method.
+
+**Solution:** Remove the `TelerikLicenseManager.InstallLicense()` call. Replace it with the IronBarcode key assignment at the same startup location:
+
+```csharp
+// Remove:
+// Telerik.WinControls.TelerikLicenseManager.InstallLicense("TELERIK-KEY");
+
+// Add:
+IronBarCode.License.LicenseKey = "YOUR-IRONBARCODE-KEY";
+```
+
+If the Telerik package remains installed (because other non-barcode Telerik controls are still in use), the `TelerikLicenseManager` call for those controls should be preserved. Only remove the call if the Telerik packages themselves are being fully removed.
+
+## Telerik RadBarcode Migration Checklist
+
+### Pre-Migration Tasks
+
+Audit the codebase for all Telerik barcode usage before making code changes:
 
 ```bash
 # License initialization
 grep -r "TelerikLicenseManager.InstallLicense" --include="*.cs" .
 
-# Generation controls (code-behind and XAML/Razor references)
-grep -r "RadBarcode" --include="*.cs" .
+# XAML generation controls
 grep -r "RadBarcode" --include="*.xaml" .
 grep -r "TelerikBarcode" --include="*.razor" .
 
-# Reading API
+# Code-behind generation references
+grep -r "RadBarcode" --include="*.cs" .
+grep -r "Symbology\." --include="*.cs" .
+
+# Reading API — WPF
 grep -r "RadBarcodeReader" --include="*.cs" .
+grep -r "DecodeTypes\." --include="*.cs" .
+grep -r "reader\.Decode(" --include="*.cs" .
+
+# Reading API — WinForms
 grep -r "BarCodeReader" --include="*.cs" .
 grep -r "DecodeType\." --include="*.cs" .
-grep -r "reader\.Decode(" --include="*.cs" .
+grep -r "reader\.Read(" --include="*.cs" .
 
 # Result property access
 grep -r "result\.Text" --include="*.cs" .
-
-# Symbology enum
-grep -r "Symbology\.Code128" --include="*.cs" .
-grep -r "Symbology\." --include="*.cs" .
+grep -r "result\.Symbology" --include="*.cs" .
 ```
 
-Work through each match:
+Document each match. Note which files contain XAML controls, which contain reading code, and which platform each file belongs to.
 
-- `TelerikLicenseManager.InstallLicense(...)` — replace with `IronBarCode.License.LicenseKey = "key"`
-- `RadBarcode` in XAML — replace with `BarcodeWriter.CreateBarcode()` in code-behind and an `Image` control displaying the result
-- `TelerikBarcode` in Razor — replace with server-side generation returning base64 or binary data
-- `new RadBarcodeReader()` or `new BarCodeReader()` — replace with `BarcodeReader.Read(path)`
-- `reader.DecodeTypes = new DecodeType[] { ... }` blocks — delete entirely; IronBarcode auto-detects
-- `reader.Decode(bitmap)` or `reader.Read(image)` calls — replace with `BarcodeReader.Read(imagePath)`
-- `result.Text` — rename to `result.Value`
-- `result.Symbology` — rename to `result.BarcodeType`
-- `Symbology.Code128` in generation code — replace with `BarcodeEncoding.Code128`
+### Code Update Tasks
 
-## Feature Comparison After Migration
+1. Remove Telerik barcode NuGet packages (or retain if needed for other controls)
+2. Install `IronBarcode` NuGet package in each project that requires barcode functionality
+3. Add `IronBarCode.License.LicenseKey = "YOUR-KEY"` at each application startup entry point
+4. Remove Telerik namespace imports and add `using IronBarCode`
+5. Replace `<telerik:RadBarcode>` XAML elements with `<Image>` controls
+6. Generate barcode images in code-behind using `BarcodeWriter.CreateBarcode(...).ToBitmapSource()`
+7. Replace `<TelerikBarcode>` Razor components with base64 `<img>` sources generated server-side
+8. Replace `new RadBarcodeReader()` instances with `BarcodeReader.Read(path)` static calls
+9. Replace `new BarCodeReader()` instances with `BarcodeReader.Read(path)` static calls
+10. Delete all `reader.DecodeTypes = new DecodeType[] { ... }` and `reader.DecodeType = new DecodeType[] { ... }` blocks
+11. Replace `reader.Decode(bitmapImage)` calls with `BarcodeReader.Read(imagePath)`
+12. Replace `reader.Read(drawingImage)` calls with `BarcodeReader.Read(imagePath)`
+13. Rename `result.Text` to `result.Value` at all reading result access points
+14. Rename `result.Symbology` to `result.BarcodeType` at all format check points
+15. Replace `Symbology.Code128` and similar generation enum values with `BarcodeEncoding.Code128`
+16. Remove `TelerikLicenseManager.InstallLicense()` calls where Telerik packages are fully removed
 
-| Feature | Telerik RadBarcode | IronBarcode |
-|---|---|---|
-| 1D barcode generation | Yes | Yes |
-| 2D barcode generation | Yes | Yes |
-| 1D barcode reading | WPF + WinForms only | All platforms |
-| QR code reading | Not available | Yes |
-| DataMatrix reading | Not available | Yes |
-| PDF417 reading | Not available | Yes |
-| PDF barcode reading | Not available | Yes (native) |
-| ASP.NET Core reading | Not available | Yes |
-| Blazor reading | Not available | Yes |
-| Docker / Linux reading | Not available | Yes |
-| Auto format detection | No | Yes |
-| Static read API | No (requires instance) | Yes |
-| Perpetual license | No — subscription | Yes — from $749 |
-| Standalone package | No — UI suite required | Yes |
+### Post-Migration Testing
 
-## Common Migration Issues
+- Verify that all previously-read 1D barcodes (Code128, EAN13, etc.) continue to return correct values
+- Confirm that QR codes in test images are now read successfully where they previously returned null
+- Test that generated barcodes (saved as PNG or served as bytes) render visibly and scan correctly
+- Verify that ASP.NET Core or Blazor endpoints that previously could not perform reading now function correctly
+- If PDF reading was added, confirm that barcodes on each PDF page are detected with correct page numbers
+- Run the grep audit commands from the Pre-Migration section to confirm no remaining Telerik barcode API references
+- Confirm that `IronBarCode.License.LicenseKey` is set before the first `BarcodeReader.Read()` or `BarcodeWriter.CreateBarcode()` call
 
-### XAML Barcode Controls
+## Key Benefits of Migrating to IronBarcode
 
-`RadBarcode` in XAML is a visual control — it renders inline in the UI. IronBarcode generates barcode images in code. The migration pattern depends on how the barcode was being displayed:
+**Complete 2D Format Support:** After migration, QR Code, DataMatrix, PDF417, and Aztec formats are readable by the same API call that was already reading Code128 and EAN13. No additional configuration is required and no separate library is needed for 2D formats. The reading engine handles format identification automatically.
 
-- If the XAML barcode was bound to a data property and displayed in a form, replace it with an `Image` control bound to a `BitmapSource` generated by `BarcodeWriter.CreateBarcode(...).ToBitmapSource()`.
-- If the barcode was being saved or exported rather than displayed, `BarcodeWriter.CreateBarcode(...).SaveAsPng(path)` is a direct replacement.
+**Unified Cross-Platform API:** The same `BarcodeReader.Read()` and `BarcodeWriter.CreateBarcode()` calls compile and run identically in WPF, WinForms, ASP.NET Core, Blazor, console applications, and Docker containers. Barcode logic written once in a shared service library works across every project type in the solution without modification.
 
-### DecodeType Removal
+**Native PDF File Processing:** IronBarcode reads barcodes from PDF files directly, processing all pages and returning results with page number metadata. Workflows that previously required a PDF rendering library plus a Telerik reading step are consolidated into a single method call, removing the third-party dependency and the intermediate image conversion step.
 
-Deleting the `reader.DecodeTypes = new DecodeType[] { ... }` block is intentional. IronBarcode detects all supported formats on every read. If your production code had a subset of `DecodeType` values listed (perhaps because only certain formats were expected in your image source), IronBarcode may now return results for additional barcode types in the same images. This is correct behavior — those barcodes were always present; they were simply excluded by the `DecodeTypes` filter. If you want to constrain results for performance reasons, `BarcodeReaderOptions.ExpectedBarcodeTypes` provides optional filtering.
+**Eliminated Subscription Dependency for Barcode Access:** After migration, barcode functionality is available through IronBarcode's perpetual licensing model. Continued access does not require annual renewal. Teams whose primary use of the Telerik suite was barcode-related reduce their recurring licensing overhead to a one-time cost.
 
-### Reading on Non-Desktop Platforms
-
-If your application previously had no barcode reading in Blazor, ASP.NET Core, or server-side code because `RadBarcodeReader` was unavailable there, those code paths can now be implemented directly with [IronBarcode's cross-platform reading capability](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) — no architecture change required.
-
-The absence of a `DecodeType.QR` in Telerik's reading API is not something a workaround can fix. The decoder was not built to handle 2D formats. After migrating, QR code images, DataMatrix codes on product labels, and PDF417 on scanned documents will all be read by the same `BarcodeReader.Read()` call that was already handling your 1D formats. There is no separate configuration path for 2D — it is included in the default detection.
+**Simplified Codebase:** The `DecodeType` configuration block, the `BitmapImage` loading step, the platform-specific reader class selection, and the `result.Text` property chain are all replaced by a single static method call with an auto-detecting result collection. Code that previously required different implementations for WPF and WinForms reading collapses into a single shared implementation.

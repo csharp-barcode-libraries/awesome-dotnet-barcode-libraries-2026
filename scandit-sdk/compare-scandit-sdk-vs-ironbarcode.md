@@ -2,27 +2,25 @@ To start reading barcodes with Scandit, you configure a `DataCaptureContext`, cr
 
 That combination — mandatory camera pipeline and opaque enterprise pricing — defines exactly when Scandit is the wrong tool for a .NET project. If you are building a server-side document processing workflow, an ASP.NET Core API that reads barcodes from uploaded files, or an Azure Function that processes shipping PDFs, Scandit's architecture works against you at every step. This comparison examines where that architecture comes from, where IronBarcode fits instead, and what it costs to find out either way.
 
----
+## Understanding Scandit SDK
 
-## Table of Contents
+Scandit SDK is a commercial enterprise barcode scanning platform built for mobile and edge computing environments. The library was designed to support real-time camera scanning on iOS, Android, and MAUI devices, with specialized product lines covering augmented reality overlays, multi-barcode simultaneous detection, and identity document scanning. Scandit's primary deployment context is mobile field workers, warehouse operations, and retail point-of-interaction scenarios where a physical camera, a live user, and sub-100ms response time are all present simultaneously.
 
-1. [The Camera Pipeline Problem](#the-camera-pipeline-problem)
-2. [Pricing: Sales Calls vs Published Tiers](#pricing-sales-calls-vs-published-tiers)
-3. [Platform and Deployment Support](#platform-and-deployment-support)
-4. [Symbology Detection: Manual vs Automatic](#symbology-detection-manual-vs-automatic)
-5. [Product Line Complexity](#product-line-complexity)
-6. [Feature Comparison Table](#feature-comparison-table)
-7. [Code Comparison](#code-comparison)
-8. [When to Choose Each Library](#when-to-choose-each-library)
-9. [Related Comparisons](#related-comparisons)
+The library's architecture is organized around the `DataCaptureContext` pipeline, which coordinates a camera session, frame analysis settings, and barcode capture configuration as a unified stateful system. Because each product line in the Scandit platform — SparkScan, MatrixScan, ID Scanning, AR Overlays, and Parser — is separately licensed and priced through a contact-sales model, the total cost of any Scandit integration is not determinable until after a sales conversation.
 
----
+Key architectural characteristics of Scandit SDK include:
 
-## The Camera Pipeline Problem
+- **Camera-First Design:** The SDK assumes a physical camera and a running frame source. All barcode reading is performed on live video frames, not on static files or streams.
+- **Mandatory DataCaptureContext Initialization:** Every integration begins by constructing a `DataCaptureContext` and wiring it to a camera instance before any barcode work can occur.
+- **Explicit Symbology Declaration:** Barcode formats must be enabled individually using `EnableSymbologies` before the capture session begins. Auto-detection is not available.
+- **Event-Driven Result Delivery:** Barcode results are delivered asynchronously through event callbacks (`BarcodeScanned`) rather than returned synchronously from a method call.
+- **Modular Product Architecture:** SparkScan, MatrixScan, ID Scanning, AR Overlays, and Parser are separately priced features that require individual contract line items.
+- **Contact-Sales Pricing:** No pricing is published. Every integration requires a sales inquiry before a license cost is known.
+- **Mobile-First Platform Targeting:** Primary support is for iOS and Android. Server-side, Docker, and serverless deployments are outside the SDK's design scope.
 
-Scandit SDK was built for a specific and legitimate scenario: a mobile worker pointing a phone camera at a physical barcode and getting real-time visual feedback. Everything about the architecture serves that scenario. The `DataCaptureContext` manages the device's camera session. `BarcodeCaptureSettings` configures how each video frame is analyzed. The camera itself is treated as a first-class object — you get it, assign it as the frame source, switch it to an active state, and then flip a flag to start processing frames.
+### The DataCaptureContext Pipeline
 
-Here is what that initialization looks like in practice before a single barcode value is read:
+Every Scandit integration begins with this camera initialization sequence before a single barcode can be read:
 
 ```csharp
 // Scandit SDK: full camera pipeline setup
@@ -46,12 +44,101 @@ await camera.SwitchToDesiredStateAsync(FrameSourceState.On);
 barcodeCapture.IsEnabled = true;
 ```
 
-Every line in that block is camera infrastructure. There is no file path argument. There is no PDF. There is no stream. The library assumes a running camera before any barcode work can begin.
+Every line in this block is camera infrastructure. There is no file path argument. There is no PDF. There is no stream. The library assumes a running camera before any barcode work can begin.
 
-For file-based document processing, IronBarcode takes a different approach entirely:
+## Understanding IronBarcode
+
+IronBarcode is a commercial .NET library for barcode reading and generation. The library is designed for server-side, desktop, and cloud environments where barcode data arrives as files, streams, byte arrays, or embedded content within PDF documents. Its API is stateless — there is no session object, no camera pipeline to initialize, and no persistent context to manage between reads. A single static call to `BarcodeReader.Read` accepts a file path, stream, byte array, or PDF and returns a collection of results.
+
+IronBarcode ships as a single NuGet package containing all reading and generation capabilities across more than 30 1D and 2D barcode formats. The library supports automatic format detection, meaning the caller is not required to specify which symbologies to look for. Pricing is published on the product page with no sales conversation required.
+
+Key characteristics of IronBarcode include:
+
+- **Stateless File-Based API:** Reading begins with a single method call accepting a file path, stream, byte array, or PDF document.
+- **Automatic Format Detection:** All supported barcode formats are detected automatically. Explicit symbology configuration is an optional performance optimization, not a prerequisite.
+- **Native PDF Support:** Multi-page PDF documents are read directly, with results indexed by page number. No external PDF rendering library is required.
+- **Server and Cloud Ready:** Supports ASP.NET Core, Azure Functions, Docker on Linux, and containerized deployments without architectural workarounds.
+- **Concurrent Processing:** The stateless API is inherently thread-safe, enabling `Parallel.ForEach` and async patterns for high-throughput batch scenarios.
+- **Barcode Generation:** Produces barcodes in image and PDF format across all supported symbologies. Generation and reading are included in the same package.
+- **Published Perpetual Licensing:** Prices are listed publicly as one-time perpetual purchases with no per-scan or per-device fees.
+
+## Feature Comparison
+
+The following table highlights the fundamental differences between Scandit SDK and IronBarcode:
+
+| Feature | Scandit SDK | IronBarcode |
+|---|---|---|
+| **Primary Use Case** | Real-time camera scanning on mobile | File, stream, and PDF barcode reading on server |
+| **Camera Required** | Yes | No |
+| **PDF Barcode Extraction** | Not supported | Native support |
+| **Pricing Model** | Contact sales, per-product | Published perpetual tiers |
+| **Server-Side Processing** | Not designed for | Primary deployment target |
+| **Symbology Configuration** | Mandatory before scanning | Optional; auto-detection is default |
+| **Barcode Generation** | Not supported | Included in single package |
+
+### Detailed Feature Comparison
+
+| Feature | Scandit SDK | IronBarcode |
+|---|---|---|
+| **Reading** | | |
+| Image file reading | Not designed for | Primary focus |
+| PDF barcode extraction | Not supported | Native multi-page |
+| Stream / byte array input | Not supported | Yes |
+| Automatic format detection | No (must specify) | Yes |
+| 1D formats (Code 128, EAN, UPC, etc.) | 30+ | 30+ |
+| 2D formats (QR, DataMatrix, Aztec, PDF417) | Yes | Yes |
+| Multi-barcode detection per document | MatrixScan (separate product) | Yes (single package) |
+| Damaged barcode recovery | Limited | Yes (ML-powered) |
+| **Generation** | | |
+| Barcode generation | Not supported | Yes |
+| Output to image file | Not supported | Yes |
+| Output to PDF | Not supported | Yes |
+| **Architecture** | | |
+| Initialization model | Stateful camera pipeline | Stateless method call |
+| Result delivery | Event callback (async) | Synchronous return value |
+| Camera dependency | Required | Not applicable |
+| Symbology pre-declaration | Required | Optional |
+| **Platform** | | |
+| iOS / Android (MAUI) | Primary target | Programmatic use |
+| ASP.NET Core | Not designed for | Full support |
+| Azure Functions / serverless | Not practical | Full support |
+| Docker / Linux server | Not supported | Full support |
+| Console / background service | Not designed for | Full support |
+| **Licensing** | | |
+| Pricing transparency | Contact sales required | Published on website |
+| License type | Annual (per product) | Perpetual one-time |
+| Per-scan or per-device fees | Yes | No |
+| Single-package access to all features | No (modular products) | Yes |
+
+## Barcode Reading Architecture
+
+The most significant structural difference between these two libraries is how they model the relationship between input and output.
+
+### Scandit SDK Approach
+
+Scandit processes camera frames in real time. The `DataCaptureContext` holds an active camera session, and `BarcodeCapture` listens for barcodes in each incoming frame. Barcode results are delivered asynchronously through the `BarcodeScanned` event. Reading a static image file with Scandit requires adapting the camera pipeline to treat a file as a frame source — a workflow that is not natively supported and requires engineering effort to approximate.
 
 ```csharp
-// IronBarcode: read a file
+// Scandit SDK: event-callback result delivery
+barcodeCapture.BarcodeScanned += (sender, args) =>
+{
+    foreach (var barcode in args.Session.NewlyRecognizedBarcodes)
+    {
+        string value = barcode.Data;
+        string symbology = barcode.Symbology.ToString();
+        ProcessBarcode(value, symbology);
+    }
+};
+```
+
+The event-driven model is appropriate for continuous live scanning, where barcodes arrive unpredictably in a video stream. For file-based processing, the model introduces unnecessary complexity: the input has a known completion boundary, the camera session never terminates naturally, and the asynchronous callback pattern does not compose well with request-response server architectures.
+
+### IronBarcode Approach
+
+IronBarcode treats every input as a discrete document with a deterministic result. The `BarcodeReader.Read` method accepts a file path, stream, or byte array, performs all detection synchronously, and returns a collection of results. There is no session to open, no frame source to configure, and no event to subscribe to.
+
+```csharp
+// IronBarcode: direct file reading
 // NuGet: dotnet add package IronBarcode
 
 IronBarCode.License.LicenseKey = "YOUR-KEY";
@@ -60,169 +147,52 @@ foreach (var result in results)
     Console.WriteLine($"{result.Value} ({result.Format})");
 ```
 
-That is the complete program. No camera. No pipeline setup. No `async` state machine to initialize a frame source. The input is a file path, a stream, a byte array, or a PDF — whichever form your barcode data arrives in.
-
-The distinction matters because it is not a surface-level API preference. It reflects a fundamentally different intended deployment. Scandit ships into mobile apps with camera hardware and live users. IronBarcode ships into servers, scheduled jobs, and document workflows where there is no camera, no user, and no UI.
-
----
-
-## Pricing: Sales Calls vs Published Tiers
-
-Scandit's pricing page does not list prices. It lists products — SparkScan, MatrixScan, ID Scanning, AR Overlays, Parser — and routes every inquiry through a sales conversation. The quote process involves explaining your use case, estimating scan volume, specifying devices, discussing support tiers, and negotiating contract length before a number appears. Reviews on G2 and DiscoverSDK describe this consistently: "costs should not be underestimated for small and medium-sized enterprises," "challenges for predictable budgeting," "higher costs for extensive scanning needs." None of those reviewers are wrong. They just found out after the sales call.
-
-IronBarcode [publishes its pricing](https://ironsoftware.com/csharp/barcode/licensing/) on the product page with no form required:
-
-| License | Price | Developers | Projects |
-|---|---|---|---|
-| Lite | $749 one-time | 1 | 1 |
-| Professional | $1,499 one-time | 10 | 10 |
-| Unlimited | $2,999 one-time | Unlimited | Unlimited |
-
-There are no per-scan fees. No per-device fees. No volume thresholds that trigger tier changes. Process one barcode or one billion — same price. Annual renewal is optional at half the original cost, but the license you purchased is perpetual whether you renew or not.
-
-The budget impact of the contact-sales model is not just the potential cost difference. It is the timeline. A developer evaluating Scandit for a new project cannot put a number in a budget request, a sprint plan, or a build-vs-buy analysis without first entering a sales cycle that may take days or weeks. With IronBarcode, the number is on the page.
-
----
+For [reading barcodes from images](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/), the stateless API requires no initialization beyond the license key. Format detection is automatic. The complete program above reads any supported barcode format from an image file in three lines of operational code.
 
 ## Platform and Deployment Support
 
-Scandit's architecture requires camera hardware and a mobile platform that can expose it. That constrains where the SDK can run.
+The deployment context for a barcode library determines whether it can run in the target environment at all, independent of feature capabilities.
 
-| Platform | Scandit | IronBarcode |
-|---|---|---|
-| iOS / Android (MAUI) | Primary target | Programmatic use (no camera UI) |
-| ASP.NET Core | Not designed for | Full support |
-| Azure Functions | Not practical | Full support |
-| Docker / Linux server | Not supported | Full support |
-| Console application | Not designed for | Full support |
-| Blazor Server | Not designed for | Full support |
-| Windows Desktop (WPF / WinForms) | Secondary | Full support |
-| Offline file processing | No | Yes |
+### Scandit SDK Approach
 
-The "not practical" designation for Azure Functions is not a configuration problem — it is an architecture problem. Azure Functions are stateless compute units with no persistent camera session, no hardware to attach, and no camera preview surface. Scandit's pipeline assumes all of those things exist. Attempting to use Scandit in serverless or containerized environments means working around the entire foundation of the library.
+Scandit's architecture requires camera hardware and a mobile platform that can expose it through a native camera API. iOS and Android are the primary supported targets. Windows desktop is a secondary target. ASP.NET Core, Azure Functions, Docker containers, and Linux servers are outside the design scope of the library. The `DataCaptureContext` assumes a running camera session, which has no equivalent in serverless compute environments, containerized deployments, or background processing services.
 
-IronBarcode was built for those environments. Deploying to [Azure Functions for barcode processing](https://ironsoftware.com/csharp/barcode/get-started/azure/) is a supported, documented path. There is nothing to work around.
+| Platform | Scandit SDK |
+|---|---|
+| iOS / Android (MAUI) | Primary target |
+| Windows Desktop | Secondary support |
+| ASP.NET Core | Not designed for |
+| Azure Functions | Not practical |
+| Docker / Linux server | Not supported |
+| Console / background service | Not designed for |
 
----
+### IronBarcode Approach
 
-## Symbology Detection: Manual vs Automatic
+IronBarcode was built for server, cloud, and containerized environments. The stateless API has no hardware dependencies and no platform-specific initialization requirements. Deploying to [Azure Functions for barcode processing](https://ironsoftware.com/csharp/barcode/get-started/azure/) is a supported, documented path. Docker on Linux is a standard deployment target. ASP.NET Core endpoints reading barcodes from uploaded files represent a core supported scenario with no architectural workarounds required.
 
-Before Scandit reads a single barcode, you must tell it which symbologies to look for:
+| Platform | IronBarcode |
+|---|---|
+| iOS / Android (MAUI) | Programmatic file processing |
+| ASP.NET Core | Full support |
+| Azure Functions / Lambda | Full support |
+| Docker / Linux server | Full support |
+| Console / background service | Full support |
+| Blazor Server | Full support |
 
-```csharp
-settings.EnableSymbologies(new HashSet<Symbology>
-{
-    Symbology.Ean13Upca,
-    Symbology.Ean8,
-    Symbology.Upce,
-    Symbology.Code128,
-    Symbology.Code39,
-    Symbology.QrCode,
-    Symbology.DataMatrix
-});
-```
+## Concurrent Batch Processing
 
-This design makes sense for real-time camera scanning where filtering symbologies reduces processing overhead per frame. If you only scan EAN-13 barcodes in a retail checkout app, there is no reason to run QR code detection on every camera frame.
+Processing large volumes of barcode-bearing documents is a common server-side requirement that the two libraries approach from fundamentally different positions.
 
-For document processing, the same constraint becomes a liability. Incoming PDFs from suppliers, logistics partners, or customers may carry Code 128 labels, QR codes, DataMatrix, Aztec, or Interleaved 2-of-5. The format is not always known in advance. With Scandit's model, you either enumerate every possible format (removing the performance benefit) or write format-detection logic on top of the library.
+### Scandit SDK Approach
 
-IronBarcode detects all supported formats automatically. [Reading barcodes from images](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) requires no format specification — the library tries all formats and returns whatever it finds. If you have a use case where you know the format and want to restrict detection for performance, `BarcodeReaderOptions` accepts explicit format constraints. But that is an optimization, not a requirement to get started.
+Scandit's camera pipeline was designed for a single camera session serving a single user or device. The `FrameSourceState` model assumes a persistent, continuous camera session — not a queue of documents being processed at throughput. Adapting the library to process batches of files requires simulating a camera session per document or serializing document processing through a shared pipeline, neither of which represents a supported or efficient pattern.
 
----
+### IronBarcode Approach
 
-## Product Line Complexity
-
-Scandit is not one product. It is a platform of individually priced features:
-
-- **SparkScan** — consumer scanning UX framework
-- **MatrixScan** — multi-barcode simultaneous detection with AR
-- **ID Scanning** — identity document and passport scanning
-- **AR Overlays** — augmented reality product information display
-- **Parser** — structured barcode data parsing (GS1, HIBC, etc.)
-
-Each of these is a separate product. Capability access depends on which products are included in your contract. If you start with SparkScan and later need MatrixScan capabilities, that requires a new quote and a contract amendment. Building on this platform means your feature roadmap is gated by sales conversations, not just engineering effort.
-
-IronBarcode is a single package. Multi-barcode reading, PDF support, image processing, barcode generation, format auto-detection — all of it ships in the same NuGet package at the same price tier. There is no upsell path because there is no separate product to upsell.
-
----
-
-## Feature Comparison Table
-
-| Feature | Scandit | IronBarcode |
-|---|---|---|
-| Camera live scanning | Yes (primary) | Not applicable |
-| File / image reading | Not designed for | Primary focus |
-| PDF barcode extraction | No | Yes (native) |
-| Automatic format detection | No (must specify) | Yes |
-| Server-side processing | No | Yes |
-| ASP.NET Core support | No | Yes |
-| Azure Functions / serverless | No | Yes |
-| Docker / Linux deployment | No | Yes |
-| AR overlay support | Yes | No |
-| Multi-barcode simultaneous scan | MatrixScan (separate product) | Yes (single package) |
-| Damaged barcode recovery | Limited | Yes (ML-powered) |
-| Barcode generation | No | Yes |
-| Published pricing | No (sales quote) | Yes |
-| Perpetual license | No (annual) | Yes |
-| Per-scan / per-device fees | Yes | No |
-| 1D formats (Code 128, EAN, etc.) | 30+ | 30+ |
-| 2D formats (QR, DataMatrix, etc.) | Yes | Yes |
-| PDF417, Aztec | Yes | Yes |
-| Offline processing | Yes | Yes |
-
----
-
-## Code Comparison
-
-### Scenario: Read a Barcode from an Uploaded Image
-
-With Scandit, this scenario does not map cleanly to the library's design. Scandit processes camera frames in real time. Reading a static image file requires adapting the camera pipeline to treat a file as a frame source, which is not a standard supported workflow.
-
-With IronBarcode:
-
-```csharp
-// IronBarcode: ASP.NET Core endpoint reading an uploaded image
-// NuGet: dotnet add package IronBarcode
-
-[HttpPost("scan")]
-public IActionResult ScanUploadedFile(IFormFile file)
-{
-    using var stream = file.OpenReadStream();
-    var results = BarcodeReader.Read(stream);
-
-    if (!results.Any())
-        return NotFound("No barcode found");
-
-    return Ok(results.First().Value);
-}
-```
-
-### Scenario: Extract All Barcodes from a Multi-Page PDF
-
-Scandit has no native PDF support. Implementing this requires external PDF rendering to extract page images, then feeding those images through the camera pipeline simulation — significant engineering overhead for a common document processing task.
-
-IronBarcode [reads barcodes from PDFs natively](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-pdf/), including multi-page documents:
-
-```csharp
-// IronBarcode: extract barcodes from every page of a PDF
-var results = BarcodeReader.Read("shipping-manifest.pdf");
-
-foreach (var barcode in results)
-{
-    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value} ({barcode.Format})");
-}
-```
-
-### Scenario: High-Throughput Batch Processing
-
-Scandit's camera pipeline is not designed for batch file processing. The `FrameSourceState` model assumes a persistent camera session, not a queue of documents.
-
-IronBarcode supports concurrent processing across multiple threads for server throughput scenarios:
+Because IronBarcode's `BarcodeReader.Read` method is stateless, it is inherently safe to call from multiple threads simultaneously. Concurrent batch processing requires no special configuration beyond defining `BarcodeReaderOptions`:
 
 ```csharp
 // IronBarcode: concurrent batch processing
-// NuGet: dotnet add package IronBarcode
-
 var options = new BarcodeReaderOptions
 {
     Speed = ReadingSpeed.Balanced,
@@ -241,28 +211,137 @@ Parallel.ForEach(files, file =>
 });
 ```
 
-For more on [async and multithreaded barcode reading](https://ironsoftware.com/csharp/barcode/how-to/async-multithread/) with IronBarcode, the documentation covers thread-safe patterns and throughput tuning.
+For detailed patterns on [async and multithreaded barcode reading](https://ironsoftware.com/csharp/barcode/how-to/async-multithread/), the IronBarcode documentation covers thread-safe patterns and throughput tuning options.
 
----
+## PDF Document Processing
 
-## When to Choose Each Library
+PDF barcode extraction is a distinct capability from image-based reading and represents a significant divergence between the two libraries.
 
-**Choose Scandit when:**
+### Scandit SDK Approach
 
-- You are building a mobile app where a user points a device camera at a physical barcode and needs sub-100ms feedback
-- You need AR overlay experiences — product information displayed over the camera view, multi-item scanning with visual highlights
-- You are deploying mobile field workers at scale (hundreds or thousands of devices) and need device management, analytics, and enterprise support SLAs
-- Your use case is genuinely real-time, camera-based, and mobile-first — and your budget process can accommodate sales-driven pricing
+Scandit has no native PDF support. Extracting barcodes from a PDF using Scandit requires rendering each PDF page to a raster image using a separate PDF rendering library, then feeding those images through the camera simulation pipeline. This approach introduces an additional dependency, additional licensing cost, and significant engineering effort for a task that is routine in document-processing workflows. Multi-page documents require iterating pages, managing memory for rendered images, and coordinating results across pages manually.
 
-**Choose IronBarcode when:**
+### IronBarcode Approach
 
-- You are processing barcodes from files — images, PDFs, scanned documents, or byte arrays from any source
-- You are building a server-side API, background service, scheduled job, or Azure Function that reads barcodes without a user present
-- You need PDF barcode extraction without an additional library or license
-- Predictable, published pricing matters for budget planning
-- You need to deploy on Linux, in Docker containers, or in cloud functions
-- You want automatic format detection without pre-specifying symbologies for every read call
+IronBarcode reads barcodes from PDF documents natively. A file path to a PDF is a valid argument to `BarcodeReader.Read`, and results include a `PageNumber` property indicating which page of the document each barcode was found on:
 
-**Consider both when:**
+```csharp
+// IronBarcode: extract barcodes from every page of a PDF
+var results = BarcodeReader.Read("shipping-manifest.pdf");
 
-Some organizations genuinely need both. Mobile warehouse workers scan physical items in real time — that is Scandit's domain. The same organization's back-office system processes incoming shipping PDFs and generates barcode labels — that is IronBarcode's domain. These tools solve different problems and can coexist without conflict.
+foreach (var barcode in results)
+{
+    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value} ({barcode.Format})");
+}
+```
+
+For complete guidance on [reading barcodes from PDFs](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-pdf/), including options for page range selection and multi-barcode extraction, the IronBarcode documentation covers the full range of PDF processing scenarios.
+
+## Pricing and Licensing
+
+Licensing structure affects not only the cost of a library but the timeline required to evaluate and adopt it.
+
+### Scandit Approach
+
+Scandit does not publish pricing. The product page lists features and product names — SparkScan, MatrixScan, ID Scanning, AR Overlays, Parser — and routes all inquiries through a sales conversation. The quote process involves explaining the use case, estimating scan volume, specifying devices, discussing support tiers, and negotiating contract length before a cost figure is provided. Reviews on platforms such as G2 and DiscoverSDK consistently note unpredictable costs for small and medium-sized enterprises and challenges with budget forecasting. Each Scandit product line is separately priced and separately contracted, meaning expanded feature access requires additional sales cycles.
+
+### IronBarcode Approach
+
+IronBarcode publishes its [licensing tiers](https://ironsoftware.com/csharp/barcode/licensing/) on the product page without requiring a form submission or sales inquiry:
+
+| License | Price | Developers | Projects |
+|---|---|---|---|
+| Lite | $749 one-time | 1 | 1 |
+| Professional | $1,499 one-time | 10 | 10 |
+| Unlimited | $2,999 one-time | Unlimited | Unlimited |
+
+Licenses are perpetual. There are no per-scan fees, no per-device fees, and no volume thresholds that trigger tier changes. Annual renewal is optional at half the original cost, but the purchased license remains valid without renewal. All features across the single IronBarcode package — reading, generation, PDF support, multi-barcode detection — are included at every tier.
+
+## API Mapping Reference
+
+The following table maps Scandit SDK concepts to their IronBarcode equivalents for teams assessing the translation cost of a migration:
+
+| Scandit SDK | IronBarcode | Notes |
+|---|---|---|
+| `DataCaptureContext.ForLicenseKey("key")` | `IronBarCode.License.LicenseKey = "key"` | One assignment; no context object required |
+| `BarcodeCaptureSettings.Create()` | `new BarcodeReaderOptions()` | Optional in IronBarcode |
+| `settings.EnableSymbologies(Symbology.Code128, ...)` | (not needed) | Auto-detection is the default |
+| `Camera.GetDefaultCamera()` | (not applicable) | No camera concept in file processing |
+| `dataCaptureContext.SetFrameSourceAsync(camera)` | (not applicable) | No frame source in IronBarcode |
+| `camera.SwitchToDesiredStateAsync(FrameSourceState.On)` | (not applicable) | No camera state machine |
+| `barcodeCapture.IsEnabled = true` | `BarcodeReader.Read(path)` | Single call initiates reading |
+| `BarcodeScanned +=` event handler | Iteration over `BarcodeReader.Read()` return value | Synchronous collection; no event system |
+| `args.Session.NewlyRecognizedBarcodes` | Return value of `BarcodeReader.Read()` | Direct collection access |
+| `barcode.Data` | `result.Value` | Same semantic content |
+| `barcode.Symbology` | `result.Format` | Equivalent format enumeration |
+| SparkScan, MatrixScan, ID Scanning (separate products) | Single `IronBarcode` package | No separate add-ons |
+
+## When Teams Consider Moving from Scandit SDK to IronBarcode
+
+### Server-Side Processing Requirements
+
+Teams building ASP.NET Core APIs, background processing services, or Azure Functions encounter Scandit's architecture as a fundamental mismatch from the first line of integration. The `DataCaptureContext` and camera pipeline assume hardware that does not exist in a server environment. When a project's barcode requirements are entirely server-side — reading from uploaded files, processing document queues, extracting barcode data from incoming PDFs — the camera pipeline adds initialization complexity, async state machine overhead, and platform constraints that contribute nothing to the actual business requirement.
+
+### Batch Document Processing
+
+Organizations processing high volumes of barcode-bearing documents — shipping manifests, invoices, inventory records, medical forms — find that Scandit's frame-source model does not compose with document queues. The library was designed for continuous camera sessions, not discrete documents with deterministic start and end points. When document volume grows and parallel processing becomes necessary, the camera pipeline's statefulness becomes an engineering obstacle rather than a feature.
+
+### Pricing Transparency
+
+Development teams working on budget proposals, vendor comparisons, or cost-benefit analyses for new projects cannot complete that work with Scandit without entering a sales cycle first. When a project has a defined budget and a defined timeline, the inability to determine license cost without a sales conversation introduces delays and uncertainty that have downstream effects on project planning. Teams evaluating multiple library options simultaneously find that the absence of published pricing makes Scandit difficult to include in a structured comparison.
+
+### Reducing Pipeline Complexity
+
+Even when Scandit is already deployed for mobile camera scanning, some teams discover that server-side barcode requirements in the same application require a different tool. The camera pipeline that is appropriate for real-time mobile scanning introduces unnecessary complexity when applied to static document processing. Teams reaching this point often adopt IronBarcode for server-side processing alongside an existing Scandit deployment, rather than attempting to extend the camera pipeline to use cases it was not designed to handle.
+
+## Common Migration Considerations
+
+### Camera Pipeline Has No File Equivalent
+
+The entire `DataCaptureContext` initialization block — context creation, settings configuration, symbology enablement, camera acquisition, frame source assignment, and state transition — has no equivalent in IronBarcode's file-based API. When migrating server-side integration code, this block is deleted in its entirety. It is not translated; it is removed. The IronBarcode replacement is a license key assignment followed by a `BarcodeReader.Read` call.
+
+### Event Callback to Direct Return
+
+Scandit delivers barcode results through the `BarcodeScanned` event because live camera scanning is asynchronous by nature. IronBarcode returns results synchronously as a typed collection because file-based reading has a known completion boundary. Migration involves converting event handler logic to standard iteration:
+
+```csharp
+// Scandit callback pattern (removed during migration)
+barcodeCapture.BarcodeScanned += (sender, args) =>
+{
+    foreach (var barcode in args.Session.NewlyRecognizedBarcodes)
+        ProcessBarcode(barcode.Data, barcode.Symbology.ToString());
+};
+
+// IronBarcode direct return (replacement)
+foreach (var result in BarcodeReader.Read("document.png"))
+    ProcessBarcode(result.Value, result.Format.ToString());
+```
+
+### Symbology Declaration Removal
+
+Scandit requires explicit `EnableSymbologies` calls before scanning begins. IronBarcode does not require symbology pre-declaration — all formats are detected automatically. During migration, all `settings.EnableSymbologies(...)` calls are removed. If the original Scandit code was restricting symbologies for performance reasons, equivalent optimization in IronBarcode is available through `BarcodeReaderOptions.ExpectBarcodeTypes`, but it is not required to get started.
+
+## Additional IronBarcode Capabilities
+
+Beyond the areas covered in the comparison above, IronBarcode provides capabilities that extend its utility in document and data processing scenarios:
+
+- **[Barcode Generation](https://ironsoftware.com/csharp/barcode/how-to/create-barcode-images/):** Generate barcodes as image files or embed them in PDFs across all supported symbologies, including QR codes, Code 128, Data Matrix, and PDF417.
+- **[GS1 and Structured Data Parsing](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/):** Decode structured barcode data formats including GS1-128 application identifiers directly from barcode results.
+- **[Image Correction and Preprocessing](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/):** Automatic image correction for skewed, low-contrast, or damaged barcodes improves read rates on scanned documents without requiring manual preprocessing.
+- **[Multi-Barcode Detection](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/):** A single `BarcodeReader.Read` call detects all barcodes present in a document, including mixed formats on the same page, using the `ExpectMultipleBarcodes` option.
+- **[MAUI Barcode Reading](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/):** In MAUI applications using a capture-and-process model, IronBarcode handles the processing step after a photo is captured using `MediaPicker`.
+- **[Stream and Byte Array Input](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/):** In addition to file paths, `BarcodeReader.Read` accepts `Stream` and `byte[]` inputs, enabling integration with upload handlers, memory buffers, and network streams without temporary file creation.
+
+## .NET Compatibility and Future Readiness
+
+IronBarcode supports .NET Framework 4.6.2 and later, .NET Standard 2.0, and all modern .NET versions including .NET 6, .NET 7, .NET 8, and .NET 9. The library receives regular updates to maintain compatibility with current and forthcoming .NET releases, including .NET 10 expected in late 2026. Its stateless API design is compatible with the async-first programming model introduced across modern .NET, and its support for Linux and containerized deployments positions it for cloud-native workloads where .NET adoption continues to grow. Because the library ships as a single NuGet package without platform-specific runtime dependencies beyond the .NET runtime itself, upgrading between .NET versions does not require separate library updates or additional configuration.
+
+## Conclusion
+
+Scandit SDK and IronBarcode represent fundamentally different approaches to barcode processing that reflect different intended deployment contexts. Scandit was built for real-time camera scanning on mobile hardware, with an architecture that coordinates a live camera session, per-frame analysis settings, and event-driven result delivery. IronBarcode was built for file-based and document-centric processing on servers, desktops, and cloud infrastructure, with a stateless API that accepts files, streams, and PDFs and returns synchronous results. These are not competing implementations of the same idea — they are different ideas serving different use cases.
+
+Scandit SDK is the appropriate choice for mobile applications where a user points a device camera at a physical barcode and needs sub-100ms visual feedback. Its AR overlay capabilities, multi-barcode simultaneous detection through MatrixScan, and identity document scanning through ID Scanning are purpose-built features that no file-based barcode library replicates. Organizations deploying mobile field workers at scale, running consumer-facing scanning experiences, or requiring enterprise mobile scanning SLAs are looking at the audience Scandit was designed to serve.
+
+IronBarcode is the appropriate choice when barcode data arrives as files — images, PDFs, byte arrays, or upload streams — and the processing occurs without a camera, without a user, and without a UI. Server-side document processing, ASP.NET Core API endpoints, Azure Functions, scheduled batch jobs, and containerized microservices represent the environments IronBarcode was built to run in. Its published pricing, single-package feature access, and direct file-reading API remove the architectural friction and budget uncertainty that Scandit's camera-pipeline model and contact-sales model introduce for these scenarios.
+
+The honest evaluation is that the choice is largely determined by deployment context rather than preference. A project requiring live mobile camera scanning has a clear answer. A project requiring server-side PDF barcode extraction has an equally clear answer. Where the two libraries are sometimes confused is in the middle — MAUI applications, hybrid architectures, and organizations that have both mobile scanning and document processing requirements. In those cases, the two libraries can coexist: Scandit handles the camera-facing work, IronBarcode handles the document-processing work, and neither library is forced into a role it was not designed for.
