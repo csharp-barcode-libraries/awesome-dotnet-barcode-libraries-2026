@@ -8,25 +8,27 @@ Teams migrating from BarcodeLib to IronBarcode report these triggers:
 
 **No Reading API:** BarcodeLib has never included a reading or decoding capability. When a project that was generating barcode images receives a new requirement to also scan barcodes — from uploaded images, warehouse scanners, or supplier documents — BarcodeLib cannot fulfill it. The only option is adding a second library such as ZXing.Net, which introduces a second dependency graph and second API surface to maintain alongside BarcodeLib.
 
-**SkiaSharp Version Conflict:** BarcodeLib 3.x introduced SkiaSharp as a graphics backend to replace `System.Drawing.Common`. The library pins to a specific SkiaSharp version range. In MAUI projects, Blazor projects, and any project where another dependency also pulls in SkiaSharp, the resolved version frequently falls outside BarcodeLib's expected range. This produces NU1608 warnings during restore and, in the worst cases, runtime assembly binding failures on device.
+**SkiaSharp Version Conflict:** BarcodeLib 3.x introduced SkiaSharp as a graphics backend to replace `System.Drawing.Common`. Version 3.1.5 pins `SkiaSharp >= 2.88.8`. In MAUI projects, Blazor projects, and any project where another dependency also pulls in SkiaSharp 3.x, the resolved version can fall outside BarcodeLib's expected range. This produces NU1608 warnings during restore and, in the worst cases, runtime assembly binding failures on device.
 
 **No PDF Support:** Applications that generate PDF documents with embedded barcodes — invoices, work orders, shipping manifests — sometimes need to read those barcodes back during downstream processing. BarcodeLib generates barcode images but has no PDF support on either end. Extracting barcodes from a PDF with BarcodeLib requires rendering the PDF pages to images with a separate PDF library and then passing those images to a separate reading library.
 
-**MemoryStream Requirement for Byte Array Output:** BarcodeLib returns `System.Drawing.Image`, which requires a `MemoryStream` intermediary to produce the `byte[]` output that HTTP responses, database BLOB columns, and most downstream consumers actually need. IronBarcode provides `.ToPngBinaryData()` directly on the generation chain.
+**Stream Encoding Required for Byte Array Output:** BarcodeLib 3.x returns a `SkiaSharp.SKImage` (or `System.Drawing.Image` on 2.x), which requires encoding to a `MemoryStream` via `SKImage.Encode(...).SaveTo(stream)` (or `Image.Save(ms, ImageFormat.Png)`) before you can produce the `byte[]` output that HTTP responses, database BLOB columns, and most downstream consumers actually need. IronBarcode provides `.ToPngBinaryData()` directly on the generation chain.
 
 ### The Fundamental Problem
 
 BarcodeLib's generation-only architecture means that adding any scan capability forces a second library into the stack:
 
 ```csharp
-// BarcodeLib: generation only — reading requires a completely separate library
-using BarcodeLib;
+// BarcodeLib 3.x: generation only — reading requires a completely separate library
+using BarcodeStandard;
+using SkiaSharp;
 
 var b = new Barcode();
-b.Width = 300;
-b.Height = 100;
-Image img = b.Encode(TYPE.CODE128, "PRODUCT-12345");
-img.Save("barcode.png", ImageFormat.Png);
+SKImage img = b.Encode(BarcodeStandard.Type.Code128, "PRODUCT-12345", 300, 100);
+using (var stream = File.OpenWrite("barcode.png"))
+{
+    img.Encode(SKEncodedImageFormat.Png, 100).SaveTo(stream);
+}
 
 // To read it back, you have no option but to add ZXing.Net or another scanner:
 // using ZXing;
@@ -47,7 +49,7 @@ BarcodeWriter.CreateBarcode("PRODUCT-12345", BarcodeEncoding.Code128)
     .SaveAsPng("barcode.png");
 
 // Read back — same package, same namespace
-var result = BarcodeReader.Read("barcode.png").First().Value;
+var result = BarcodeReader.Read("barcode.png").First().Value;  // .Value is the decoded string
 Console.WriteLine(result);  // "PRODUCT-12345"
 ```
 
@@ -55,9 +57,10 @@ Console.WriteLine(result);  // "PRODUCT-12345"
 
 | Feature | BarcodeLib | IronBarcode |
 |---|---|---|
-| Barcode generation | Yes | Yes |
+| Barcode generation (1D) | Yes | Yes |
+| Barcode generation (2D / QR / Data Matrix) | No | Yes |
 | Barcode reading / scanning | No | Yes (`BarcodeReader.Read()`) |
-| QR code generation | Yes (basic) | Yes (advanced, with logo embedding) |
+| QR code generation | No | Yes (advanced, with logo embedding) |
 | PDF barcode reading | No | Yes (native, no extra library) |
 | PDF barcode generation output | No | Yes |
 | SkiaSharp dependency | Yes (version conflict risk) | No |
@@ -70,7 +73,7 @@ Console.WriteLine(result);  // "PRODUCT-12345"
 | Docker / container support | Configuration required | Yes |
 | Active maintenance | Yes (community) | Yes (commercial) |
 | Commercial support / SLA | No | Yes |
-| License | Apache 2.0 (free) | $749–$5,999 perpetual |
+| License | Apache 2.0 (free) | $799–$4,799 perpetual |
 
 ## Quick Start: BarcodeLib to IronBarcode Migration
 
@@ -78,23 +81,16 @@ The migration can begin immediately with these foundational steps.
 
 ### Step 1: Replace NuGet Package
 
-The package name varies depending on which BarcodeLib variant your project uses. Remove it first:
+Remove BarcodeLib first:
 
 ```bash
-# Remove the standard package
 dotnet remove package BarcodeLib
-
-# Or the signed variant
-dotnet remove package BarcodeLib.Signed
-
-# Or the SkiaSharp variant (most likely to have caused NU1608)
-dotnet remove package BarcodeLib.SkiaSharp
 ```
 
-If you are not sure which variant is installed, check the `.csproj` file:
+Note that the canonical package on nuget.org is `BarcodeLib` (by Brad Barnhill). Some legacy projects also reference now-archived community forks under different IDs — handle those the same way. Check the `.csproj` file to be sure:
 
 ```bash
-grep -n "BarcodeLib" YourProject.csproj
+grep -n "BarcodeLib\|BarcodeStandard" YourProject.csproj
 ```
 
 Remove all BarcodeLib-related `<PackageReference>` entries. If you added explicit `<PackageReference Include="SkiaSharp">` overrides to work around NU1608 warnings from BarcodeLib, remove those too — after installing IronBarcode, evaluate whether SkiaSharp is still needed for other reasons. Then install IronBarcode:
@@ -105,12 +101,16 @@ dotnet add package IronBarcode
 
 ### Step 2: Update Namespaces
 
-Replace the BarcodeLib `using` directives in each file that referenced them:
+Replace the BarcodeLib `using` directives in each file that referenced them. Note that BarcodeLib 2.x used `using BarcodeLib;` and 3.x switched to `using BarcodeStandard;` (alongside `using SkiaSharp;` for the `SKImage` return type):
 
 ```csharp
-// Before
+// Before (BarcodeLib 2.x)
 using BarcodeLib;
 using System.Drawing.Imaging;  // often paired with BarcodeLib for ImageFormat
+
+// Before (BarcodeLib 3.x)
+using BarcodeStandard;
+using SkiaSharp;
 
 // After
 using IronBarCode;
@@ -132,21 +132,20 @@ For ASP.NET Core applications, put this in `Program.cs` before `builder.Build()`
 
 The most common BarcodeLib pattern: create an instance, set properties, call `Encode()`.
 
-**BarcodeLib Approach:**
+**BarcodeLib Approach (3.x):**
 
 ```csharp
-using BarcodeLib;
-using System.Drawing;
-using System.Drawing.Imaging;
+using BarcodeStandard;
+using SkiaSharp;
+using System.IO;
 
 public void GenerateShippingLabel(string trackingNumber, string outputPath)
 {
     var b = new Barcode();
     b.IncludeLabel = true;
-    b.Width = 400;
-    b.Height = 120;
-    Image img = b.Encode(TYPE.CODE128, trackingNumber);
-    img.Save(outputPath, ImageFormat.Png);
+    SKImage img = b.Encode(BarcodeStandard.Type.Code128, trackingNumber, 400, 120);
+    using var stream = File.OpenWrite(outputPath);
+    img.Encode(SKEncodedImageFormat.Png, 100).SaveTo(stream);
 }
 ```
 
@@ -165,29 +164,26 @@ public void GenerateShippingLabel(string trackingNumber, string outputPath)
 }
 ```
 
-The property-setter block collapses into a fluent chain. `.AddAnnotationTextBelowBarcode()` replaces `b.IncludeLabel = true` — it accepts the label string explicitly so you control what text appears below the bars. `.ResizeTo()` replaces the `Width` and `Height` property assignments. For advanced generation options, see the [IronBarcode barcode generation documentation](https://ironsoftware.com/csharp/barcode/how-to/create-barcode-images/).
+The instance-plus-`Encode` pattern collapses into a fluent chain. `.AddAnnotationTextBelowBarcode()` replaces `b.IncludeLabel = true` — it accepts the label string explicitly so you control what text appears below the bars. `.ResizeTo()` replaces the explicit width/height arguments to `Encode()`. The `SKImage` round-trip through a stream disappears entirely. For advanced generation options, see the [IronBarcode barcode generation documentation](https://ironsoftware.com/csharp/barcode/how-to/create-barcode-images/).
 
 ### Returning byte[] — the Common Web API Pattern
 
-BarcodeLib returns a `System.Drawing.Image`. Getting bytes out of it requires saving to a `MemoryStream`. IronBarcode provides `.ToPngBinaryData()` directly.
+BarcodeLib 3.x returns an `SKImage`. Getting bytes out of it requires encoding to a `MemoryStream` via `SKImage.Encode(...).SaveTo(ms)`. IronBarcode provides `.ToPngBinaryData()` directly.
 
-**BarcodeLib Approach:**
+**BarcodeLib Approach (3.x):**
 
 ```csharp
-using BarcodeLib;
-using System.Drawing;
-using System.Drawing.Imaging;
+using BarcodeStandard;
+using SkiaSharp;
 using System.IO;
 
 public byte[] GetBarcodeBytes(string data)
 {
     var b = new Barcode();
-    b.Width = 300;
-    b.Height = 100;
-    Image img = b.Encode(TYPE.CODE128, data);
+    SKImage img = b.Encode(BarcodeStandard.Type.Code128, data, 300, 100);
 
     using var ms = new MemoryStream();
-    img.Save(ms, ImageFormat.Png);
+    img.Encode(SKEncodedImageFormat.Png, 100).SaveTo(ms);
     return ms.ToArray();
 }
 ```
@@ -209,12 +205,12 @@ The `MemoryStream` intermediate step is gone. `.ToPngBinaryData()` returns the `
 
 ### Web API Controller Action
 
-**BarcodeLib Approach:**
+**BarcodeLib Approach (3.x):**
 
 ```csharp
-using BarcodeLib;
+using BarcodeStandard;
 using Microsoft.AspNetCore.Mvc;
-using System.Drawing.Imaging;
+using SkiaSharp;
 using System.IO;
 
 [ApiController]
@@ -225,12 +221,10 @@ public class LabelsController : ControllerBase
     public IActionResult GetLabel(string sku)
     {
         var b = new Barcode();
-        b.Width = 400;
-        b.Height = 120;
-        var img = b.Encode(TYPE.CODE128, sku);
+        SKImage img = b.Encode(BarcodeStandard.Type.Code128, sku, 400, 120);
 
         using var ms = new MemoryStream();
-        img.Save(ms, ImageFormat.Png);
+        img.Encode(SKEncodedImageFormat.Png, 100).SaveTo(ms);
         return File(ms.ToArray(), "image/png");
     }
 }
@@ -260,22 +254,17 @@ public class LabelsController : ControllerBase
 
 The controller action shrinks by removing the `MemoryStream` block and the `System.Drawing.Imaging` import. The byte array flows directly from `.ToPngBinaryData()` into `File()`.
 
-### QR Code Generation
+### QR Code Generation (Net-New Capability)
 
-BarcodeLib supports QR codes through `TYPE.QR_Code`. IronBarcode uses a dedicated `QRCodeWriter` class with additional options for logo embedding and styling.
+BarcodeLib does **not** generate QR codes — its `Type` enum is 1D-only and contains no QR Code, Data Matrix, or other 2D entry. Projects that need QR generation alongside their existing BarcodeLib usage typically had to add a second library (such as QRCoder). IronBarcode covers both with `QRCodeWriter`.
 
 **BarcodeLib Approach:**
 
 ```csharp
-using BarcodeLib;
-using System.Drawing;
-using System.Drawing.Imaging;
-
-var b = new Barcode();
-b.Width = 300;
-b.Height = 300;
-Image qr = b.Encode(TYPE.QR_Code, "https://example.com/product/42");
-qr.Save("qr.png", ImageFormat.Png);
+// BarcodeLib has no QR Code support.
+// Projects historically added a second library (e.g. QRCoder) for QR codes
+// alongside BarcodeLib's 1D generation. This is a separate dependency
+// graph and a separate API to maintain.
 ```
 
 **IronBarcode Approach:**
@@ -287,7 +276,7 @@ using IronBarCode;
 QRCodeWriter.CreateQrCode("https://example.com/product/42", 300)
     .SaveAsPng("qr.png");
 
-// QR code with embedded brand logo (not possible with BarcodeLib)
+// QR code with embedded brand logo (not possible with BarcodeLib at all)
 QRCodeWriter.CreateQrCode("https://example.com/product/42", 300)
     .AddBrandLogo("logo.png")
     .SaveAsPng("qr-branded.png");
@@ -299,23 +288,23 @@ QRCodeWriter.CreateQrCode("https://example.com/product/42", 300)
 
 These are common in retail inventory systems. The enum names change but the values are direct equivalents.
 
-**BarcodeLib Approach:**
+**BarcodeLib Approach (3.x):**
 
 ```csharp
-using BarcodeLib;
-using System.Drawing;
-using System.Drawing.Imaging;
+using BarcodeStandard;
+using SkiaSharp;
+using System.IO;
 
 // EAN-13 product barcode
 var b = new Barcode();
-b.Width = 250;
-b.Height = 100;
-Image ean = b.Encode(TYPE.EAN13, "5901234123457");
-ean.Save("product-ean.png", ImageFormat.Png);
+SKImage ean = b.Encode(BarcodeStandard.Type.Ean13, "5901234123457", 250, 100);
+using (var s = File.OpenWrite("product-ean.png"))
+    ean.Encode(SKEncodedImageFormat.Png, 100).SaveTo(s);
 
 // UPC-A for US retail
-Image upc = b.Encode(TYPE.UPCA, "012345678905");
-upc.Save("product-upc.png", ImageFormat.Png);
+SKImage upc = b.Encode(BarcodeStandard.Type.UpcA, "012345678905", 250, 100);
+using (var s = File.OpenWrite("product-upc.png"))
+    upc.Encode(SKEncodedImageFormat.Png, 100).SaveTo(s);
 ```
 
 **IronBarcode Approach:**
@@ -359,7 +348,7 @@ var results = BarcodeReader.Read("incoming-label.png");
 foreach (var result in results)
 {
     Console.WriteLine($"Value: {result.Value}");
-    Console.WriteLine($"Format: {result.Format}");
+    Console.WriteLine($"Format: {result.BarcodeType}");
 }
 
 // Read all barcodes from a multi-page PDF — no PDF library required
@@ -382,7 +371,7 @@ var warehouseResults = BarcodeReader.Read("dock-scan.png", options);
 
 ### Resolving the SkiaSharp Conflict
 
-If your migration is driven by NU1608 warnings, verify the conflict is resolved after switching packages. After running `dotnet remove package BarcodeLib.SkiaSharp` and `dotnet add package IronBarcode`, rebuild and check the output:
+If your migration is driven by NU1608 warnings, verify the conflict is resolved after switching packages. After running `dotnet remove package BarcodeLib` and `dotnet add package IronBarcode`, rebuild and check the output:
 
 ```bash
 dotnet build 2>&1 | grep -i "NU1608\|SkiaSharp"
@@ -395,9 +384,9 @@ If no output appears, the conflict is resolved. If SkiaSharp warnings remain, th
 ```xml
 <!-- Before — explicit overrides needed to pacify BarcodeLib -->
 <ItemGroup>
-  <PackageReference Include="BarcodeLib.SkiaSharp" Version="3.1.5" />
-  <PackageReference Include="SkiaSharp" Version="2.88.7" />
-  <!-- Override required because MAUI needs a different version -->
+  <PackageReference Include="BarcodeLib" Version="3.1.5" />
+  <!-- BarcodeLib pulls in SkiaSharp >= 2.88.8 transitively -->
+  <!-- Override often added because MAUI needs a 3.x SkiaSharp -->
   <PackageReference Include="SkiaSharp" Version="3.116.1" />
 </ItemGroup>
 ```
@@ -418,47 +407,47 @@ If no output appears, the conflict is resolved. If SkiaSharp warnings remain, th
 | BarcodeLib | IronBarcode |
 |---|---|
 | `new Barcode()` | Static API — no instance required |
-| `b.Encode(TYPE.CODE128, "data")` | `BarcodeWriter.CreateBarcode("data", BarcodeEncoding.Code128)` |
+| `b.Encode(BarcodeStandard.Type.Code128, "data", w, h)` | `BarcodeWriter.CreateBarcode("data", BarcodeEncoding.Code128).ResizeTo(w, h)` |
 | `b.IncludeLabel = true` | `.AddAnnotationTextBelowBarcode("text")` |
-| `b.Width = 300; b.Height = 100` | `.ResizeTo(300, 100)` |
-| Returns `System.Drawing.Image` | `.SaveAsPng(path)` / `.ToPngBinaryData()` |
-| `TYPE.CODE128` | `BarcodeEncoding.Code128` |
-| `TYPE.CODE39` | `BarcodeEncoding.Code39` |
-| `TYPE.EAN13` | `BarcodeEncoding.EAN13` |
-| `TYPE.UPCA` | `BarcodeEncoding.UPCA` |
-| `TYPE.QR_Code` | `BarcodeEncoding.QRCode` (also `QRCodeWriter`) |
-| `TYPE.ITF14` | `BarcodeEncoding.ITF14` |
-| `TYPE.CODABAR` | `BarcodeEncoding.Codabar` |
+| `width` / `height` args to `Encode()` | `.ResizeTo(width, height)` |
+| Returns `SKImage` (3.x) / `System.Drawing.Image` (2.x) | `.SaveAsPng(path)` / `.ToPngBinaryData()` |
+| `BarcodeStandard.Type.Code128` | `BarcodeEncoding.Code128` |
+| `BarcodeStandard.Type.Code39` | `BarcodeEncoding.Code39` |
+| `BarcodeStandard.Type.Ean13` | `BarcodeEncoding.EAN13` |
+| `BarcodeStandard.Type.UpcA` | `BarcodeEncoding.UPCA` |
+| (no QR Code in BarcodeLib) | `BarcodeEncoding.QRCode` / `QRCodeWriter.CreateQrCode()` |
+| `BarcodeStandard.Type.Itf14` | `BarcodeEncoding.ITF14` |
+| `BarcodeStandard.Type.Codabar` | `BarcodeEncoding.Codabar` |
 | No reading API | `BarcodeReader.Read(path)` |
 | SkiaSharp version conflict in MAUI | No conflicting dependencies |
-| `img.Save(path, ImageFormat.Png)` | `.SaveAsPng(path)` |
-| `MemoryStream` + `img.Save(ms)` | `.ToPngBinaryData()` |
+| `img.Encode(SKEncodedImageFormat.Png, 100).SaveTo(stream)` | `.SaveAsPng(path)` |
+| `MemoryStream` + `SKImage.Encode().SaveTo(ms)` | `.ToPngBinaryData()` |
 
 ## Common Migration Issues and Solutions
 
-### Issue 1: TYPE Enum Namespace Change
+### Issue 1: Type Enum Naming and Namespace Change
 
-**BarcodeLib:** Uses `TYPE.CODE128` (uppercase constant, `TYPE` class). The `TYPE` class is BarcodeLib's central enum container.
+**BarcodeLib:** 2.x exposed `using BarcodeLib;` with values like `TYPE.CODE128` (uppercase). 3.x switched to `using BarcodeStandard;` with PascalCase values on the `Type` enum: `BarcodeStandard.Type.Code128`, `Type.Ean13`, `Type.UpcA`, `Type.QR_Code` does **not** exist (BarcodeLib has no QR support).
 
 **Solution:** Replace with `BarcodeEncoding.Code128` (PascalCase, standard `enum` type). A grep across `.cs` files identifies all occurrences, and a systematic find-and-replace covers the common formats:
 
 ```bash
-grep -rn "TYPE\." --include="*.cs" .
+grep -rn "TYPE\.\|BarcodeStandard\.Type\." --include="*.cs" .
 ```
 
-Common replacements: `TYPE.CODE128` → `BarcodeEncoding.Code128`, `TYPE.EAN13` → `BarcodeEncoding.EAN13`, `TYPE.UPCA` → `BarcodeEncoding.UPCA`, `TYPE.QR_Code` → `BarcodeEncoding.QRCode`, `TYPE.ITF14` → `BarcodeEncoding.ITF14`, `TYPE.CODABAR` → `BarcodeEncoding.Codabar`.
+Common replacements (covering both 2.x and 3.x source forms): `TYPE.CODE128` / `Type.Code128` → `BarcodeEncoding.Code128`; `TYPE.EAN13` / `Type.Ean13` → `BarcodeEncoding.EAN13`; `TYPE.UPCA` / `Type.UpcA` → `BarcodeEncoding.UPCA`; `TYPE.ITF14` / `Type.Itf14` → `BarcodeEncoding.ITF14`; `TYPE.CODABAR` / `Type.Codabar` → `BarcodeEncoding.Codabar`. There is no QR equivalent to map from BarcodeLib — adopt `BarcodeEncoding.QRCode` directly.
 
-### Issue 2: System.Drawing.Image Return Type
+### Issue 2: SKImage / System.Drawing.Image Return Type
 
-**BarcodeLib:** `b.Encode()` returns `System.Drawing.Image`. Code typed to `Image` or `System.Drawing.Image` will not compile against IronBarcode.
+**BarcodeLib:** `b.Encode()` returns `SKImage` on 3.x and `System.Drawing.Image` on 2.x. Code typed to either will not compile against IronBarcode.
 
-**Solution:** Remove the intermediate `Image` variable and replace the save logic with the appropriate terminal method on the fluent chain:
+**Solution:** Remove the intermediate image variable and replace the save logic with the appropriate terminal method on the fluent chain:
 
 ```csharp
-// Before
-Image img = b.Encode(TYPE.CODE128, data);
+// Before (3.x)
+SKImage img = b.Encode(BarcodeStandard.Type.Code128, data, 300, 100);
 using var ms = new MemoryStream();
-img.Save(ms, ImageFormat.Png);
+img.Encode(SKEncodedImageFormat.Png, 100).SaveTo(ms);
 return ms.ToArray();
 
 // After
@@ -467,20 +456,22 @@ return BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code128)
     .ToPngBinaryData();
 ```
 
-Search for `Image img = b.Encode` and `Image barcode = b.Encode` patterns to find all affected locations.
+Search for `SKImage img = b.Encode` and `Image img = b.Encode` patterns to find all affected locations.
 
-### Issue 3: Width and Height Property Assignments
+### Issue 3: Width and Height Arguments to Encode()
 
-**BarcodeLib:** `b.Width` and `b.Height` are separate property assignments on the instance. A find-and-replace on `b.Width =` and `b.Height =` individually will not produce valid IronBarcode code.
+**BarcodeLib:** 3.x passes width and height as the third and fourth arguments to `b.Encode(...)`. 2.x exposed `b.Width` and `b.Height` as separate property assignments on the instance.
 
-**Solution:** The two assignments become a single `.ResizeTo(width, height)` call chained after `CreateBarcode()`. Find them together before replacing:
+**Solution:** Whether your code uses the property-setter form or the constructor-arg form, both collapse into a single `.ResizeTo(width, height)` call chained after `CreateBarcode()`. Find both shapes before replacing:
 
 ```bash
-# Find Width/Height property assignments on Barcode objects
+# 2.x property assignments
 grep -n "\.Width = \|\.Height = " --include="*.cs" -r .
+# 3.x positional arguments to Encode
+grep -n "\.Encode(" --include="*.cs" -r .
 ```
 
-Then replace the pair with the single `.ResizeTo(width, height)` chain call.
+Then replace each occurrence with the single `.ResizeTo(width, height)` chain call.
 
 ### Issue 4: IncludeLabel Boolean Toggle
 
@@ -514,8 +505,8 @@ If SkiaSharp only appears due to the now-removed explicit `<PackageReference>`, 
 Run these searches before starting to understand the scope of changes needed:
 
 ```bash
-# Find all BarcodeLib using directives
-grep -rn "using BarcodeLib" --include="*.cs" .
+# Find all BarcodeLib using directives (covers 2.x and 3.x)
+grep -rn "using BarcodeLib\|using BarcodeStandard" --include="*.cs" .
 
 # Find Barcode object instantiation
 grep -rn "new Barcode()" --include="*.cs" .
@@ -523,14 +514,14 @@ grep -rn "new Barcode()" --include="*.cs" .
 # Find Encode calls
 grep -rn "\.Encode(" --include="*.cs" .
 
-# Find TYPE enum usage
-grep -rn "TYPE\.CODE128\|TYPE\.EAN13\|TYPE\.QR_Code\|TYPE\.UPCA\|TYPE\.CODE39" --include="*.cs" .
+# Find Type/TYPE enum usage (both 2.x and 3.x casing)
+grep -rn "TYPE\.\|BarcodeStandard\.Type\." --include="*.cs" .
 
 # Find IncludeLabel usage
 grep -rn "IncludeLabel" --include="*.cs" .
 
 # Find the package references in project files
-grep -rn "BarcodeLib\|BarcodeLib\.SkiaSharp\|BarcodeLib\.Signed" --include="*.csproj" .
+grep -rn "BarcodeLib\|BarcodeStandard" --include="*.csproj" .
 
 # Find NU1608 evidence in lock files
 grep -rn "NU1608" .
@@ -540,19 +531,20 @@ Document all files affected by each search. Note which projects reference Barcod
 
 ### Code Update Tasks
 
-1. Run `dotnet remove package BarcodeLib` (or `BarcodeLib.Signed` / `BarcodeLib.SkiaSharp` as applicable) for each project
+1. Run `dotnet remove package BarcodeLib` for each project
 2. Remove any explicit SkiaSharp version override references added only to fix BarcodeLib conflicts
 3. Run `dotnet add package IronBarcode` for each project
 4. Add `IronBarCode.License.LicenseKey = "YOUR-KEY";` to application startup in each project
-5. Replace `using BarcodeLib;` with `using IronBarCode;` across all `.cs` files
-6. Remove `using System.Drawing.Imaging;` imports that existed only for `ImageFormat.Png`
-7. Replace `new Barcode()` + property setters with `BarcodeWriter.CreateBarcode()` fluent calls
-8. Replace `TYPE.CODE128` → `BarcodeEncoding.Code128` and all other `TYPE.*` values
-9. Replace `b.Width = N; b.Height = M;` pairs with `.ResizeTo(N, M)` chain calls
+5. Replace `using BarcodeLib;` (2.x) or `using BarcodeStandard;` (3.x) with `using IronBarCode;` across all `.cs` files
+6. Remove `using SkiaSharp;` and `using System.Drawing.Imaging;` imports that existed only for the BarcodeLib output pipeline
+7. Replace `new Barcode()` + property setters / `Encode(type, data, w, h)` with `BarcodeWriter.CreateBarcode()` fluent calls
+8. Replace `TYPE.CODE128` / `Type.Code128` → `BarcodeEncoding.Code128` and all other enum values
+9. Replace `b.Width = N; b.Height = M;` pairs (2.x) and the width/height arguments to `Encode()` (3.x) with `.ResizeTo(N, M)` chain calls
 10. Replace `b.IncludeLabel = true;` with `.AddAnnotationTextBelowBarcode(data)`
-11. Replace `img.Save(path, ImageFormat.Png)` with `.SaveAsPng(path)` or `.ToPngBinaryData()`
-12. Remove intermediate `Image` variables and `MemoryStream` blocks where `.ToPngBinaryData()` replaces them
+11. Replace `img.Save(path, ImageFormat.Png)` (2.x) and `img.Encode(SKEncodedImageFormat.Png, 100).SaveTo(stream)` (3.x) with `.SaveAsPng(path)` or `.ToPngBinaryData()`
+12. Remove intermediate `SKImage` / `Image` variables and `MemoryStream` blocks where `.ToPngBinaryData()` replaces them
 13. Add barcode reading code where needed (`BarcodeReader.Read()`)
+14. Add QR Code generation if previously deferred to a second library (`BarcodeEncoding.QRCode` or `QRCodeWriter`)
 
 ### Post-Migration Testing
 
@@ -578,4 +570,4 @@ Document all files affected by each search. Note which projects reference Barcod
 
 **Commercial Support and SLA:** IronBarcode is backed by Iron Software's commercial support model with a guaranteed update cadence. When .NET 10 releases in 2026 or breaking changes appear in the .NET ecosystem, IronBarcode publishes compatibility updates on a timeline tied to the commercial SLA rather than community availability.
 
-**Expanded QR Code Capabilities:** `QRCodeWriter` supports logo embedding, color customization, and error correction level configuration through chained methods — capabilities that BarcodeLib's basic `TYPE.QR_Code` support does not include. Teams whose QR code requirements have expanded gain these features immediately without changing their generation workflow.
+**QR Code Generation Without a Second Library:** BarcodeLib does not generate QR Code, Data Matrix, PDF417, or any other 2D symbology. `QRCodeWriter` brings QR generation into the same package alongside 1D generation and reading, with logo embedding, color customization, and error correction level configuration through chained methods. Teams that previously paired BarcodeLib with QRCoder (or similar) can drop the second library entirely.

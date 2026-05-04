@@ -39,10 +39,11 @@ namespace DevExpressGenerationOnlyComparison
         /// </summary>
         public void GenerateWinFormsBarcode()
         {
-            // DevExpress WinForms example (conceptual - requires DevExpress packages)
+            // DevExpress WinForms example (conceptual - requires DevExpress packages
+            // installed from the vendor's private feed: https://nuget.devexpress.com/)
             /*
-            using DevExpress.XtraBars.BarCode;
-            using DevExpress.XtraBars.BarCode.Symbologies;
+            using DevExpress.XtraEditors;              // BarCodeControl
+            using DevExpress.XtraPrinting.BarCode;     // Code128Generator, QRCodeGenerator, etc.
 
             // Create the control
             var barCodeControl = new BarCodeControl();
@@ -106,7 +107,8 @@ namespace DevExpressGenerationOnlyComparison
 
             // Or in C#:
             /*
-            using DevExpress.Xpf.Printing;
+            using DevExpress.Xpf.Printing;             // BarCode (WPF control)
+            using DevExpress.XtraPrinting.BarCode;     // Code128Generator
 
             var barCode = new BarCode();
             barCode.Symbology = new Code128Generator();
@@ -203,7 +205,7 @@ namespace DevExpressGenerationOnlyComparison
         /// </summary>
         public void GenerateCode128()
         {
-            // Install: dotnet add package IronBarcode
+            // Install: dotnet add package BarCode
 
             // One line to generate and save
             BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
@@ -273,8 +275,7 @@ namespace DevExpressGenerationOnlyComparison
             foreach (var barcode in results)
             {
                 Console.WriteLine($"Type: {barcode.BarcodeType}");
-                Console.WriteLine($"Value: {barcode.Text}");
-                Console.WriteLine($"Confidence: {barcode.Confidence}");
+                Console.WriteLine($"Value: {barcode.Value}");
             }
         }
 
@@ -288,7 +289,7 @@ namespace DevExpressGenerationOnlyComparison
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
             }
         }
 
@@ -301,7 +302,7 @@ namespace DevExpressGenerationOnlyComparison
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Found: {barcode.Text}");
+                Console.WriteLine($"Found: {barcode.Value}");
             }
         }
 
@@ -320,7 +321,7 @@ namespace DevExpressGenerationOnlyComparison
                 var path = barcode.InputPath ?? "unknown";
                 if (!grouped.ContainsKey(path))
                     grouped[path] = new List<string>();
-                grouped[path].Add(barcode.Text);
+                grouped[path].Add(barcode.Value);
             }
 
             return grouped;
@@ -391,14 +392,14 @@ namespace DevExpressGenerationOnlyComparison
             // STEP 4: Match to inventory
             foreach (var scanned in scannedResults)
             {
-                var matchingProduct = Array.Find(products, p => p.Item1 == scanned.Text);
+                var matchingProduct = Array.Find(products, p => p.Item1 == scanned.Value);
                 if (matchingProduct != default)
                 {
-                    Console.WriteLine($"Received: {matchingProduct.Item2} (SKU: {scanned.Text})");
+                    Console.WriteLine($"Received: {matchingProduct.Item2} (SKU: {scanned.Value})");
                 }
                 else
                 {
-                    Console.WriteLine($"Unknown product: {scanned.Text}");
+                    Console.WriteLine($"Unknown product: {scanned.Value}");
                 }
             }
         }

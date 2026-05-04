@@ -2,7 +2,7 @@
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-Aspose.BarCode is an enterprise-grade barcode generation and recognition library for C# and .NET supporting over 60 symbologies. As part of the broader Aspose product family, it targets organizations already invested in the Aspose ecosystem or those requiring extensive format coverage. This comprehensive guide examines Aspose.BarCode C# capabilities, pricing structure, API complexity, and how it compares to alternatives like [IronBarcode](https://ironsoftware.com/csharp/barcode/) for production deployments in .NET environments.
+Aspose.BarCode is an enterprise-grade barcode generation and recognition library for C# and .NET supporting over 80 symbologies. As part of the broader Aspose product family, it targets organizations already invested in the Aspose ecosystem or those requiring extensive format coverage. This comprehensive guide examines Aspose.BarCode C# capabilities, pricing structure, API complexity, and how it compares to alternatives like [IronBarcode](https://ironsoftware.com/csharp/barcode/) for production deployments in .NET environments.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ Aspose.BarCode is an enterprise-grade barcode generation and recognition library
 
 ## Understanding the Barcode Ecosystem
 
-The .NET barcode library landscape presents C# developers with choices spanning open-source projects, commercial SDKs, and cloud-based APIs. Aspose.BarCode .NET occupies the enterprise commercial space, positioning itself as a comprehensive solution for organizations requiring extensive symbology support.
+The .NET barcode library landscape presents C# developers with choices spanning open-source projects, commercial SDKs, and cloud-based APIs. Aspose.BarCode for .NET occupies the enterprise commercial space, positioning itself as a comprehensive solution for organizations requiring extensive symbology support.
 
 ### The Aspose Product Family Context
 
@@ -45,9 +45,9 @@ Aspose.BarCode has evolved significantly over its development history:
 - Progressive addition of 2D formats (QR Code, DataMatrix, PDF417)
 - Cloud version introduction (Aspose.BarCode Cloud API)
 - .NET Standard support for cross-platform deployment
-- Continued symbology expansion to 60+ formats
+- Continued symbology expansion to 80+ formats
 
-The current version (2024.x series as of this writing) represents mature technology with comprehensive format coverage, though the API surface area has grown accordingly.
+The current version (26.x series as of this writing — Aspose.BarCode 26.4.0 was released in April 2026) represents mature technology with comprehensive format coverage, though the API surface area has grown accordingly.
 
 ### Feature Comparison Overview
 
@@ -55,7 +55,7 @@ Understanding where Aspose.BarCode fits requires direct comparison with alternat
 
 | Feature | Aspose.BarCode | IronBarcode | ZXing.Net |
 |---------|---------------|-------------|-----------|
-| Symbology Count | 60+ | 50+ | 20+ |
+| Symbology Count | 80+ | 50+ | 20+ |
 | License Model | Subscription | Perpetual option | Free (Apache 2.0) |
 | API Complexity | High (verbose) | Low (one-liner) | Medium |
 | Format Detection | Manual specification | Automatic | Manual |
@@ -141,7 +141,7 @@ The primary product for C# and .NET developers:
 
 - NuGet package: `Aspose.BarCode`
 - Full local processing
-- 60+ symbology support
+- 80+ symbology support
 - Subscription licensing required
 
 ### Aspose.BarCode Cloud
@@ -166,10 +166,11 @@ Bundle including all Aspose .NET products:
 
 | Product | License Type | Annual Cost | Notes |
 |---------|-------------|-------------|-------|
-| Aspose.BarCode Developer | Per-developer subscription | $999/year | Single developer |
-| Aspose.BarCode Site | Site license subscription | $4,995/year | Up to 10 developers |
-| Aspose.BarCode OEM | Unlimited deployment | $14,985/year | For software vendors |
-| Aspose.Total | All products bundle | $2,999-$9,999/year | 20+ products |
+| Aspose.BarCode Developer Small Business | Per-developer subscription | $999/year | 1 developer, 1 deployment location |
+| Aspose.BarCode Developer OEM | Per-developer, unlimited deployments | $2,997/year | 1 developer, unlimited deployment locations |
+| Aspose.BarCode Site Small Business | Site subscription | $4,995/year | Up to 10 developers, up to 10 deployment locations |
+| Aspose.BarCode Site OEM | Site, unlimited deployments | $13,986/year | Up to 10 developers, unlimited deployment locations |
+| Aspose.Total | All products bundle | Tiered, see vendor | Bundles barcode with 20+ Aspose products |
 | **IronBarcode Lite** | Perpetual | $749 one-time | 1 developer |
 | **IronBarcode Professional** | Perpetual | $2,999 one-time | 10 developers |
 
@@ -231,15 +232,8 @@ metered.SetMeteredKey("publicKey", "privateKey");
 ```
 
 **Step 3: Verify Setup**
-```csharp
-// Check if license is loaded
-if (!Aspose.BarCode.License.IsLicensed)
-{
-    Console.WriteLine("Warning: Running in evaluation mode");
-}
-```
 
-Without a valid license, Aspose.BarCode adds watermarks to generated barcodes and limits recognition capabilities.
+Aspose.BarCode does not expose a public `IsLicensed` property on the `License` class — verification is by observing output. Without a valid license, generated barcodes contain an "Aspose.Demo" watermark and recognition results may be limited; a successful `SetLicense()` call without exceptions is the practical confirmation that the license loaded.
 
 ### IronBarcode Installation
 
@@ -281,7 +275,7 @@ The most telling comparison between barcode libraries is how common tasks are im
 
 **Aspose.BarCode:**
 ```csharp
-using Aspose.BarCode .NET.Generation;
+using Aspose.BarCode.Generation;
 
 public void GenerateBarcode(string data, string outputPath)
 {
@@ -523,7 +517,7 @@ Production barcode processing involves challenges beyond simple scanning scenari
 
 ### Challenge 1: Configuration Complexity
 
-Aspose.BarCode .NET provides extensive configuration options, which can be both a strength and a burden:
+Aspose.BarCode for .NET provides extensive configuration options, which can be both a strength and a burden:
 
 **Aspose.BarCode Configuration Surface:**
 ```csharp
@@ -576,15 +570,13 @@ Real-world barcodes are often damaged, poorly printed, or photographed at angles
 using var reader = new BarCodeReader(imagePath);
 reader.QualitySettings = QualitySettings.MaxQuality;
 
-// If MaxQuality doesn't work, try adjusting specific settings
-reader.QualitySettings.AllowMedianSmoothing = true;
-reader.QualitySettings.MedianSmoothingWindowSize = 5;
-reader.QualitySettings.AllowSaltAndPaperFiltering = true;
-reader.QualitySettings.AllowDetectScanGap = true;
-reader.QualitySettings.AllowDatamatrixIndustrialBarcodes = true;
-reader.QualitySettings.AllowQRMicroQrRestoration = true;
-
-// Developers often need multiple attempts with different settings
+// Earlier Aspose.BarCode versions exposed granular toggles such as
+// AllowMedianSmoothing, MedianSmoothingWindowSize, AllowSaltAndPaperFiltering,
+// and AllowQRMicroQrRestoration; the 24.x and later builds consolidated many
+// of these into higher-level properties (BarcodeQuality, ComplexBackground,
+// Deconvolution, InverseImage). Codebases on older Aspose versions still
+// carry the original toggles, which is one of the reasons the API surface
+// feels heavy to migrate away from.
 ```
 
 **IronBarcode ML-Powered Correction:**
@@ -603,7 +595,7 @@ Processing barcodes from multi-page documents (particularly PDFs) differs signif
 
 **Aspose.BarCode PDF Processing:**
 
-Aspose.BarCode does not natively read barcodes from PDFs. You need additional libraries:
+`BarCodeReader` accepts only image inputs (Bitmap, Stream, file path) — none of its 14 documented constructors take a PDF. To read barcodes from PDFs, pages must first be rendered to images, typically via Aspose.PDF (a separate product):
 
 ```csharp
 // Requires Aspose.PDF (separate license)
@@ -847,7 +839,7 @@ Common migration motivations reported by developers:
 **Remove Aspose.BarCode:**
 ```xml
 <!-- Remove from .csproj -->
-<PackageReference Include="Aspose.BarCode" Version="24.x.x" />
+<PackageReference Include="Aspose.BarCode" Version="26.x.x" />
 ```
 
 **Add IronBarcode:**
@@ -896,7 +888,7 @@ IronBarCode.License.LicenseKey = "YOUR-KEY-HERE";
 | `BarCodeReader` | `BarcodeReader.Read()` | Static method vs constructor |
 | `DecodeType.Code128` | Automatic | No format specification needed |
 | `reader.ReadBarCodes()` | Return value is collection | Direct result vs iterator |
-| `result.CodeText` | `result.Text` | Property name change |
+| `result.CodeText` | `result.Value` | Property name change |
 | `result.CodeTypeName` | `result.BarcodeType` | Property name change |
 
 #### Quality Settings
@@ -966,7 +958,7 @@ foreach (var result in results)
 **Key Changes:**
 - No format specification required (automatic detection)
 - Static method instead of disposable reader
-- Property names changed (CodeText -> Text, CodeTypeName -> BarcodeType)
+- Property names changed (CodeText -> Value, CodeTypeName -> BarcodeType)
 
 #### Example 3: QR Code with Styling
 

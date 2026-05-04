@@ -5,20 +5,21 @@
  * libraries in their respective areas of strength.
  *
  * Key Points:
- * - Dynamsoft IS faster for real-time camera scanning (acknowledge this)
- * - IronBarcode prioritizes accuracy over raw frame speed for documents
+ * - Dynamsoft IS faster on raw decoding, especially for streaming inputs
+ * - IronBarcode prioritises document accuracy and deployment simplicity
  * - Speed benchmarks without context are misleading
- * - Choose based on your actual use case, not benchmark numbers
+ * - Choose based on your actual workload, not benchmark numbers
  *
  * NuGet Packages Required:
- * - Dynamsoft: Dynamsoft.DotNet.BarcodeReader
- * - IronBarcode: IronBarcode version 2024.x+
+ * - Dynamsoft: Dynamsoft.DotNet.BarcodeReader.Bundle (v11.x)
+ * - IronBarcode: BarCode (NuGet package id `BarCode`; namespace `IronBarCode`)
  */
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 // ============================================================
 // HONEST ASSESSMENT: Dynamsoft Speed Advantage
@@ -27,7 +28,7 @@ using System.IO;
 namespace PerformanceComparison
 {
     /// <summary>
-    /// Dynamsoft excels at real-time speed. This is a fact, not marketing.
+    /// Dynamsoft excels at raw decoding speed. This is a fact, not marketing.
     /// When milliseconds matter for user experience, Dynamsoft delivers.
     /// </summary>
     public static class SpeedReality
@@ -36,23 +37,26 @@ namespace PerformanceComparison
          * HONEST ACKNOWLEDGMENT
          * =====================
          *
-         * In real-time camera scanning scenarios, Dynamsoft is genuinely faster.
-         * This isn't a weakness we're trying to spin - it's their core competency.
+         * In real-time camera scanning and high-throughput streaming
+         * scenarios, Dynamsoft is genuinely faster. This isn't a weakness
+         * we're trying to spin — it's their core competency.
          *
-         * Dynamsoft has spent years optimizing for:
+         * Dynamsoft has spent years optimising for:
          * - Sub-100ms frame decoding
          * - Motion blur compensation
          * - Autofocus prediction
+         * - DPM and deformed-barcode recognition
          * - Video buffer management
          *
-         * If you're building a mobile scanning app and need instant feedback
-         * when users point their camera at a barcode, Dynamsoft deserves
-         * serious consideration.
+         * If you're building a mobile / MAUI scanning app and need instant
+         * feedback when users point their camera at a barcode, Dynamsoft
+         * deserves serious consideration.
          *
-         * However, speed isn't everything. Different use cases have different
-         * priorities. A benchmark showing "Library A decodes a frame in 50ms
-         * vs Library B in 150ms" tells you nothing about which library will
-         * better serve your document processing workflow.
+         * However, speed isn't the whole story. The right answer depends on
+         * what you're actually doing — a benchmark showing "Library A
+         * decodes a frame in 50ms vs Library B in 150ms" tells you nothing
+         * about which library will better serve your overnight document
+         * processing workflow.
          */
     }
 
@@ -63,29 +67,26 @@ namespace PerformanceComparison
     {
         // SCENARIO 1: Real-time camera scanning (30 fps target)
         // ------------------------------------------------------
-        // Dynamsoft: ~50-100ms per frame = good user experience
-        // IronBarcode: ~100-300ms per frame = noticeable lag
+        // Dynamsoft: tuned for sub-100ms per frame
+        // IronBarcode: not optimised for sustained streaming
         // Winner: Dynamsoft (this is their specialty)
 
         // SCENARIO 2: Processing 1000 PDF invoices overnight
         // ---------------------------------------------------
-        // Per-frame speed irrelevant - total batch time matters
-        // Dynamsoft: Requires PDF library + per-page rendering overhead
-        // IronBarcode: Native PDF support, optimized batch processing
-        // Winner: IronBarcode (faster total throughput, less code)
+        // Per-frame speed irrelevant — total batch time + integration cost matters
+        // Dynamsoft: typically requires PDF render step (PdfiumViewer etc.)
+        // IronBarcode: native PDF support, fewer moving parts
+        // Winner: IronBarcode (less code, less to deploy)
 
         // SCENARIO 3: Reading damaged shipping labels
         // -------------------------------------------
-        // Speed less important than accuracy
-        // Missing one barcode costs more than extra processing time
-        // IronBarcode: ML-powered error correction, higher accuracy
-        // Winner: IronBarcode (accuracy matters more than speed)
+        // Both libraries have strong damaged-code handling. Dynamsoft has
+        // explicit DPM modes; IronBarcode has ML-assisted error correction.
+        // Either may win depending on the exact label degradation mode.
 
         // SCENARIO 4: High-volume real-time scanning (warehouse scanners)
         // ----------------------------------------------------------------
-        // Dedicated hardware with camera input
-        // Workers expect instant feedback
-        // Dynamsoft: Optimized for this exact scenario
+        // Dedicated hardware with camera input, instant feedback expected
         // Winner: Dynamsoft (purpose-built for this)
     }
 }
@@ -96,39 +97,37 @@ namespace PerformanceComparison
 
 namespace DocumentAccuracy
 {
-    using IronBarcode;
+    using IronBarCode;
 
     /// <summary>
-    /// For document processing, accuracy often matters more than speed.
-    /// IronBarcode's ML-powered error correction handles damaged codes.
+    /// For document processing, accuracy and deployment simplicity often
+    /// matter more than raw decoding speed. IronBarcode's static API and
+    /// native PDF support handle these workloads cleanly.
     /// </summary>
     public class AccuracyDemonstration
     {
         /// <summary>
-        /// Process damaged document barcodes where accuracy trumps speed.
+        /// Process damaged document barcodes.
         /// </summary>
         public static void ProcessDamagedDocuments()
         {
             // Real-world document barcodes suffer from:
             // - Thermal printer fading
             // - Label scratches and tears
-            // - Scanner artifacts
+            // - Scanner artefacts
             // - Poor print quality
             // - Smudges and stains
 
             var options = new BarcodeReaderOptions
             {
-                // Detailed mode spends more time analyzing unclear codes
+                // Detailed mode spends more time analysing unclear codes
                 Speed = ReadingSpeed.Detailed,
 
-                // Correct for scanner rotation
-                UseAutoRotate = true,
-
                 // Find all barcodes on multi-code documents
-                MultipleBarcodes = true
+                ExpectMultipleBarcodes = true
             };
 
-            // IronBarcode's ML-powered processing can reconstruct:
+            // IronBarcode's processing can reconstruct:
             // - Partially obscured bars
             // - Faded thermal prints
             // - Codes with missing quiet zones
@@ -143,10 +142,7 @@ namespace DocumentAccuracy
                 {
                     Console.WriteLine($"File: {Path.GetFileName(file)}");
                     Console.WriteLine($"  Value: {result.Value}");
-                    Console.WriteLine($"  Format: {result.Format}");
-
-                    // In document processing, catching damaged codes matters more
-                    // than saving 50ms per image
+                    Console.WriteLine($"  Format: {result.BarcodeType}");
                 }
             }
         }
@@ -193,11 +189,11 @@ namespace DocumentAccuracy
 
 namespace BatchPerformance
 {
-    using IronBarcode;
+    using IronBarCode;
 
     /// <summary>
     /// For batch document processing, total throughput matters more than
-    /// per-frame speed. IronBarcode's architecture optimizes for this.
+    /// per-frame speed. IronBarcode's architecture optimises for this.
     /// </summary>
     public class BatchProcessingDemo
     {
@@ -229,36 +225,31 @@ namespace BatchPerformance
             Console.WriteLine($"Found {allResults.Count} barcodes");
             Console.WriteLine($"Total time: {stopwatch.ElapsedMilliseconds}ms");
             Console.WriteLine($"Average per PDF: {stopwatch.ElapsedMilliseconds / pdfPaths.Length}ms");
-
-            // For batch jobs running overnight, a few hundred milliseconds
-            // per document doesn't matter. What matters:
-            // 1. Did we find all the barcodes? (accuracy)
-            // 2. Did we handle damaged codes? (reliability)
-            // 3. Did the job complete successfully? (robustness)
         }
 
         /// <summary>
-        /// The Dynamsoft equivalent would require:
+        /// The Dynamsoft equivalent typically requires:
         /// </summary>
         public static void DynamsoftPdfBatchComparison()
         {
             /*
-             * To process PDFs with Dynamsoft, you would need:
+             * To process PDFs with Dynamsoft on Linux containers, you would
+             * normally need:
              *
-             * 1. Add PdfiumViewer or similar package:
-             *    dotnet add package PdfiumViewer
+             * 1. Add a PDF render package (e.g. PdfiumViewer, Magick.NET).
              *
              * 2. For each PDF:
-             *    - Load with PdfiumViewer
+             *    - Load with the PDF library
              *    - Loop through pages
-             *    - Render each page to bitmap (memory overhead)
-             *    - Convert bitmap to byte array
-             *    - Pass to Dynamsoft
+             *    - Render each page to a bitmap
+             *    - Save / encode as PNG bytes
+             *    - Pass to CaptureVisionRouter.Capture()
              *    - Dispose resources carefully
              *
-             * 3. The code would be approximately:
+             * 3. The code looks roughly like:
              *
              * using (var pdfDoc = PdfDocument.Load(pdfPath))
+             * using (var router = new CaptureVisionRouter())
              * {
              *     for (int page = 0; page < pdfDoc.PageCount; page++)
              *     {
@@ -267,8 +258,9 @@ namespace BatchPerformance
              *         {
              *             image.Save(ms, ImageFormat.Png);
              *             byte[] bytes = ms.ToArray();
-             *             TextResult[] results = reader.DecodeFileInMemory(bytes, "");
-             *             // Process results...
+             *             CapturedResult result = router.Capture(bytes,
+             *                 PresetTemplate.PT_READ_BARCODES);
+             *             // Process result.GetDecodedBarcodesResult()...
              *         }
              *     }
              * }
@@ -276,7 +268,7 @@ namespace BatchPerformance
              * This overhead adds up for large batches:
              * - Memory allocation for each rendered page
              * - PNG encoding/decoding overhead
-             * - Additional library dependency
+             * - Additional library dependency to deploy and patch
              *
              * IronBarcode's native PDF support eliminates all of this.
              */
@@ -288,13 +280,13 @@ namespace BatchPerformance
 // WHEN SPEED MATTERS vs WHEN ACCURACY MATTERS
 // ============================================================
 
-public static class UseCase Guidance
+public static class UseCaseGuidance
 {
     /*
      * SPEED-CRITICAL SCENARIOS (Consider Dynamsoft)
      * =============================================
      *
-     * 1. Mobile apps with live camera preview
+     * 1. Mobile / MAUI apps with live camera preview
      *    - Users expect instant feedback
      *    - They can reposition if scan fails
      *    - Speed directly impacts user experience
@@ -307,63 +299,59 @@ public static class UseCase Guidance
      * 3. Event ticket scanning
      *    - Lines of people waiting
      *    - Gate throughput matters
-     *    - Phones/tickets can be repositioned easily
+     *    - Phones / tickets can be repositioned easily
      *
      * 4. Real-time inventory counting
      *    - Workers with handheld scanners
      *    - Continuous scanning session
-     *    - Immediate visual/audio feedback needed
+     *    - Immediate visual / audio feedback needed
+     *
+     * 5. DPM / deformed-barcode pipelines
+     *    - Manufacturing, automotive, electronics traceability
+     *    - Dynamsoft has explicit DPM modes
      *
      *
-     * ACCURACY-CRITICAL SCENARIOS (Consider IronBarcode)
-     * ==================================================
+     * DOCUMENT / DEPLOYMENT-FOCUSED SCENARIOS (Consider IronBarcode)
+     * ==============================================================
      *
-     * 1. Invoice/document processing
+     * 1. Invoice / document processing
      *    - Barcodes are printed, not displayed on screens
      *    - Print quality varies
-     *    - Missing a barcode causes data integrity issues
+     *    - Native PDF input avoids an extra render pipeline
      *
-     * 2. Medical specimen tracking
+     * 2. Medical specimen tracking (server side)
      *    - Labels on tubes may be scratched or faded
      *    - Missing a scan has serious consequences
-     *    - Accuracy >> speed
      *
      * 3. Legal document management
      *    - Documents may be old, damaged, or poorly scanned
      *    - Compliance requires capturing all codes
      *    - Speed is not a factor for batch processing
      *
-     * 4. Shipping label processing
+     * 4. Shipping label processing on backend services
      *    - Thermal labels fade over time
-     *    - Labels get scratched during handling
      *    - Wrong tracking number = lost package
      *
-     * 5. Historical document digitization
-     *    - Old documents with degraded barcodes
-     *    - One-time processing, not real-time
-     *    - Maximum accuracy required
+     * 5. Air-gapped or strict-egress environments
+     *    - No outbound licence-server traffic permitted
+     *    - Single-key local activation simplifies compliance
      *
      *
      * THE HONEST RECOMMENDATION
      * =========================
      *
-     * Don't choose based on benchmark numbers alone.
-     * Choose based on what your application actually needs.
+     * Don't choose based on benchmark numbers alone. Choose based on what
+     * your application actually needs.
      *
-     * Building a mobile camera scanner? Dynamsoft's speed advantage
-     * will make your users happier.
+     * Building a mobile camera scanner or a high-throughput streaming
+     * pipeline? Dynamsoft's speed advantage is real.
      *
-     * Processing documents on a server? IronBarcode's accuracy and
-     * native PDF support will make your operations more reliable.
+     * Processing documents on a server, especially behind a strict egress
+     * policy? IronBarcode's native PDF support and offline licensing make
+     * the deployment cheaper and shorter.
      *
-     * Need both? Use both. That's not compromise - that's smart engineering.
+     * Need both? Use both. That's not compromise — that's smart engineering.
      */
-}
-
-// Workaround for C# keyword
-public static class UseCaseGuidance
-{
-    // See comments above
 }
 
 // ============================================================
@@ -379,16 +367,16 @@ public class PerformanceComparisonDemo
         Console.WriteLine();
 
         Console.WriteLine("HONEST ASSESSMENT:");
-        Console.WriteLine("- Dynamsoft IS faster for real-time camera scanning");
-        Console.WriteLine("- IronBarcode prioritizes accuracy for documents");
+        Console.WriteLine("- Dynamsoft IS faster for real-time / streaming decoding");
+        Console.WriteLine("- IronBarcode prioritises document workflows and deployment simplicity");
         Console.WriteLine("- Choose based on YOUR use case, not benchmarks");
         Console.WriteLine();
 
-        Console.WriteLine("SPEED-CRITICAL? (mobile camera, POS, events)");
+        Console.WriteLine("SPEED-CRITICAL? (mobile camera, POS, events, DPM)");
         Console.WriteLine("  -> Consider Dynamsoft");
         Console.WriteLine();
 
-        Console.WriteLine("ACCURACY-CRITICAL? (documents, PDFs, damaged codes)");
+        Console.WriteLine("DOCUMENT / DEPLOYMENT-CRITICAL? (PDFs, air-gapped, perpetual pricing)");
         Console.WriteLine("  -> Consider IronBarcode");
         Console.WriteLine();
 

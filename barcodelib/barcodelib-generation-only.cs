@@ -11,9 +11,13 @@
 
 using System;
 using System.IO;
+using System.Linq;
 
 // BarcodeLib packages
-// Install: dotnet add package BarcodeLib
+// NuGet: Install-Package BarcodeLib (v3.1.5, by Brad Barnhill, Apache-2.0)
+// Namespace is BarcodeStandard in 3.x; SkiaSharp is a transitive dependency
+// NOTE: BarcodeLib supports 1D symbologies only — no QR Code, Data Matrix,
+// PDF417, or Aztec. The Type enum on the current source contains no 2D entries.
 using BarcodeStandard;
 using SkiaSharp;
 
@@ -57,24 +61,19 @@ namespace BarcodeLibComparison
 
             Console.WriteLine("Generated: barcodelib-code128.png");
             Console.WriteLine("Format: Code128");
-            Console.WriteLine("Data: PRODUCT-12345");
+            Console.WriteLine("Data: PRODUCT-12345\n");
 
-            // Generate QR Code
-            SKImage qrImage = barcode.Encode(
-                BarcodeStandard.Type.QR_Code,
-                "https://ironsoftware.com",
-                200,
-                200
-            );
-
-            using (var stream = File.OpenWrite("barcodelib-qr.png"))
-            {
-                qrImage.Encode(SKEncodedImageFormat.Png, 100).SaveTo(stream);
-            }
-
-            Console.WriteLine("Generated: barcodelib-qr.png");
-            Console.WriteLine("Format: QR Code");
-            Console.WriteLine("Data: https://ironsoftware.com\n");
+            // BarcodeLib does NOT support QR Code generation.
+            // The following code WILL NOT COMPILE — there is no QR_Code or
+            // any other 2D entry on the BarcodeStandard.Type enum:
+            //
+            //   barcode.Encode(BarcodeStandard.Type.QR_Code, "...", 200, 200);
+            //                                  ^^^^^^^ does not exist
+            //
+            // Generating a QR code from a project that uses BarcodeLib means
+            // adding a second library such as QRCoder or IronBarcode.
+            Console.WriteLine("LIMITATION: BarcodeLib has NO 2D symbology support");
+            Console.WriteLine("  No QR Code, Data Matrix, PDF417, Aztec, or MaxiCode\n");
 
             // THE LIMITATION: BarcodeLib cannot read barcodes
             Console.WriteLine("LIMITATION: BarcodeLib has NO reading API");
@@ -167,7 +166,7 @@ namespace BarcodeLibComparison
             var code128Results = BarcodeReader.Read("ironbarcode-code128.png");
             foreach (var result in code128Results)
             {
-                Console.WriteLine($"  Read from Code128: {result.Text}");
+                Console.WriteLine($"  Read from Code128: {result.Value}");
                 Console.WriteLine($"  Detected format: {result.BarcodeType}");
             }
 
@@ -175,7 +174,7 @@ namespace BarcodeLibComparison
             var qrResults = BarcodeReader.Read("ironbarcode-qr.png");
             foreach (var result in qrResults)
             {
-                Console.WriteLine($"  Read from QR: {result.Text}");
+                Console.WriteLine($"  Read from QR: {result.Value}");
                 Console.WriteLine($"  Detected format: {result.BarcodeType}");
             }
 
@@ -214,7 +213,7 @@ namespace BarcodeLibComparison
 
                 // Verify (same library)
                 var readResults = BarcodeReader.Read(filename);
-                bool verified = readResults.Any(r => r.Text == code);
+                bool verified = readResults.Any(r => r.Value == code);
 
                 Console.WriteLine($"  {code}: Generated -> {(verified ? "VERIFIED" : "FAILED")}");
             }

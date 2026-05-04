@@ -15,10 +15,12 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 // BarcodeLib packages
-// Install: dotnet add package BarcodeLib
+// NuGet: Install-Package BarcodeLib (v3.1.5, by Brad Barnhill, Apache-2.0)
+// Namespace is BarcodeStandard in 3.x; SkiaSharp is a transitive dependency
 using BarcodeStandard;
 using SkiaSharp;
 
@@ -42,22 +44,22 @@ namespace BarcodeLibComparison
         {
             Console.WriteLine("=== BarcodeLib: SkiaSharp Version Conflicts ===\n");
 
-            Console.WriteLine("BarcodeLib 3.1.4+ uses SkiaSharp for cross-platform graphics.");
+            Console.WriteLine("BarcodeLib 3.x uses SkiaSharp for cross-platform graphics.");
             Console.WriteLine("This can conflict with other packages using SkiaSharp.\n");
 
-            Console.WriteLine("Common Error (GitHub Issue #216):");
+            Console.WriteLine("Common Error reported on GitHub:");
             Console.WriteLine("  'libSkiaSharp library version incompatible'\n");
 
             Console.WriteLine("Scenario:");
             Console.WriteLine("  Your project uses:");
-            Console.WriteLine("    - BarcodeLib 3.1.5 (wants SkiaSharp 2.88.x)");
-            Console.WriteLine("    - SkiaSharp.Views.Forms 2.80.x (older version)");
-            Console.WriteLine("    - Another imaging library (wants SkiaSharp 2.90.x)");
-            Console.WriteLine("  Result: Runtime error or build failure\n");
+            Console.WriteLine("    - BarcodeLib 3.1.5 (depends on SkiaSharp >= 2.88.8)");
+            Console.WriteLine("    - SkiaSharp.Views.Maui.Controls 3.116.x (newer 3.x)");
+            Console.WriteLine("    - Another imaging library on a different SkiaSharp range");
+            Console.WriteLine("  Result: NU1608 warnings, runtime binding failures\n");
 
             Console.WriteLine("Workaround attempts:");
             Console.WriteLine("  1. Explicit SkiaSharp version in csproj");
-            Console.WriteLine("     <PackageReference Include=\"SkiaSharp\" Version=\"2.88.6\" />");
+            Console.WriteLine("     <PackageReference Include=\"SkiaSharp\" Version=\"2.88.8\" />");
             Console.WriteLine("  2. Binding redirects in app.config (Framework only)");
             Console.WriteLine("  3. Downgrade conflicting packages");
             Console.WriteLine("  4. Fork BarcodeLib and update dependencies\n");
@@ -80,9 +82,9 @@ namespace BarcodeLibComparison
 
             Console.WriteLine("BarcodeLib History on Linux:");
             Console.WriteLine("  - Pre-3.0: Used System.Drawing.Common");
-            Console.WriteLine("  - System.Drawing.Common deprecated on Linux in .NET 6");
+            Console.WriteLine("  - System.Drawing.Common deprecated on non-Windows in .NET 6+");
             Console.WriteLine("  - Error: 'Unable to load shared library libgdiplus'");
-            Console.WriteLine("  - 3.0+: Migrated to SkiaSharp/ImageSharp");
+            Console.WriteLine("  - 3.0+: Migrated to SkiaSharp (ImageSharp is NOT a dependency)");
             Console.WriteLine("  - New Error: 'Unable to load shared library libSkiaSharp'\n");
 
             Console.WriteLine("Required native libraries for Linux:");
@@ -159,7 +161,7 @@ public byte[] GenerateBarcodePortable(string data)
     try
     {
         var barcode = new Barcode();
-        var image = barcode.Encode(Type.Code128, data, 300, 100);
+        var image = barcode.Encode(BarcodeStandard.Type.Code128, data, 300, 100);
 
         using var ms = new MemoryStream();
         image.Encode(SKEncodedImageFormat.Png, 100).SaveTo(ms);
@@ -218,7 +220,7 @@ public byte[] GenerateBarcodePortable(string data)
 
             // Reading also works everywhere
             var readResults = BarcodeReader.Read("ironbarcode-crossplatform.png");
-            Console.WriteLine($"\n  Read back: {readResults.FirstOrDefault()?.Text}");
+            Console.WriteLine($"\n  Read back: {readResults.FirstOrDefault()?.Value}");
             Console.WriteLine("  Platform: No special handling required\n");
         }
 

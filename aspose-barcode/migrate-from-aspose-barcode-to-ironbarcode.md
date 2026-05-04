@@ -50,7 +50,7 @@ foreach (var result in results)
 | Feature | Aspose.BarCode | IronBarcode |
 |---|---|---|
 | **Format detection** | Manual `DecodeType` required | Automatic |
-| **Symbology count** | 60+ | 50+ |
+| **Symbology count** | 80+ | 50+ |
 | **PDF reading** | No — requires separate Aspose.PDF ($999–$4,995/yr) | Yes — native, included in base package |
 | **API style** | Instance-based, `IDisposable` | Static factory methods |
 | **Thread safety** | Per-thread instances required | Stateless — naturally concurrent |
@@ -58,7 +58,7 @@ foreach (var result in results)
 | **Perpetual option** | Not available | Yes, all tiers |
 | **Single developer** | $999/yr | $749 one-time |
 | **10 developers** | $4,995/yr (Site) | $2,999 one-time (Professional) |
-| **Unlimited developers** | $14,985/yr (OEM) | $5,999 one-time (Unlimited) |
+| **Unlimited deployments (10 devs)** | $13,986/yr (Site OEM) | $5,999 one-time (Unlimited) |
 | **Docker license** | `.lic` file must be mounted or copied | Environment variable string |
 | **QR logo overlay** | Manual GDI+ composition | `.AddBrandLogo()` built in |
 | **Performance tuning** | 12+ `QualitySettings` parameters | `ReadingSpeed` enum — three levels |

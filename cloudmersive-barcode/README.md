@@ -8,8 +8,8 @@ When evaluating barcode solutions for .NET applications, developers face a funda
 |---------|-------------------------|-------------|
 | **Processing Model** | Cloud REST API | Local .NET library |
 | **Internet Required** | Yes (every operation) | No |
-| **Free Tier** | 800 requests/month | Trial available |
-| **Paid Pricing** | $19.99+/month | $749 one-time |
+| **Free Tier** | 600 requests/month | Trial available |
+| **Paid Pricing** | $19.99+/month | $799 one-time (Lite) |
 | **Rate Limits** | Yes (concurrent + monthly) | None |
 | **Batch Processing** | Limited by rate | Unlimited |
 | **Data Privacy** | Data sent to cloud | Stays local |
@@ -68,35 +68,33 @@ Compare this to local processing where 10,000 barcodes might complete in under a
 Cloudmersive uses a freemium model with monthly request quotas:
 
 ### Free Tier
-- **Requests:** 800 per month
-- **Concurrent Requests:** 1 (blocking for parallel operations)
+- **Requests:** 600 per month
+- **Rate Limit:** 1 call per second
 - **Rate Limiting:** Calls queue when exceeded
 - **Use Case:** Prototyping, very low volume testing
 
-### Premium Tier
-- **Starting Price:** $19.99/month
-- **Requests:** 5,000 per month (increases with tier)
-- **Concurrent Requests:** Higher limits
-- **Additional Benefits:** Priority support, SLA
-
-### Enterprise Tiers
-- **Higher Volumes:** Custom pricing for 50,000+ requests/month
-- **Dedicated Resources:** Reduced latency options
-- **On-Premise Option:** Self-hosted deployment (different licensing)
+### Paid Tiers (verified at cloudmersive.com/pricing-small-business, May 2026)
+- **Basic:** $19.99/month — 10,000 calls/month
+- **Business:** $49.99/month — 25,000 calls/month
+- **Business Premier:** $99.99/month — 50,000 calls/month
+- **Business Advantage:** $199.99/month — 100,000 calls/month
+- **Medium Business:** $499.99/month — 250,000 calls/month
+- **Enterprise:** Custom pricing for unlimited calls
+- **Managed Instance / On-Premises:** Custom pricing
 
 **Key Pricing Considerations:**
 
-The per-request model means costs scale linearly with usage. Processing 10,000 barcodes monthly requires the higher premium tiers. Processing 100,000 barcodes monthly becomes a significant recurring expense.
+The per-request model means costs scale linearly with usage. Processing 10,000 barcodes monthly fits the $19.99 Basic tier exactly; 100,000 barcodes monthly requires the $199.99 Business Advantage tier.
 
-IronBarcode's perpetual license at $749 one-time (or $1,299 for unlimited deployment) provides unlimited processing with no per-request costs.
+IronBarcode's perpetual license starts at $799 (Lite) and scales to $4,799 (Unlimited) for unlimited deployment, with unlimited processing and no per-request costs.
 
 ## Rate Limits and Throughput Constraints
 
 Cloudmersive enforces rate limits at multiple levels:
 
-### Concurrent Request Limits
-- **Free Tier:** 1 concurrent request
-- **Premium Tiers:** 2-10 concurrent requests (tier dependent)
+### Concurrent Request / Throughput Limits
+- **Free Tier:** 1 call per second
+- **Paid Tiers:** Higher throughput tier-dependent
 - **Impact:** Parallel batch processing is throttled
 
 ### Monthly Request Limits
@@ -110,9 +108,9 @@ Consider a document processing workflow scanning invoices with multiple barcodes
 
 **Scenario:** 500 invoices, 3 barcodes per invoice = 1,500 barcode scans
 
-- **Free Tier:** Cannot complete (800 request limit)
-- **Premium $19.99:** Completes but uses 30% of monthly quota
-- **At 1 concurrent request:** Sequential processing takes significant time
+- **Free Tier:** Cannot complete (600 request limit)
+- **Basic $19.99:** Completes but uses 15% of monthly quota
+- **At 1 call/second:** Sequential processing takes significant time
 
 **With IronBarcode:** No limits. Process 1,500 barcodes in parallel, locally, in seconds.
 
@@ -147,7 +145,7 @@ Despite the limitations, Cloudmersive has valid use cases:
 If your application runs on AWS Lambda, Azure Functions, or similar serverless platforms with size constraints, a lightweight API client may be preferable to a full SDK.
 
 ### Very Low Volume
-For applications processing fewer than 800 barcodes monthly, the free tier covers the need without cost.
+For applications processing fewer than 600 barcodes monthly, the free tier covers the need without cost.
 
 ### Already Using Cloudmersive Suite
 If your application already uses Cloudmersive for document conversion or other APIs, adding barcode capability requires no new vendor relationship.
@@ -163,11 +161,11 @@ For most .NET barcode processing scenarios, local processing with IronBarcode pr
 
 | Monthly Volume | Cloudmersive Cost | IronBarcode Cost |
 |---------------|-------------------|------------------|
-| 800 | Free | $749 (one-time) |
-| 5,000 | ~$20/month | $749 (one-time) |
-| 25,000 | ~$50+/month | $749 (one-time) |
-| 100,000 | $200+/month | $749 (one-time) |
-| 1,000,000 | $1,000+/month | $749 (one-time) |
+| 600 | Free | $799 (one-time, Lite) |
+| 10,000 | $19.99/month | $799 (one-time, Lite) |
+| 25,000 | $49.99/month | $799 (one-time, Lite) |
+| 100,000 | $199.99/month | $799 (one-time, Lite) |
+| 500,000 | $999.99/month | $799 (one-time, Lite) |
 
 After 3-6 months of moderate volume, IronBarcode's perpetual license pays for itself.
 
@@ -224,11 +222,11 @@ var scanApi = new BarcodeScanApi();
 ### IronBarcode Setup
 
 ```csharp
-// Install: dotnet add package IronBarcode
-using IronBarcode;
+// Install: dotnet add package BarCode
+using IronBarCode;
 
 // Optional: Configure license for production
-// IronBarcode.License.LicenseKey = "YOUR-LICENSE-KEY";
+// IronBarCode.License.LicenseKey = "YOUR-LICENSE-KEY";
 
 // No API configuration needed - just use the library
 ```
@@ -243,6 +241,7 @@ using (var stream = File.OpenRead("barcode.png"))
     if (result.Successful == true)
     {
         Console.WriteLine($"Value: {result.RawText}");
+        Console.WriteLine($"Type: {result.BarcodeType}");
     }
 }
 // Each call: 150-400ms network latency + processing
@@ -275,7 +274,7 @@ If you're currently using Cloudmersive and considering migration to local proces
 
 ```bash
 dotnet remove package Cloudmersive.APIClient.NET.Barcode
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Step 2: Update Using Statements
@@ -287,7 +286,7 @@ using Cloudmersive.APIClient.NET.Barcode.Client;
 using Cloudmersive.APIClient.NET.Barcode.Model;
 
 // Add
-using IronBarcode;
+using IronBarCode;
 ```
 
 ### Step 3: Remove API Configuration
@@ -328,6 +327,13 @@ var barcode = BarcodeWriter.CreateBarcode("5901234123457", BarcodeEncoding.EAN13
 barcode.SaveAsPng("barcode.png");
 ```
 
+Note: Cloudmersive's `GenerateBarcodeApi` exposes one method per symbology
+(`GenerateBarcodeQRCodeAsync`, `GenerateBarcodeCode128Async`,
+`GenerateBarcodeEAN13Async`, `GenerateBarcodeEAN8Async`,
+`GenerateBarcodeUPCAAsync`, `GenerateBarcodeUPCEAsync`). There is no generic
+generator and only six 1D/2D formats are supported — DataMatrix, Aztec, PDF417,
+and similar 2D codes are read-only on Cloudmersive.
+
 ### Step 6: Remove Async/Retry Infrastructure
 
 Cloud API code typically includes:
@@ -346,10 +352,10 @@ Calculate your migration ROI:
 |--------|--------------|-------------|
 | Monthly API cost | $X/month | $0 |
 | Annual API cost | $X * 12 | $0 |
-| One-time license | N/A | $749 |
-| Break-even | N/A | ~$63/month API cost |
+| One-time license | N/A | $799 (Lite) |
+| Break-even | N/A | ~$67/month API cost |
 
-If your Cloudmersive usage exceeds $63/month, IronBarcode pays for itself in the first year with ongoing savings thereafter.
+If your Cloudmersive usage exceeds $67/month, IronBarcode pays for itself in the first year with ongoing savings thereafter.
 
 ## Real-World Scenario: Invoice Processing
 
@@ -359,7 +365,7 @@ Consider a business processing 1,000 invoices daily, each containing 2-3 barcode
 
 **Cloudmersive Approach:**
 - Monthly volume: ~75,000 requests
-- Required tier: Enterprise pricing ($200+/month estimated)
+- Required tier: Business Premier ($99.99/month, 50,000 calls) is insufficient — needs Business Advantage ($199.99/month, 100,000 calls)
 - Processing time: 2,500 * 250ms = 10+ minutes of network overhead daily
 - Risk: Downtime if Cloudmersive service unavailable
 
@@ -369,15 +375,16 @@ Consider a business processing 1,000 invoices daily, each containing 2-3 barcode
 - Reliability: Works regardless of internet status
 
 **Annual comparison:**
-- Cloudmersive: $2,400+/year recurring
-- IronBarcode: $749 once, then $0/year
+- Cloudmersive: ~$2,400/year recurring
+- IronBarcode: $799 once, then $0/year
 
 ## PDF Document Processing
 
 A key differentiation point is PDF handling.
 
 ### Cloudmersive PDF Limitations
-- Must extract images from PDF first
+- The Barcode API has no PDF input mode — `BarcodeScanApi` accepts image streams only
+- You must extract pages to images using a separate library (or another Cloudmersive API) first
 - Each page becomes a separate API call
 - No native multi-page batch processing
 - Additional complexity and API calls for document workflows

@@ -9,11 +9,11 @@ This guide is honest about what you lose: if your application processes real-tim
 ## Step 1: Swap the NuGet Packages
 
 ```bash
-dotnet remove package Dynamsoft.DotNet.BarcodeReader
-dotnet add package IronBarcode
+dotnet remove package Dynamsoft.DotNet.BarcodeReader.Bundle
+dotnet add package BarCode
 ```
 
-If your project also has a PDF rendering library added specifically for Dynamsoft (PdfiumViewer is the most common), that can be removed too:
+The IronBarcode NuGet package id is `BarCode` even though the namespace is `IronBarCode`. If your project also has a PDF rendering library added specifically for Dynamsoft (PdfiumViewer is the most common), that can be removed too:
 
 ```bash
 # Remove if added only for Dynamsoft PDF support
@@ -28,18 +28,20 @@ This is where the most immediate simplification happens. The Dynamsoft pattern r
 **Before — Dynamsoft:**
 
 ```csharp
-using Dynamsoft.DBR;
+using Dynamsoft.License;
+using Dynamsoft.Core;
 
-// Must run before any barcode operations — contacts license.dynamsoft.com
-int errorCode = BarcodeReader.InitLicense("YOUR-LICENSE-KEY", out string errorMsg);
-if (errorCode != (int)EnumErrorCode.DBR_OK)
+// Must run before any barcode operations — performs online activation
+// against Dynamsoft's license servers and re-validates periodically.
+int errorCode = LicenseManager.InitLicense("YOUR-LICENSE-KEY", out string errorMsg);
+if (errorCode != (int)EnumErrorCode.EC_OK)
     throw new InvalidOperationException($"License validation failed [{errorCode}]: {errorMsg}");
 ```
 
 **After — IronBarcode:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 // Local validation — no network call, no error code
@@ -60,14 +62,17 @@ In a Docker or Kubernetes environment, set the `IRONBARCODE_KEY` environment var
 Find and replace across all source files:
 
 ```bash
-grep -r "using Dynamsoft.DBR" --include="*.cs" .
+grep -r "using Dynamsoft\." --include="*.cs" .
 ```
 
 Replace each occurrence:
 
 ```csharp
 // Before
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
+using Dynamsoft.License;
+using Dynamsoft.Core;
 
 // After
 using IronBarCode;
@@ -82,22 +87,24 @@ The most fundamental operation — reading a barcode from an image file.
 **Before — Dynamsoft:**
 
 ```csharp
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
 
-public string ReadBarcodeFromFile(BarcodeReader reader, string imagePath)
+public string ReadBarcodeFromFile(CaptureVisionRouter router, string imagePath)
 {
-    TextResult[] results = reader.DecodeFile(imagePath, "");
-    if (results == null || results.Length == 0)
+    CapturedResult result = router.Capture(imagePath, PresetTemplate.PT_READ_BARCODES);
+    var items = result.GetDecodedBarcodesResult()?.GetItems();
+    if (items == null || items.Length == 0)
         return null;
 
-    return results[0].BarcodeText;
+    return items[0].GetText();
 }
 ```
 
 **After — IronBarcode:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 public string ReadBarcodeFromFile(string imagePath)
@@ -107,29 +114,28 @@ public string ReadBarcodeFromFile(string imagePath)
 }
 ```
 
-The `reader` instance is gone. `BarcodeReader.Read` is static. `TextResult[].BarcodeText` becomes `.Value`. The `null` check on `results` is cleaner with LINQ.
+The `CaptureVisionRouter` instance is gone. `BarcodeReader.Read` is static. `BarcodeResultItem.GetText()` becomes `.Value`. The `null` check is cleaner with LINQ.
 
 ### Reading Multiple Barcodes
 
 **Before — Dynamsoft:**
 
 ```csharp
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
 
-public List<string> ReadAllBarcodes(BarcodeReader reader, string imagePath)
+public List<string> ReadAllBarcodes(CaptureVisionRouter router, string imagePath)
 {
-    var settings = reader.GetRuntimeSettings();
-    settings.ExpectedBarcodesCount = 0; // 0 = find all
-    reader.UpdateRuntimeSettings(settings);
+    SimplifiedCaptureVisionSettings settings = router.GetSimplifiedSettings(
+        PresetTemplate.PT_READ_BARCODES);
+    settings.BarcodeSettings.ExpectedBarcodesCount = 0; // 0 = find all
+    router.UpdateSettings(PresetTemplate.PT_READ_BARCODES, settings);
 
-    TextResult[] results = reader.DecodeFile(imagePath, "");
+    CapturedResult result = router.Capture(imagePath, PresetTemplate.PT_READ_BARCODES);
     var values = new List<string>();
 
-    if (results != null)
-    {
-        foreach (var result in results)
-            values.Add(result.BarcodeText);
-    }
+    foreach (var item in result.GetDecodedBarcodesResult().GetItems())
+        values.Add(item.GetText());
 
     return values;
 }
@@ -159,16 +165,25 @@ public List<string> ReadAllBarcodes(string imagePath)
 **Before — Dynamsoft:**
 
 ```csharp
+using Dynamsoft.CVR;
+using Dynamsoft.Core;
 using Dynamsoft.DBR;
 
 // Requires width, height, stride, and pixel format — low-level buffer API
-public string ReadFromBuffer(BarcodeReader reader, byte[] rawPixels, int width, int height)
+public string ReadFromBuffer(CaptureVisionRouter router, byte[] rawPixels, int width, int height)
 {
     int stride = width * 3; // assuming 24bpp RGB
-    var results = reader.DecodeBuffer(rawPixels, width, height, stride,
-        EnumImagePixelFormat.IPF_RGB_888, "");
+    var imageData = new ImageData
+    {
+        Bytes = rawPixels,
+        Width = width,
+        Height = height,
+        Stride = stride,
+        Format = EnumImagePixelFormat.IPF_RGB_888
+    };
 
-    return results?.FirstOrDefault()?.BarcodeText;
+    CapturedResult result = router.Capture(imageData, PresetTemplate.PT_READ_BARCODES);
+    return result.GetDecodedBarcodesResult()?.GetItems()?.FirstOrDefault()?.GetText();
 }
 ```
 
@@ -193,12 +208,13 @@ This is typically the largest code reduction in the migration. Remove the entire
 **Before — Dynamsoft with PdfiumViewer:**
 
 ```csharp
-// Requires: Dynamsoft.DotNet.BarcodeReader + PdfiumViewer + PdfiumViewer.Native.*
+// Requires: Dynamsoft.DotNet.BarcodeReader.Bundle + PdfiumViewer + PdfiumViewer.Native.*
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
 using PdfiumViewer;
 using System.Drawing.Imaging;
 
-public List<string> ReadBarcodesFromPdf(BarcodeReader reader, string pdfPath)
+public List<string> ReadBarcodesFromPdf(CaptureVisionRouter router, string pdfPath)
 {
     var allBarcodes = new List<string>();
 
@@ -210,12 +226,10 @@ public List<string> ReadBarcodesFromPdf(BarcodeReader reader, string pdfPath)
             using var ms = new MemoryStream();
             image.Save(ms, ImageFormat.Png);
 
-            TextResult[] results = reader.DecodeFileInMemory(ms.ToArray(), "");
-            if (results != null)
-            {
-                foreach (var result in results)
-                    allBarcodes.Add(result.BarcodeText);
-            }
+            CapturedResult result = router.Capture(ms.ToArray(),
+                PresetTemplate.PT_READ_BARCODES);
+            foreach (var item in result.GetDecodedBarcodesResult().GetItems())
+                allBarcodes.Add(item.GetText());
         }
     }
 
@@ -236,7 +250,7 @@ public List<string> ReadBarcodesFromPdf(string pdfPath)
 }
 ```
 
-The page loop, the PdfDocument, the image rendering at 300 DPI, the MemoryStream, and the `DecodeFileInMemory` call all disappear. IronBarcode handles PDF pages internally.
+The page loop, the PdfDocument, the image rendering at 300 DPI, the MemoryStream, and the `Capture` call per page all disappear. IronBarcode handles PDF pages internally.
 
 If you need to read from a PDF with options (for dense or difficult barcodes):
 
@@ -264,16 +278,18 @@ If your current code includes the offline licensing pattern, remove it entirely:
 **Before — Dynamsoft offline license:**
 
 ```csharp
-// Dynamsoft offline: get UUID, send to support, receive licenseContent
-string uuid = BarcodeReader.OutputLicenseToString();
-// ... send uuid to support@dynamsoft.com, receive licenseContent ...
-int errorCode = BarcodeReader.InitLicenseFromLicenseContent(
+// Dynamsoft offline: request a device-bound license file from support,
+// then activate it through the LicenseManager APIs documented for your
+// SDK version (the exact method names have moved across versions).
+using Dynamsoft.License;
+using Dynamsoft.Core;
+
+int errorCode = LicenseManager.InitLicenseFromDevice(
     "YOUR-LICENSE-KEY",
     licenseContent,
-    uuid,
     out string errorMsg);
 
-if (errorCode != (int)EnumErrorCode.DBR_OK)
+if (errorCode != (int)EnumErrorCode.EC_OK)
     throw new InvalidOperationException($"Offline license failed: {errorMsg}");
 ```
 
@@ -284,7 +300,7 @@ if (errorCode != (int)EnumErrorCode.DBR_OK)
 IronBarCode.License.LicenseKey = "YOUR-KEY";
 ```
 
-No UUID. No support email. No licenseContent string. The key validates locally.
+No device-bound license file. No support email round-trip. The key validates locally.
 
 ### Docker Configuration
 
@@ -313,40 +329,43 @@ Dynamsoft uses an instance-based API. If your code creates `BarcodeReader` insta
 **Before — Dynamsoft instance management:**
 
 ```csharp
+using Dynamsoft.CVR;
+using Dynamsoft.DBR;
+using Dynamsoft.License;
+using Dynamsoft.Core;
+
 public class BarcodeService : IDisposable
 {
-    private readonly BarcodeReader _reader;
+    private readonly CaptureVisionRouter _router;
 
     public BarcodeService()
     {
-        int errorCode = BarcodeReader.InitLicense("KEY", out string errorMsg);
-        if (errorCode != (int)EnumErrorCode.DBR_OK)
+        int errorCode = LicenseManager.InitLicense("KEY", out string errorMsg);
+        if (errorCode != (int)EnumErrorCode.EC_OK)
             throw new InvalidOperationException(errorMsg);
 
-        _reader = new BarcodeReader();
+        _router = new CaptureVisionRouter();
 
-        var settings = _reader.GetRuntimeSettings();
-        settings.ExpectedBarcodesCount = 0;
-        _reader.UpdateRuntimeSettings(settings);
+        var settings = _router.GetSimplifiedSettings(PresetTemplate.PT_READ_BARCODES);
+        settings.BarcodeSettings.ExpectedBarcodesCount = 0;
+        _router.UpdateSettings(PresetTemplate.PT_READ_BARCODES, settings);
     }
 
     public string[] ReadFile(string path)
     {
-        var results = _reader.DecodeFile(path, "");
-        return results?.Select(r => r.BarcodeText).ToArray() ?? Array.Empty<string>();
+        var result = _router.Capture(path, PresetTemplate.PT_READ_BARCODES);
+        return result.GetDecodedBarcodesResult()?.GetItems()
+            ?.Select(i => i.GetText()).ToArray() ?? Array.Empty<string>();
     }
 
-    public void Dispose()
-    {
-        _reader?.Dispose();
-    }
+    public void Dispose() => _router?.Dispose();
 }
 ```
 
 **After — IronBarcode static API:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 public class BarcodeService
@@ -364,7 +383,7 @@ public class BarcodeService
 }
 ```
 
-The class loses its constructor, its `IDisposable` implementation, and its `_reader` field. If this service was registered in DI as a singleton or scoped service to manage the Dynamsoft instance lifecycle, that registration can be simplified or the service can become a set of static methods.
+The class loses its constructor, its `IDisposable` implementation, and its `_router` field. If this service was registered in DI as a singleton or scoped service to manage the Dynamsoft instance lifecycle, that registration can be simplified or the service can become a set of static methods.
 
 ### Reading Speed vs Timeout Mapping
 
@@ -372,8 +391,8 @@ Dynamsoft uses a `Timeout` in milliseconds optimized for camera frame rates. Iro
 
 | Dynamsoft setting | IronBarcode equivalent |
 |---|---|
-| `settings.Timeout = 100` (30fps pipeline) | `Speed = ReadingSpeed.ExtremeDetail` is NOT this — this is actually the opposite |
-| Low timeout (prioritize speed) | `Speed = ReadingSpeed.Balanced` |
+| Low `Timeout` (30fps pipeline, prioritize speed) | `Speed = ReadingSpeed.Faster` |
+| Default timeout | `Speed = ReadingSpeed.Balanced` |
 | Higher timeout (prioritize accuracy) | `Speed = ReadingSpeed.Detailed` |
 | Maximum accuracy, no time pressure | `Speed = ReadingSpeed.ExtremeDetail` |
 
@@ -390,44 +409,45 @@ var options = new BarcodeReaderOptions
 
 ## Common Migration Issues
 
-### TextResult[].BarcodeText vs result.Value
+### BarcodeResultItem.GetText() vs result.Value
 
-The property name changes:
+The property accessor changes:
 
 ```csharp
 // Before
-string value = textResult.BarcodeText;
+string value = item.GetText();
 
 // After
 string value = result.Value;
 ```
 
-### TextResult[].BarcodeFormat vs result.Format
+### GetFormatString() vs result.BarcodeType
 
-Both are enums, but they are different enum types. If you were using Dynamsoft's `EnumBarcodeFormat` values for comparisons or logging, switch to IronBarcode's `BarcodeEncoding`:
+Dynamsoft items expose format via `GetFormatString()` (string) or `GetFormat()` (enum). IronBarcode exposes `BarcodeType` as a `BarcodeEncoding` enum:
 
 ```csharp
 // Before
-if (textResult.BarcodeFormat == EnumBarcodeFormat.BF_QR_CODE)
+if (item.GetFormat() == EnumBarcodeFormat.BF_QR_CODE)
     Console.WriteLine("Found QR code");
 
 // After
-if (result.Format == BarcodeEncoding.QRCode)
+if (result.BarcodeType == BarcodeEncoding.QRCode)
     Console.WriteLine("Found QR code");
 
 // For logging without enum comparison — .ToString() works on both
-Console.WriteLine($"Format: {result.Format}");
+Console.WriteLine($"Format: {result.BarcodeType}");
 ```
 
 ### Null Results vs Empty Collection
 
-Dynamsoft can return `null` from `DecodeFile` when no barcodes are found. IronBarcode returns an empty collection. Update null checks:
+Dynamsoft's `GetDecodedBarcodesResult()` can return `null` when no barcodes are found. IronBarcode returns an empty collection. Update null checks:
 
 ```csharp
 // Before: null check required
-var results = reader.DecodeFile(path, "");
-if (results != null && results.Length > 0)
-    Process(results[0].BarcodeText);
+var result = router.Capture(path, PresetTemplate.PT_READ_BARCODES);
+var items = result.GetDecodedBarcodesResult()?.GetItems();
+if (items != null && items.Length > 0)
+    Process(items[0].GetText());
 
 // After: null-safe but also correct to check Count
 var results = BarcodeReader.Read(path);
@@ -435,18 +455,18 @@ if (results.Any())
     Process(results.First().Value);
 ```
 
-### RuntimeSettings to BarcodeReaderOptions
+### SimplifiedCaptureVisionSettings to BarcodeReaderOptions
 
-The `GetRuntimeSettings` / `UpdateRuntimeSettings` pattern becomes `BarcodeReaderOptions` passed to `Read`:
+The `GetSimplifiedSettings` / `UpdateSettings` pattern becomes `BarcodeReaderOptions` passed to `Read`:
 
 ```csharp
 // Before
-var settings = reader.GetRuntimeSettings();
-settings.DeblurLevel = 5;
-settings.ExpectedBarcodesCount = 0;
+var settings = router.GetSimplifiedSettings(PresetTemplate.PT_READ_BARCODES);
+settings.BarcodeSettings.DeblurModes = ...;
+settings.BarcodeSettings.ExpectedBarcodesCount = 0;
 settings.Timeout = 500;
-reader.UpdateRuntimeSettings(settings);
-var results = reader.DecodeFile(path, "");
+router.UpdateSettings(PresetTemplate.PT_READ_BARCODES, settings);
+var result = router.Capture(path, PresetTemplate.PT_READ_BARCODES);
 
 // After
 var options = new BarcodeReaderOptions
@@ -462,27 +482,27 @@ var results = BarcodeReader.Read(path, options);
 Run these searches to find every Dynamsoft reference that needs updating:
 
 ```bash
-grep -r "using Dynamsoft.DBR" --include="*.cs" .
-grep -r "BarcodeReader.InitLicense\|EnumErrorCode\|DBR_OK" --include="*.cs" .
-grep -r "new BarcodeReader()\|reader\.DecodeFile\|reader\.DecodeBuffer\|reader\.DecodeFileInMemory" --include="*.cs" .
-grep -r "TextResult\|BarcodeText\|BarcodeFormat" --include="*.cs" .
-grep -r "GetRuntimeSettings\|UpdateRuntimeSettings\|PublicRuntimeSettings" --include="*.cs" .
-grep -r "reader\.Dispose\|OutputLicenseToString\|InitLicenseFromLicenseContent" --include="*.cs" .
+grep -r "using Dynamsoft\." --include="*.cs" .
+grep -r "LicenseManager.InitLicense\|EnumErrorCode\|EC_OK\|DBR_OK" --include="*.cs" .
+grep -r "new CaptureVisionRouter()\|router\.Capture\|cvRouter" --include="*.cs" .
+grep -r "BarcodeResultItem\|GetDecodedBarcodesResult\|GetText()\|GetFormatString" --include="*.cs" .
+grep -r "GetSimplifiedSettings\|UpdateSettings\|SimplifiedCaptureVisionSettings" --include="*.cs" .
+grep -r "InitLicenseFromDevice\|InitLicenseFromLicenseContent" --include="*.cs" .
 ```
 
 Work through each match:
 
-- `using Dynamsoft.DBR` → `using IronBarCode`
-- `BarcodeReader.InitLicense(key, out errorMsg)` + error check → `IronBarCode.License.LicenseKey = "key"`
-- `new BarcodeReader()` → remove (static API, no instance)
-- `reader.DecodeFile(path, "")` → `BarcodeReader.Read(path)`
-- `reader.DecodeBuffer(bytes, w, h, stride, format, "")` → `BarcodeReader.Read(imageBytes)`
-- `reader.DecodeFileInMemory(bytes, "")` + PDF render loop → `BarcodeReader.Read(pdfPath)`
-- `TextResult[].BarcodeText` → `result.Value`
-- `TextResult[].BarcodeFormat` → `result.Format`
-- `GetRuntimeSettings()` + `UpdateRuntimeSettings(settings)` → `new BarcodeReaderOptions { ... }`
-- `reader.Dispose()` → remove
-- `BarcodeReader.OutputLicenseToString()` + `InitLicenseFromLicenseContent(...)` → remove entirely
+- `using Dynamsoft.CVR / DBR / License / Core` → `using IronBarCode`
+- `LicenseManager.InitLicense(key, out errorMsg)` + error check → `IronBarCode.License.LicenseKey = "key"`
+- `new CaptureVisionRouter()` → remove (static API, no instance)
+- `router.Capture(path, PresetTemplate.PT_READ_BARCODES)` → `BarcodeReader.Read(path)`
+- `router.Capture(imageData, ...)` → `BarcodeReader.Read(imageBytes)`
+- PDF page render loop + per-page `Capture` → `BarcodeReader.Read(pdfPath)`
+- `BarcodeResultItem.GetText()` → `result.Value`
+- `BarcodeResultItem.GetFormat()` / `GetFormatString()` → `result.BarcodeType`
+- `GetSimplifiedSettings()` + `UpdateSettings(...)` → `new BarcodeReaderOptions { ... }`
+- `router.Dispose()` → remove
+- Offline `InitLicenseFromDevice(...)` → remove entirely
 - Remove PdfiumViewer NuGet packages if they were added only to support Dynamsoft PDF processing
-- Remove Docker/Kubernetes network egress rules for `license.dynamsoft.com`
+- Remove Docker/Kubernetes network egress rules for `*.dynamsoft.com` license endpoints
 - Set `IRONBARCODE_KEY` environment variable in deployment configuration

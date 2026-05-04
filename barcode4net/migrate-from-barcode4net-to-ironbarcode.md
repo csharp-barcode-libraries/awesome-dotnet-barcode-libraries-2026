@@ -67,7 +67,7 @@ BarcodeWriter.CreateBarcode("ITEM-12345", BarcodeEncoding.Code128)
 | QR code with logo | No | Yes (`AddBrandLogo()`) |
 | Fluent chainable API | No | Yes |
 | Active maintenance | No (end-of-life) | Yes |
-| New licenses available | No | Yes — Lite $749, Plus $1,499, Professional $2,999, Unlimited $5,999 |
+| New licenses available | No | Yes — Lite $799, Plus $1,199, Professional $2,399, Unlimited $4,799 |
 | Security patches | No | Yes |
 | CI/CD pipeline integration | Manual DLL copy steps | Standard `dotnet restore` |
 

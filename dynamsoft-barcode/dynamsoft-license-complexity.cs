@@ -2,29 +2,32 @@
  * License Complexity: Dynamsoft Barcode Reader vs IronBarcode
  *
  * This example demonstrates the licensing model differences between
- * Dynamsoft's runtime license validation and IronBarcode's simple key activation.
+ * Dynamsoft's online activation flow and IronBarcode's local key activation.
  *
  * Key Differences:
- * - Dynamsoft: Runtime license validation with callbacks and error handling
- * - Dynamsoft: License server dependency for online validation
- * - Dynamsoft: Offline licensing requires license files and device UUIDs
+ * - Dynamsoft: Online activation via LicenseManager.InitLicense, periodic re-check
+ * - Dynamsoft: First activation requires outbound HTTPS to Dynamsoft's licence servers
+ * - Dynamsoft: Air-gapped environments need a device-bound offline licence file
  * - IronBarcode: Single line license key assignment
  * - IronBarcode: No network calls, no server dependencies
  *
  * NuGet Packages Required:
- * - Dynamsoft: Dynamsoft.DotNet.BarcodeReader
- * - IronBarcode: IronBarcode version 2024.x+
+ * - Dynamsoft: Dynamsoft.DotNet.BarcodeReader.Bundle (v11.x)
+ * - IronBarcode: BarCode (NuGet package id is `BarCode`; namespace is `IronBarCode`)
  */
 
 using System;
 
 // ============================================================
-// DYNAMSOFT APPROACH: Complex Runtime License Validation
+// DYNAMSOFT APPROACH: Online License Activation
 // ============================================================
 
 namespace DynamsoftLicensing
 {
+    using Dynamsoft.CVR;
     using Dynamsoft.DBR;
+    using Dynamsoft.License;
+    using Dynamsoft.Core;
 
     public class DynamsoftLicenseManager
     {
@@ -32,8 +35,10 @@ namespace DynamsoftLicensing
         private static readonly object _lockObject = new object();
 
         /// <summary>
-        /// Initialize Dynamsoft license - MUST be called before any barcode operations.
-        /// This method contacts Dynamsoft's license server for validation.
+        /// Initialize the Dynamsoft licence — must be called before any
+        /// CaptureVisionRouter operations. The first call performs an online
+        /// activation against Dynamsoft's licence servers; subsequent runs
+        /// re-validate periodically against the cached credentials.
         /// </summary>
         public static void Initialize(string licenseKey)
         {
@@ -41,59 +46,56 @@ namespace DynamsoftLicensing
             {
                 if (_isInitialized) return;
 
-                // Dynamsoft license initialization can fail for many reasons:
-                // - Network unavailable
-                // - License server unreachable
-                // - Invalid or expired license key
-                // - License quota exceeded
-                int errorCode = BarcodeReader.InitLicense(licenseKey, out string errorMsg);
+                // LicenseManager.InitLicense can fail for many reasons:
+                // - Network unavailable on first activation
+                // - Periodic re-check window expired with no connectivity
+                // - Invalid or expired licence key
+                // - Activation quota exceeded
+                int errorCode = LicenseManager.InitLicense(licenseKey, out string errorMsg);
 
-                if (errorCode != (int)EnumErrorCode.DBR_OK)
+                if (errorCode != (int)EnumErrorCode.EC_OK)
                 {
-                    // Must handle license failures - app cannot proceed
+                    // Must handle licence failures - app cannot proceed
                     throw new DynamsoftLicenseException(
                         $"License initialization failed. Code: {errorCode}, Message: {errorMsg}");
                 }
 
                 _isInitialized = true;
-                Console.WriteLine("Dynamsoft license validated successfully");
+                Console.WriteLine("Dynamsoft license activated successfully");
             }
         }
 
         /// <summary>
-        /// For air-gapped or offline deployments, Dynamsoft requires
-        /// license files obtained from their support team.
+        /// For air-gapped or offline deployments, Dynamsoft requires a
+        /// device-bound licence file obtained from their support team.
         /// </summary>
-        public static void InitializeOffline(string licenseFileContent, string deviceUuid)
+        public static void InitializeOffline(string licenseKey, string licenseFileContent)
         {
             // Offline licensing requires:
-            // 1. Contact Dynamsoft support to obtain offline license
-            // 2. Provide device UUID from target machine
-            // 3. Receive license file content specific to that device
-            // 4. License files expire and need periodic renewal
-
-            BarcodeReader reader = new BarcodeReader();
+            // 1. Contact Dynamsoft support to obtain an offline licence
+            // 2. Receive a licence file bound to the target device fingerprint
+            // 3. Pass it to the LicenseManager APIs documented for your SDK
+            //    version (the exact method names have moved across versions)
+            // 4. Files have an expiry date and need periodic renewal
 
             try
             {
-                reader.InitLicenseFromLicenseContent(licenseFileContent, deviceUuid);
-                Console.WriteLine("Offline license activated for device: " + deviceUuid);
+                // Method shape varies by SDK version; consult the current
+                // Dynamsoft.License.LicenseManager API reference for your build.
+                int errorCode = LicenseManager.InitLicenseFromDevice(
+                    licenseKey, licenseFileContent, out string errorMsg);
+
+                if (errorCode != (int)EnumErrorCode.EC_OK)
+                    throw new DynamsoftLicenseException(
+                        $"Offline license activation failed: {errorMsg}");
+
+                Console.WriteLine("Offline license activated");
             }
             catch (Exception ex)
             {
                 throw new DynamsoftLicenseException(
                     $"Offline license activation failed: {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// Get device UUID for offline licensing - needed when requesting license files.
-        /// </summary>
-        public static string GetDeviceUuid()
-        {
-            // This must be generated and stored for each deployment target
-            // Different containers/servers need different UUIDs
-            return BarcodeReader.OutputLicenseToString();
         }
     }
 
@@ -108,36 +110,39 @@ namespace DynamsoftLicensing
     /// <summary>
     /// Example service using Dynamsoft - note the initialization requirement.
     /// </summary>
-    public class DynamsoftBarcodeService
+    public class DynamsoftBarcodeService : IDisposable
     {
-        private readonly BarcodeReader _reader;
+        private readonly CaptureVisionRouter _router;
 
         public DynamsoftBarcodeService(string licenseKey)
         {
-            // Must initialize license first
+            // Must initialize licence first
             DynamsoftLicenseManager.Initialize(licenseKey);
 
-            // Only now can we create the reader
-            _reader = new BarcodeReader();
+            // Only now can we create the router
+            _router = new CaptureVisionRouter();
         }
 
         public string[] ReadBarcodes(string filePath)
         {
-            TextResult[] results = _reader.DecodeFile(filePath, "");
-            string[] values = new string[results.Length];
+            CapturedResult capturedResult = _router.Capture(filePath,
+                PresetTemplate.PT_READ_BARCODES);
 
-            for (int i = 0; i < results.Length; i++)
+            DecodedBarcodesResult barcodes = capturedResult.GetDecodedBarcodesResult();
+            if (barcodes == null) return Array.Empty<string>();
+
+            BarcodeResultItem[] items = barcodes.GetItems();
+            string[] values = new string[items.Length];
+
+            for (int i = 0; i < items.Length; i++)
             {
-                values[i] = results[i].BarcodeText;
+                values[i] = items[i].GetText();
             }
 
             return values;
         }
 
-        public void Dispose()
-        {
-            _reader?.Dispose();
-        }
+        public void Dispose() => _router?.Dispose();
     }
 }
 
@@ -147,7 +152,7 @@ namespace DynamsoftLicensing
 
 namespace IronBarcodeLicensing
 {
-    using IronBarcode;
+    using IronBarCode;
 
     public class IronBarcodeLicenseManager
     {
@@ -158,7 +163,7 @@ namespace IronBarcodeLicensing
         {
             // That's it. One line. No network validation.
             // No callbacks, no error handling required for licensing.
-            IronBarcode.License.LicenseKey = licenseKey;
+            IronBarCode.License.LicenseKey = licenseKey;
 
             // License validation happens locally and synchronously
             // Works in air-gapped environments immediately
@@ -172,8 +177,8 @@ namespace IronBarcodeLicensing
     {
         public IronBarcodeBarcodeService(string licenseKey)
         {
-            // Set license (can be done anywhere, anytime)
-            IronBarcode.License.LicenseKey = licenseKey;
+            // Set licence (can be done anywhere, anytime)
+            IronBarCode.License.LicenseKey = licenseKey;
 
             // No other initialization needed
             // No reader instance management required
@@ -214,10 +219,12 @@ namespace DeploymentComparison
          * ----------------------------
          *
          * Dockerfile requirements:
-         * - Network access to license.dynamsoft.com during startup
-         * - OR pre-configured offline license file with container-specific UUID
-         * - Environment variables for license key
-         * - Health checks must wait for license validation
+         * - Outbound HTTPS access to Dynamsoft's licence servers on first
+         *   activation and during periodic re-checks
+         * - OR a pre-configured offline licence file bound to the container
+         *   image / device fingerprint
+         * - Environment variables for licence key
+         * - Health checks must wait for licence activation
          *
          * Example Dockerfile snippet:
          *
@@ -227,17 +234,16 @@ namespace DeploymentComparison
          *   ENV DYNAMSOFT_LICENSE_FILE="/app/license/license-file.lic"
          *
          * Kubernetes considerations:
-         * - Each pod may need unique device UUID for offline licensing
-         * - License server must be reachable from cluster
-         * - NetworkPolicy must allow egress to license.dynamsoft.com
-         * - Pod restarts trigger license re-validation
+         * - License server reachable from cluster (or offline file mounted)
+         * - NetworkPolicy must allow egress to Dynamsoft licence endpoints
+         * - Pod restarts may trigger licence re-validation
          *
          *
          * IRONBARCODE DOCKER DEPLOYMENT:
          * ------------------------------
          *
          * Dockerfile requirements:
-         * - Environment variable with license key
+         * - Environment variable with licence key
          * - No network requirements
          *
          * Example Dockerfile snippet:
@@ -245,7 +251,7 @@ namespace DeploymentComparison
          *   ENV IRONBARCODE_LICENSE_KEY="your-key"
          *
          * Kubernetes considerations:
-         * - Secret containing license key
+         * - Secret containing licence key
          * - No network dependencies
          * - No pod-specific configuration needed
          * - Works identically in air-gapped clusters
@@ -261,19 +267,19 @@ namespace DeploymentComparison
          * DYNAMSOFT IN CI/CD:
          * -------------------
          *
-         * - Build agents need license server access for integration tests
-         * - Development/trial licenses may have usage limits
-         * - Parallel test execution may hit concurrent license limits
-         * - License validation adds latency to test startup
+         * - Build agents need licence-server access for integration tests
+         * - Development/trial licences may have usage limits
+         * - Parallel test execution may hit concurrent activation limits
+         * - Online activation adds latency to first test run after a clean cache
          *
          *
          * IRONBARCODE IN CI/CD:
          * ---------------------
          *
-         * - License key in environment variable or secrets
+         * - Licence key in environment variable or secrets
          * - No network calls during test execution
          * - No concurrent usage concerns
-         * - Consistent test timing without license validation latency
+         * - Consistent test timing without licence-validation latency
          */
     }
 }
@@ -286,21 +292,20 @@ public class LicensingComparisonExample
 {
     public static void Main()
     {
-        // Dynamsoft: Must handle potential license failures
+        // Dynamsoft: Must handle potential licence failures
         try
         {
             DynamsoftLicensing.DynamsoftLicenseManager.Initialize("DYNAMSOFT-LICENSE-KEY");
-            var dynamsoftService = new DynamsoftLicensing.DynamsoftBarcodeService("DYNAMSOFT-LICENSE-KEY");
+            using var dynamsoftService = new DynamsoftLicensing.DynamsoftBarcodeService("DYNAMSOFT-LICENSE-KEY");
             // Use service...
-            dynamsoftService.Dispose();
         }
         catch (DynamsoftLicensing.DynamsoftLicenseException ex)
         {
             Console.WriteLine($"Dynamsoft license error: {ex.Message}");
-            // Application cannot proceed without valid license
+            // Application cannot proceed without valid licence
         }
 
-        // IronBarcode: Simple assignment, guaranteed to work
+        // IronBarcode: Simple assignment, works locally
         IronBarcodeLicensing.IronBarcodeLicenseManager.Initialize("IRONBARCODE-LICENSE-KEY");
         var ironService = new IronBarcodeLicensing.IronBarcodeBarcodeService("IRONBARCODE-LICENSE-KEY");
         // Use service immediately - no error handling needed for licensing

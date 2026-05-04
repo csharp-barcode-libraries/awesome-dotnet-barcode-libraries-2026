@@ -1,4 +1,4 @@
-/**
+﻿/**
  * API Configuration Verbosity: Aspose.BarCode vs IronBarcode
  *
  * This example demonstrates the API complexity differences between
@@ -11,7 +11,7 @@
  * - Line count comparison: 15-25 lines vs 2-5 lines for common operations
  *
  * NuGet Packages Required:
- * - Aspose.BarCode: Aspose.BarCode version 24.x+
+ * - Aspose.BarCode: Aspose.BarCode version 26.x+
  * - IronBarcode: IronBarcode version 2024.x+
  */
 
@@ -255,7 +255,7 @@ namespace BarcodeReading
 
         public List<string> ReadAllSupportedFormats(string imagePath)
         {
-            // AllSupportedTypes includes all 60+ formats - performance impact
+            // AllSupportedTypes includes all 80+ formats - performance impact
             using var reader = new Aspose.BarCode.BarCodeRecognition.BarCodeReader(
                 imagePath,
                 Aspose.BarCode.BarCodeRecognition.DecodeType.AllSupportedTypes);
@@ -280,14 +280,14 @@ namespace BarcodeReading
         {
             // Automatic format detection
             var result = IronBarCode.BarcodeReader.Read(imagePath);
-            return result.FirstOrDefault()?.Text;
+            return result.FirstOrDefault()?.Value;
         }
 
         public List<string> ReadAllBarcodes(string imagePath)
         {
             // Automatically detects all barcode types present
             var results = IronBarCode.BarcodeReader.Read(imagePath);
-            return results.Select(r => $"{r.BarcodeType}: {r.Text}").ToList();
+            return results.Select(r => $"{r.BarcodeType}: {r.Value}").ToList();
         }
 
         public List<string> ReadWithSpecificFormatHint(string imagePath)
@@ -300,7 +300,7 @@ namespace BarcodeReading
             };
 
             var results = IronBarCode.BarcodeReader.Read(imagePath, options);
-            return results.Select(r => $"{r.BarcodeType}: {r.Text}").ToList();
+            return results.Select(r => $"{r.BarcodeType}: {r.Value}").ToList();
         }
     }
 }
@@ -324,10 +324,16 @@ namespace QualityConfiguration
                 imagePath,
                 Aspose.BarCode.BarCodeRecognition.DecodeType.AllSupportedTypes);
 
-            // Configure quality settings for difficult images
+            // Configure quality settings for difficult images.
+            // NOTE: Aspose.BarCode 24.x consolidated several of the granular
+            // properties below into higher-level controls (BarcodeQuality,
+            // ComplexBackground, Deconvolution, InverseImage). The toggles
+            // shown here reflect the legacy surface that pre-24.x codebases
+            // still carry — exactly the kind of historical depth that makes
+            // migration valuable.
             reader.QualitySettings = Aspose.BarCode.BarCodeRecognition.QualitySettings.MaxQuality;
 
-            // Additional fine-tuning often required
+            // Additional fine-tuning often required (legacy surface)
             reader.QualitySettings.AllowMedianSmoothing = true;
             reader.QualitySettings.MedianSmoothingWindowSize = 5;
             reader.QualitySettings.AllowSaltAndPaperFiltering = true;
@@ -383,7 +389,7 @@ namespace QualityConfiguration
         {
             // ML-powered automatic handling of damaged barcodes
             var results = IronBarCode.BarcodeReader.Read(imagePath);
-            return results.Select(r => $"{r.BarcodeType}: {r.Text}").ToList();
+            return results.Select(r => $"{r.BarcodeType}: {r.Value}").ToList();
         }
 
         public List<string> ReadWithSpeedHint(string imagePath)
@@ -396,7 +402,7 @@ namespace QualityConfiguration
             };
 
             var results = IronBarCode.BarcodeReader.Read(imagePath, options);
-            return results.Select(r => r.Text).ToList();
+            return results.Select(r => r.Value).ToList();
         }
 
         public List<string> ReadWithMaximumEffort(string imagePath)
@@ -408,7 +414,7 @@ namespace QualityConfiguration
             };
 
             var results = IronBarCode.BarcodeReader.Read(imagePath, options);
-            return results.Select(r => r.Text).ToList();
+            return results.Select(r => r.Value).ToList();
         }
     }
 }
@@ -492,7 +498,7 @@ namespace BatchProcessing
                 .GroupBy(r => r.InputPath)
                 .ToDictionary(
                     g => g.Key,
-                    g => g.Select(r => r.Text).ToList());
+                    g => g.Select(r => r.Value).ToList());
         }
 
         public void ProcessBatchWithProgress(string[] imagePaths, Action<int, int> progressCallback)
@@ -506,7 +512,7 @@ namespace BatchProcessing
 
                 foreach (var barcode in results)
                 {
-                    Console.WriteLine($"{Path.GetFileName(path)}: {barcode.Text}");
+                    Console.WriteLine($"{Path.GetFileName(path)}: {barcode.Value}");
                 }
 
                 processed++;
@@ -638,3 +644,4 @@ namespace FullCustomization
  * For complex customization scenarios, IronBarcode's fluent API remains
  * more readable and maintainable than Aspose.BarCode's nested property model.
  */
+

@@ -7,7 +7,8 @@ The typical scenario that prompts this migration is one of three things: a readi
 ## Step 1: Install IronBarcode
 
 ```bash
-dotnet add package IronBarcode
+# The IronBarcode NuGet package id is "BarCode"
+dotnet add package BarCode
 ```
 
 If you are keeping other DevExpress controls in the same project, leave the DevExpress NuGet packages in place. Only the barcode-related code in your source files changes. If barcode generation was the only reason DevExpress appeared in a particular project and you use no other DX controls there, you can remove the DevExpress packages from that project after the migration:
@@ -34,7 +35,7 @@ Search your codebase for DevExpress barcode types. Everything else stays:
 
 ```bash
 # Find barcode-related DevExpress usage — ignore grid, chart, and other DX components
-grep -r "BarCodeControl\|Code128Generator\|QRCodeGenerator\|DataMatrixGenerator\|PDF417Generator\|DevExpress.XtraBars.BarCode" --include="*.cs" .
+grep -r "BarCodeControl\|Code128Generator\|QRCodeGenerator\|DataMatrixGenerator\|PDF417Generator\|DevExpress\.XtraEditors\.BarCodeControl\|DevExpress\.XtraPrinting\.BarCode" --include="*.cs" .
 grep -r "barCode\.Module\|DrawToBitmap\|BarCode\.Symbology" --include="*.cs" .
 ```
 
@@ -49,8 +50,8 @@ This is the most common migration. A `BarCodeControl` with a `Code128Generator` 
 **Before — DevExpress WinForms control:**
 
 ```csharp
-using DevExpress.XtraBars.BarCode;
-using DevExpress.XtraBars.BarCode.Symbologies;
+using DevExpress.XtraEditors;              // BarCodeControl
+using DevExpress.XtraPrinting.BarCode;     // *Generator symbology classes
 using System.Drawing;
 using System.Drawing.Imaging;
 
@@ -76,7 +77,7 @@ public void GenerateCode128(string data, string outputPath)
 **After — IronBarcode:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 public void GenerateCode128(string data, string outputPath)
@@ -94,8 +95,8 @@ The `barCode.Module = 0.02f` document-unit sizing is gone. `.ResizeTo(400, 100)`
 **Before — DevExpress QR with error correction:**
 
 ```csharp
-using DevExpress.XtraBars.BarCode;
-using DevExpress.XtraBars.BarCode.Symbologies;
+using DevExpress.XtraEditors;              // BarCodeControl
+using DevExpress.XtraPrinting.BarCode;     // *Generator symbology classes
 using System.Drawing;
 using System.Drawing.Imaging;
 
@@ -149,8 +150,8 @@ public void GenerateBrandedQrCode(string url, string logoPath, string outputPath
 **Before — DevExpress:**
 
 ```csharp
-using DevExpress.XtraBars.BarCode;
-using DevExpress.XtraBars.BarCode.Symbologies;
+using DevExpress.XtraEditors;              // BarCodeControl
+using DevExpress.XtraPrinting.BarCode;     // *Generator symbology classes
 
 var barCode = new BarCodeControl();
 var symbology = new DataMatrixGenerator();
@@ -175,8 +176,8 @@ BarcodeWriter.CreateBarcode("PART-7734-X", BarcodeEncoding.DataMatrix)
 **Before — DevExpress:**
 
 ```csharp
-using DevExpress.XtraBars.BarCode;
-using DevExpress.XtraBars.BarCode.Symbologies;
+using DevExpress.XtraEditors;              // BarCodeControl
+using DevExpress.XtraPrinting.BarCode;     // *Generator symbology classes
 
 var barCode = new BarCodeControl();
 barCode.Symbology = new PDF417Generator();
@@ -205,7 +206,7 @@ using IronBarCode;
 var results = BarcodeReader.Read("uploaded-label.png");
 foreach (var result in results)
 {
-    Console.WriteLine($"Found {result.Format}: {result.Value}");
+    Console.WriteLine($"Found {result.BarcodeType}: {result.Value}");
 }
 
 // Read with options for better accuracy on difficult images
@@ -255,7 +256,7 @@ using IronBarCode;
 var results = BarcodeReader.Read("shipping-manifest.pdf");
 foreach (var result in results)
 {
-    Console.WriteLine($"Barcode: {result.Value} | Format: {result.Format}");
+    Console.WriteLine($"Barcode: {result.Value} | Format: {result.BarcodeType}");
 }
 ```
 
@@ -315,8 +316,8 @@ Old imports to remove:
 
 ```csharp
 // Remove these
-using DevExpress.XtraBars.BarCode;
-using DevExpress.XtraBars.BarCode.Symbologies;
+using DevExpress.XtraEditors;              // BarCodeControl
+using DevExpress.XtraPrinting.BarCode;     // *Generator symbology classes
 ```
 
 New import to add:
@@ -343,7 +344,7 @@ using IronBarCode;
 | `new Bitmap(w, h)` + manual disposal | Not needed |
 | Bitmap → `MemoryStream` → HTTP | `.ToPngBinaryData()` |
 | No reading API | `BarcodeReader.Read(path)` |
-| `using DevExpress.XtraBars.BarCode` | `using IronBarCode` |
+| `using DevExpress\.XtraEditors\.BarCodeControl\|DevExpress\.XtraPrinting\.BarCode` | `using IronBarCode` |
 
 ## Migration Checklist
 
@@ -351,12 +352,12 @@ Use this grep pattern to find every file that needs updating:
 
 ```bash
 grep -r "BarCodeControl\|Code128Generator\|QRCodeGenerator\|DataMatrixGenerator\|PDF417Generator\|AztecGenerator" --include="*.cs" .
-grep -r "barCode\.Module\|barCode\.Symbology\|DrawToBitmap\|DevExpress\.XtraBars\.BarCode" --include="*.cs" .
+grep -r "barCode\.Module\|barCode\.Symbology\|DrawToBitmap\|DevExpress\.XtraEditors\.BarCodeControl\|DevExpress\.XtraPrinting\.BarCode" --include="*.cs" .
 ```
 
 Work through each match:
 
-- Replace `using DevExpress.XtraBars.BarCode;` and `using DevExpress.XtraBars.BarCode.Symbologies;` with `using IronBarCode;`
+- Replace `using DevExpress.XtraEditors;` and `using DevExpress.XtraPrinting.BarCode;` with `using IronBarCode;`
 - Replace `new BarCodeControl()` + symbology setup with `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.X)`
 - Replace `new QRCodeGenerator()` + symbology setup with `QRCodeWriter.CreateQrCode(data, size, errorLevel)`
 - Replace `barCode.Module = X` with `.ResizeTo(width, height)`

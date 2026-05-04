@@ -12,7 +12,7 @@ Cloudmersive's .NET SDK is a generated REST API client — a thin wrapper around
 
 ```bash
 dotnet remove package Cloudmersive.APIClient.NETCore.Barcode
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Step 2: Replace Namespaces
@@ -39,7 +39,7 @@ IronBarCode.License.LicenseKey = "YOUR-KEY";
 In an ASP.NET Core application, the license key goes in `Program.cs` before `builder.Build()`:
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 IronBarCode.License.LicenseKey = "YOUR-KEY";
@@ -54,17 +54,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 Before migrating, it's worth calculating what the Cloudmersive integration actually costs. The math is straightforward:
 
-| Your Daily Volume | Monthly Requests | Estimated Annual Cost | IronBarcode (one-time) |
-|---|---|---|---|
-| 100/day | ~3,000 | ~$240/year | $749 |
-| 1,000/day | ~30,000 | ~$1,200/year | $749 |
-| 5,000/day | ~150,000 | ~$1,800/year | $749 |
-| 10,000/day | ~300,000 | ~$3,650/year | $749 |
-| 25,000/day | ~750,000 | ~$9,000/year | $1,499 (Plus, 3 devs) |
+| Your Daily Volume | Monthly Requests | Cloudmersive Tier | Annual Cost | IronBarcode (one-time) |
+|---|---|---|---|---|
+| 100/day | ~3,000 | Basic ($19.99/mo) | ~$240/year | $799 (Lite) |
+| 1,000/day | ~30,000 | Business ($49.99/mo) | ~$600/year | $799 (Lite) |
+| 5,000/day | ~150,000 | Business Advantage ($199.99/mo) | ~$2,400/year | $799 (Lite) |
+| 10,000/day | ~300,000 | Medium Business ($499.99/mo) | ~$6,000/year | $799 (Lite) |
+| 25,000/day | ~750,000 | Medium Business Advantage ($999.99/mo) | ~$12,000/year | $1,199 (Plus) |
 
-If you're paying more than $63/month for Cloudmersive, IronBarcode pays for itself within the first year. If you're paying $300/month, IronBarcode pays for itself in 2.5 months. After that, the savings are indefinite — IronBarcode is a perpetual license with no renewal and no per-request charges.
+If you're paying more than $67/month for Cloudmersive, IronBarcode pays for itself within the first year. If you're paying $300/month, IronBarcode pays for itself in under three months. After that, the savings are indefinite — IronBarcode is a perpetual license with no renewal and no per-request charges.
 
-The annual savings at 10,000 barcodes per day: approximately $2,900 in the first year, and $3,650 every year after.
+The annual savings at 10,000 barcodes per day: approximately $5,200 in the first year, and $6,000 every year after.
 
 ---
 
@@ -90,7 +90,7 @@ File.WriteAllBytes("qr.png", result);
 
 **After (IronBarcode):**
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 IronBarCode.License.LicenseKey = "YOUR-KEY";
@@ -115,7 +115,7 @@ using Cloudmersive.APIClient.NETCore.Barcode.Client;
 Configuration.Default.ApiKey.Add("Apikey", "YOUR-CLOUDMERSIVE-API-KEY");
 var apiInstance = new GenerateBarcodeApi();
 
-byte[] result = apiInstance.GenerateBarcodeCode128By("SHIP-2024031500428");
+byte[] result = apiInstance.GenerateBarcodeCode128("SHIP-2024031500428");
 File.WriteAllBytes("barcode.png", result);
 ```
 
@@ -156,7 +156,7 @@ using (var stream = File.OpenRead("barcode.png"))
 
 **After (IronBarcode):**
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 IronBarCode.License.LicenseKey = "YOUR-KEY";
@@ -164,7 +164,7 @@ IronBarCode.License.LicenseKey = "YOUR-KEY";
 var results = BarcodeReader.Read("barcode.png");
 var result = results.First();
 Console.WriteLine($"Value: {result.Value}");
-Console.WriteLine($"Type: {result.Format}");
+Console.WriteLine($"Type: {result.BarcodeType}");
 ```
 
 ### Async Barcode Reading
@@ -422,12 +422,12 @@ if (cloudmersiveResult.Successful == true)
     string type = cloudmersiveResult.BarcodeType;
 }
 
-// IronBarcode result — use .Value and .Format directly
+// IronBarcode result — use .Value and .BarcodeType directly
 var results = BarcodeReader.Read("barcode.png");
 if (results.Any())
 {
     string value = results.First().Value;
-    string format = results.First().Format.ToString();
+    string format = results.First().BarcodeType.ToString();
 }
 ```
 

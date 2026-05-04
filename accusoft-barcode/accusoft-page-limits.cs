@@ -15,16 +15,20 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 
 // ============================================================================
-// PART 1: ACCUSOFT BARCODEXPRESS PAGE LIMIT HANDLING
+// PART 1: ACCUSOFT BARCODE XPRESS PAGE LIMIT HANDLING
 // ============================================================================
 
 namespace AccusoftBarcodeXpressExample
 {
-    // Install: dotnet add package Accusoft.BarcodeXpress.NetCore
+    // NuGet (.NET Standard 2.0 / .NET Core / .NET 5+):
+    //   dotnet add package Accusoft.BarcodeXpress.NetCore
+    // NuGet (.NET Framework):
+    //   dotnet add package Accusoft.BarcodeXpress.Net
     using Accusoft.BarcodeXpressSdk;
 
     /// <summary>
@@ -40,9 +44,9 @@ namespace AccusoftBarcodeXpressExample
 
         public AccusoftPageLimitHandler()
         {
-            _barcodeXpress = new BarcodeXpress();
-            _barcodeXpress.Licensing.SolutionName = "YourSolutionName";
-            _barcodeXpress.Licensing.SolutionKey = Convert.ToInt64("YourSolutionKey");
+            _barcodeXpress = new BarcodeXpress(".");
+            _barcodeXpress.Licensing.SetSolutionName("YourSolutionName");
+            _barcodeXpress.Licensing.SetSolutionKey(1, 2, 3, 4);
             _minuteWindowStart = DateTime.Now;
         }
 
@@ -65,10 +69,12 @@ namespace AccusoftBarcodeXpressExample
                 // Check if we need to wait for rate limit reset
                 await EnforceRateLimitAsync();
 
-                // Process the image
-                _barcodeXpress.reader.SetPropertyValue(
-                    BarcodeXpress.cycBxeSetFilename, path);
-                var barcodes = _barcodeXpress.reader.Analyze();
+                // Process the image — Analyze takes a System.Drawing.Bitmap.
+                // The SDK does not read PDFs directly; documented input
+                // formats are TIFF, JPEG, PNG, and BMP.
+                using var bitmap = new Bitmap(path);
+                _barcodeXpress.reader.BarcodeTypes = Enum.GetValues(typeof(BarcodeType));
+                Result[] barcodes = _barcodeXpress.reader.Analyze(bitmap);
 
                 results[path] = barcodes.Select(r => r.BarcodeValue).ToArray();
                 _pagesProcessedThisMinute++;
@@ -315,15 +321,15 @@ namespace IronBarcodeExample
             Console.WriteLine("No processing limits - full speed ahead");
             Console.WriteLine();
 
-            // Process all images - IronBarcode handles parallelization internally
-            var allResults = BarcodeReader.Read(imagePaths);
+            // Process per-path so we can map results back to source paths.
+            var results = new Dictionary<string, string[]>();
+            foreach (var path in imagePaths)
+            {
+                var found = BarcodeReader.Read(path);
+                results[path] = found.Select(r => r.Text).ToArray();
+            }
 
             stopwatch.Stop();
-
-            var results = allResults.GroupBy(r => r.InputPath ?? "")
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(r => r.Text).ToArray());
 
             Console.WriteLine($"Total processing time: {stopwatch.Elapsed.TotalSeconds:F2} seconds");
             Console.WriteLine($"Effective rate: {imagePaths.Length / stopwatch.Elapsed.TotalMinutes:F0} pages/minute");

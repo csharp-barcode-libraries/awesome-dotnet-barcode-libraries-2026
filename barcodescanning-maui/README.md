@@ -2,9 +2,9 @@
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-BarcodeScanning.Native.Maui is an open-source library that provides native barcode scanning capabilities for .NET MAUI mobile applications. It wraps platform-specific APIs (iOS CIBarcodeDescriptor and Android ML Kit) to deliver camera-based barcode scanning. If you're building a MAUI mobile app and need quick camera scanning, you've likely encountered this library in GitHub searches.
+BarcodeScanning.Native.Maui is an open-source library that provides native barcode scanning capabilities for .NET MAUI applications. It wraps platform-specific APIs (Apple Vision on iOS/macOS, Google ML Kit on Android, and ZXingCpp on Windows) to deliver camera-based barcode scanning. If you're building a MAUI app and need quick camera scanning, you've likely encountered this library in GitHub searches.
 
-However, BarcodeScanning.Native.Maui is designed exclusively for MAUI mobile camera input. It cannot process static images, PDFs, or work outside of MAUI projects. In this comprehensive comparison, I'll examine BarcodeScanning.Native.Maui's capabilities and limitations, compare it to [IronBarcode](https://ironsoftware.com/csharp/barcode/) (which provides universal .NET barcode processing including MAUI support), and help you determine the right approach for your barcode scanning needs.
+However, BarcodeScanning.Native.Maui is designed exclusively for MAUI camera input. It cannot process static images, PDFs, or work outside of MAUI projects. In this comprehensive comparison, I'll examine BarcodeScanning.Native.Maui's capabilities and limitations, compare it to [IronBarcode](https://ironsoftware.com/csharp/barcode/) (which provides universal .NET barcode processing including MAUI support), and help you determine the right approach for your barcode scanning needs.
 
 ## Table of Contents
 
@@ -28,37 +28,44 @@ BarcodeScanning.Native.Maui (officially BarcodeScanning.Native.Maui on NuGet) is
 | Aspect | Details |
 |--------|---------|
 | **NuGet Package** | BarcodeScanning.Native.Maui |
-| **Current Version** | 2.2.1 (as of January 2026) |
+| **Current Version** | 3.0.3 (released February 2026) |
 | **GitHub Repository** | afriscic/BarcodeScanning.Native.Maui |
 | **License** | MIT (Free) |
-| **Platforms** | iOS 14.0+, Android API 21+ |
+| **Platforms** | iOS, Android, Windows (since 3.0.1), macOS Catalyst |
 | **Input Method** | Camera only |
-| **Dependencies** | iOS: CIBarcodeDescriptor (Vision framework), Android: Google ML Kit |
+| **Dependencies** | iOS/macOS: Apple Vision framework, Android: Google ML Kit, Windows: ZXingCpp |
 
 ### How It Works
 
 BarcodeScanning.Native.Maui provides a `CameraView` control that you embed in your MAUI pages. The control handles camera permissions, preview display, and barcode detection through native platform APIs:
 
-- **iOS**: Uses Apple's CIBarcodeDescriptor within the Vision framework
+- **iOS / macOS**: Uses Apple's Vision framework
 - **Android**: Uses Google ML Kit's barcode scanning module
+- **Windows**: Uses the ZXingCpp library (added in version 3.0.1)
 
-When a barcode enters the camera frame, the library fires a `BarcodeDetected` event with the decoded data.
+When a barcode enters the camera frame, the library fires an `OnDetectionFinished` event with the decoded data.
 
 ### Supported Barcode Formats
 
-The library supports formats available through the native platform APIs:
+The library exposes a `BarcodeFormats` flags enum. Format coverage is the intersection of what the native platform APIs support, so the actual recognized set varies per platform:
 
-**iOS (via CIBarcodeDescriptor):**
+**iOS / macOS (via Apple Vision):**
+- QR Code (and MicroQR), Data Matrix, Aztec, PDF417
+- Code 128, Code 39, Code 93
+- EAN-8, EAN-13, UPC-A, UPC-E
+- ITF, Codabar, GS1 DataBar
+
+**Android (via Google ML Kit):**
 - QR Code, Data Matrix, Aztec, PDF417
 - Code 128, Code 39, Code 93
 - EAN-8, EAN-13, UPC-A, UPC-E
 - ITF, Codabar
 
-**Android (via ML Kit):**
-- QR Code, Data Matrix, Aztec, PDF417
+**Windows (via ZXingCpp, since v3.0.1):**
+- QR Code, Data Matrix, Aztec, PDF417, MaxiCode
 - Code 128, Code 39, Code 93
-- EAN-8, EAN-13, UPC-A, UPC-E
-- ITF, Codabar
+- EAN-8, EAN-13, UPC-A, UPC-E, ISBN
+- ITF, Codabar, GS1 DataBar
 
 ---
 
@@ -66,16 +73,16 @@ The library supports formats available through the native platform APIs:
 
 Before integrating BarcodeScanning.Native.Maui, understand these fundamental constraints:
 
-### Limitation 1: MAUI Mobile Only
+### Limitation 1: MAUI Only
 
-BarcodeScanning.Native.Maui **only works in .NET MAUI projects** targeting iOS and Android. You cannot use it in:
+BarcodeScanning.Native.Maui **only works in .NET MAUI projects**. You cannot use it in:
 
 | Platform/Framework | Supported |
 |-------------------|-----------|
 | .NET MAUI iOS | Yes |
 | .NET MAUI Android | Yes |
-| .NET MAUI Windows | **No** |
-| .NET MAUI macOS | **No** |
+| .NET MAUI Windows | Yes (since 3.0.1, via ZXingCpp) |
+| .NET MAUI macOS | Yes (Mac Catalyst) |
 | ASP.NET Core | **No** |
 | Console Applications | **No** |
 | WPF Applications | **No** |
@@ -83,7 +90,7 @@ BarcodeScanning.Native.Maui **only works in .NET MAUI projects** targeting iOS a
 | Blazor Server | **No** |
 | Azure Functions | **No** |
 
-If your application needs barcode processing outside of mobile MAUI, you need a different solution.
+If your application needs barcode processing outside of MAUI, you need a different solution.
 
 ### Limitation 2: Camera Input Only
 
@@ -97,17 +104,18 @@ The library processes **live camera feeds only**. It cannot:
 
 This is a camera wrapper, not an image processing library.
 
-### Limitation 3: No Windows MAUI Support
+### Limitation 3: Windows Uses a Different Engine
 
-Even within MAUI, **Windows is not supported**. The library's GitHub repository explicitly states Windows support is not on the roadmap due to fundamental differences in how Windows handles camera access compared to iOS and Android.
+Windows support was added in version 3.0.1, but it does not use a Microsoft-provided native barcode API. Instead, the Windows target depends on the third-party `ZXingCpp` package. That means recognition behavior, supported symbologies, and decoding tolerance on Windows differ from the iOS Vision and Android ML Kit code paths.
 
 ### Limitation 4: Platform-Specific Behavior Differences
 
-Because the library wraps different native APIs (Apple Vision vs Google ML Kit), behavior varies between platforms:
+Because the library wraps three different engines (Apple Vision, Google ML Kit, ZXingCpp), behavior varies between platforms:
 
-- **Format detection sensitivity differs** between iOS and Android
+- **Format detection sensitivity differs** between iOS, Android, and Windows
 - **iOS UPC-A adds extra leading zero** in some cases
 - **Performance characteristics vary** by device manufacturer
+- **Symbology support is not identical** across the three engines
 
 ---
 
@@ -144,16 +152,16 @@ The same barcode scanned on iOS and Android may return different metadata or for
 | Feature | BarcodeScanning.MAUI | IronBarcode |
 |---------|---------------------|-------------|
 | **MAUI Mobile** | Yes (iOS, Android) | Yes (all MAUI targets) |
-| **MAUI Windows** | No | Yes |
-| **MAUI macOS** | No | Yes |
+| **MAUI Windows** | Yes (since 3.0.1, via ZXingCpp) | Yes |
+| **MAUI macOS** | Yes (Mac Catalyst) | Yes |
 | **Camera Input** | Yes (primary purpose) | No (image-based) |
 | **Image Input** | No | Yes |
 | **PDF Input** | No | Yes |
 | **ASP.NET Core** | No | Yes |
 | **Console Apps** | No | Yes |
 | **WPF/WinForms** | No | Yes |
-| **PDF417 Reliability** | Poor (documented issues) | Excellent |
-| **Cross-Platform Consistency** | Varies by native API | Consistent managed code |
+| **PDF417 Reliability** | Poor on Android/iOS (documented issues) | Reliable |
+| **Cross-Platform Consistency** | Varies by engine (Vision/ML Kit/ZXingCpp) | Consistent managed code |
 | **Automatic Format Detection** | Yes (native APIs) | Yes |
 | **Batch Processing** | No | Yes |
 | **Offline Operation** | Yes | Yes |
@@ -161,7 +169,7 @@ The same barcode scanned on iOS and Android may return different metadata or for
 
 ### Key Architectural Difference
 
-**BarcodeScanning.Native.Maui** is a camera wrapper. It provides a XAML control that displays camera preview and fires events when barcodes appear in frame. The actual barcode recognition happens in native platform code (Apple/Google).
+**BarcodeScanning.Native.Maui** is a camera wrapper. It provides a XAML control that displays camera preview and fires events when barcodes appear in frame. The actual barcode recognition happens in three different engines depending on platform: Apple Vision (iOS/macOS), Google ML Kit (Android), or ZXingCpp (Windows).
 
 **IronBarcode** is a barcode processing library. It accepts images (files, streams, byte arrays, PDFs) and returns decoded barcode data. For MAUI mobile, you capture an image (using MAUI Essentials or platform camera APIs), then process it with IronBarcode.
 
@@ -171,21 +179,20 @@ The same barcode scanned on iOS and Android may return different metadata or for
 
 ### BarcodeScanning.Native.Maui is Appropriate For:
 
-1. **Quick mobile prototypes** - Need camera scanning in a demo app fast
+1. **Quick MAUI prototypes** - Need camera scanning in a demo app fast
 2. **Free/open-source requirements** - License prohibits commercial libraries
 3. **Simple QR/1D scanning** - Basic format recognition without complex requirements
-4. **iOS/Android only** - Windows support not needed, ever
+4. **MAUI-only deployment** - No need to share barcode logic with backend, web, or desktop apps
 5. **Camera-only workflow** - No need to process saved images or documents
 
 ### IronBarcode is Appropriate For:
 
 1. **Production MAUI applications** - Reliability matters more than free
-2. **Windows MAUI support** - Desktop MAUI deployment required
-3. **Server-side processing** - ASP.NET, Azure Functions, background services
-4. **PDF document workflows** - Shipping labels, invoices, multi-page documents
-5. **Cross-application architecture** - Same library in mobile, web, and server
-6. **PDF417 and specialty formats** - Driver's licenses, shipping industry standards
-7. **Consistent cross-platform behavior** - Same results on every platform
+2. **Server-side processing** - ASP.NET, Azure Functions, background services
+3. **PDF document workflows** - Shipping labels, invoices, multi-page documents
+4. **Cross-application architecture** - Same library in mobile, web, and server
+5. **Reliable PDF417 and specialty formats** - Driver's licenses, shipping industry standards
+6. **Consistent cross-platform behavior** - Same managed code on every platform, instead of three different engines
 
 ---
 
@@ -202,11 +209,11 @@ See complete example: [maui-camera-only.cs](maui-camera-only.cs)
 //                     OnDetectionFinished="OnDetectionFinished"
 //                     CameraEnabled="True" />
 
-private void OnDetectionFinished(object sender, OnDetectionFinishedEventArgs e)
+private void OnDetectionFinished(object sender, OnDetectionFinishedEventArg e)
 {
     // Cannot process static images - camera only
     // Cannot process PDFs - camera only
-    // Cannot run on Windows MAUI - not supported
+    // Recognition engine differs by platform (Vision / ML Kit / ZXingCpp)
 
     foreach (var barcode in e.BarcodeResults)
     {
@@ -241,7 +248,7 @@ var results = BarcodeReader.Read(stream);
 foreach (var barcode in results)
 {
     Console.WriteLine($"Format: {barcode.BarcodeType}");
-    Console.WriteLine($"Value: {barcode.Text}");
+    Console.WriteLine($"Value: {barcode.Value}");
     // Consistent results across all platforms
 }
 ```
@@ -273,7 +280,7 @@ See complete example: [maui-platform-issues.cs](maui-platform-issues.cs)
 // Expected UPC-A: "012345678905" (12 digits)
 // Actual result:  "0012345678905" (13 digits - extra leading zero)
 
-private void OnDetectionFinished(object sender, OnDetectionFinishedEventArgs e)
+private void OnDetectionFinished(object sender, OnDetectionFinishedEventArg e)
 {
     foreach (var barcode in e.BarcodeResults)
     {
@@ -281,7 +288,7 @@ private void OnDetectionFinished(object sender, OnDetectionFinishedEventArgs e)
 
         // Must normalize iOS UPC-A behavior
         if (DeviceInfo.Platform == DevicePlatform.iOS &&
-            barcode.BarcodeFormat == BarcodeFormats.UpcA &&
+            barcode.BarcodeFormat == BarcodeFormats.Upca &&
             value.Length == 13 && value.StartsWith("0"))
         {
             value = value.Substring(1); // Remove extra leading zero
@@ -336,7 +343,7 @@ public async Task<bool> InitializeScannerSafely()
 // BarcodeScanning.Native.Maui - PDF417 scanning unreliable
 // GitHub: "PDF417 scanning very problematic, most scans never occur"
 
-private void OnDetectionFinished(object sender, OnDetectionFinishedEventArgs e)
+private void OnDetectionFinished(object sender, OnDetectionFinishedEventArg e)
 {
     // If scanning driver's licenses (PDF417), expect failures
     var pdf417Results = e.BarcodeResults
@@ -354,7 +361,7 @@ private void OnDetectionFinished(object sender, OnDetectionFinishedEventArgs e)
 // IronBarcode alternative for PDF417
 var results = BarcodeReader.Read(capturedImage);
 var pdf417 = results.FirstOrDefault(r => r.BarcodeType == BarcodeEncoding.PDF417);
-// Reliable detection with ML-powered error correction
+// Reliable detection across platforms
 ```
 
 ---
@@ -365,22 +372,21 @@ var pdf417 = results.FirstOrDefault(r => r.BarcodeType == BarcodeEncoding.PDF417
 
 | Scenario | Why It Works |
 |----------|--------------|
-| Building a quick MAUI mobile prototype | Fast setup, free, camera view ready |
+| Building a quick MAUI prototype | Fast setup, free, camera view ready |
 | Zero budget for barcode scanning | MIT license, no cost |
 | Only need basic QR/1D scanning | Native APIs handle common formats |
-| iOS and Android only, never Windows | Matches the library's scope |
+| MAUI-only deployment | Matches the library's scope |
 | Don't need to process saved images | Camera-only is acceptable |
-| Can handle platform inconsistencies | Willing to write normalization code |
+| Can handle engine-by-platform differences | Willing to write normalization code |
 
 ### Choose IronBarcode When:
 
 | Scenario | Why It Works |
 |----------|--------------|
 | Building production MAUI applications | Reliability and support matter |
-| Need Windows MAUI support | IronBarcode works on all MAUI targets |
 | Processing PDF documents | Native PDF barcode extraction |
 | Building web or server applications | ASP.NET, Azure Functions, console apps |
-| Requiring PDF417 reliability | ML-powered scanning succeeds where native fails |
+| Requiring PDF417 reliability | Reliable on all platforms, no engine-by-platform variance |
 | Cross-platform consistency critical | Same managed code, same results everywhere |
 | Multiple project types in solution | One library works in MAUI, web, and backend |
 | Compliance/audit requirements | Commercial support with documentation |
@@ -395,8 +401,8 @@ If you've started with BarcodeScanning.Native.Maui and need to migrate to IronBa
 
 | Pain Point | Root Cause | IronBarcode Solution |
 |------------|------------|---------------------|
-| Windows MAUI not working | Not supported | Full Windows MAUI support |
-| PDF417 unreliable | Native API limitations | ML-powered detection |
+| Engine differs per platform (Vision/ML Kit/ZXingCpp) | Three different native engines | Single managed code path |
+| PDF417 unreliable on iOS/Android | Native API limitations | Reliable detection |
 | Can't process saved images | Camera-only design | Image/stream/byte array input |
 | iOS UPC-A formatting | Platform API behavior | Consistent managed code |
 | App crashes on permission denial | Native integration issues | No camera dependencies |
@@ -445,7 +451,7 @@ private async void OnScanClicked(object sender, EventArgs e)
             foreach (var barcode in results)
             {
                 // Consistent results - no platform normalization needed
-                ProcessBarcode(barcode.Text);
+                ProcessBarcode(barcode.Value);
             }
         }
     }
@@ -463,7 +469,7 @@ private async void OnScanClicked(object sender, EventArgs e)
 <PackageReference Include="BarcodeScanning.Native.Maui" Version="*" />
 
 <!-- Add -->
-<PackageReference Include="IronBarcode" Version="2024.*" />
+<PackageReference Include="BarCode" Version="*" />
 ```
 
 #### Step 4: Remove Camera View Code
@@ -472,7 +478,7 @@ Delete the `CameraView` XAML elements and associated event handlers. Remove the 
 
 #### Step 5: Benefits After Migration
 
-- **Windows MAUI works** - Deploy to Windows desktop
+- **Single managed engine across MAUI targets** - No Vision/ML Kit/ZXingCpp variance
 - **PDF417 reliable** - Driver's licenses scan consistently
 - **Image processing available** - Process saved photos, screenshots, PDFs
 - **Consistent data format** - No iOS UPC-A normalization needed
@@ -484,7 +490,7 @@ Delete the `CameraView` XAML elements and associated event handlers. Remove the 
 |---------------------|-------------|-------|
 | `CameraView` control | N/A - use MediaPicker | Different architecture |
 | `OnDetectionFinished` event | `BarcodeReader.Read()` return | Pull vs push model |
-| `BarcodeResult.DisplayValue` | `BarcodeResult.Text` | Same data |
+| `BarcodeResult.DisplayValue` | `BarcodeResult.Value` | Same data |
 | `BarcodeResult.BarcodeFormat` | `BarcodeResult.BarcodeType` | Renamed property |
 | Camera permission handling | No camera needed | Eliminates permission issues |
 

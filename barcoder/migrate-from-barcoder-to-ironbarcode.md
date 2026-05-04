@@ -308,7 +308,7 @@ var results = BarcodeReader.Read("barcode.png");
 foreach (var result in results)
 {
     Console.WriteLine($"Value: {result.Value}");
-    Console.WriteLine($"Format: {result.Format}");
+    Console.WriteLine($"Type: {result.BarcodeType}");
 }
 
 // Read from PDF natively — no image extraction step, no extra dependency

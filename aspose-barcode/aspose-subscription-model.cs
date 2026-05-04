@@ -12,7 +12,7 @@
  * - IronBarcode: Simple license key string
  *
  * NuGet Packages Required:
- * - Aspose.BarCode: Aspose.BarCode version 24.x+
+ * - Aspose.BarCode: Aspose.BarCode version 26.x+
  * - IronBarcode: IronBarcode version 2024.x+
  *
  * Note: This file documents factual licensing differences for
@@ -95,17 +95,12 @@ namespace LicenseConfiguration
 
         public void CheckLicenseStatus()
         {
-            // Verify license is properly loaded
-            if (Aspose.BarCode.License.IsLicensed)
-            {
-                Console.WriteLine("Aspose.BarCode is licensed");
-            }
-            else
-            {
-                Console.WriteLine("Aspose.BarCode is in evaluation mode");
-                Console.WriteLine("- Generated barcodes will have watermarks");
-                Console.WriteLine("- Recognition results may be limited");
-            }
+            // Aspose.BarCode does not expose a public IsLicensed property on
+            // the License class. The practical confirmation is that
+            // SetLicense() returned without throwing and that generated
+            // output does not contain the "Aspose.Demo" watermark.
+            Console.WriteLine("Aspose license loaded — verify by inspecting " +
+                "generated output for the absence of the Aspose.Demo watermark.");
         }
     }
 
@@ -341,9 +336,15 @@ namespace CostAnalysis
     public static class LicensingCostComparison
     {
         // Aspose.BarCode Pricing (subscription required annually)
-        public const decimal AsposeDevSingleYear = 999m;      // 1 developer
-        public const decimal AsposeSiteYear = 4995m;          // Up to 10 developers
-        public const decimal AsposeOEMYear = 14985m;          // Unlimited deployment
+        // Source: https://purchase.aspose.com/pricing/barcode/net/
+        public const decimal AsposeDevSmallBusinessYear = 999m;   // 1 developer, 1 deployment location
+        public const decimal AsposeDevOEMYear = 2997m;            // 1 developer, unlimited deployment locations
+        public const decimal AsposeSiteSmallBusinessYear = 4995m; // Up to 10 developers, up to 10 deployment locations
+        public const decimal AsposeSiteOEMYear = 13986m;          // Up to 10 developers, unlimited deployment locations
+
+        // Backwards-compatible aliases for the helper methods below
+        public const decimal AsposeDevSingleYear = AsposeDevSmallBusinessYear;
+        public const decimal AsposeSiteYear = AsposeSiteSmallBusinessYear;
 
         // IronBarcode Pricing (one-time perpetual)
         public const decimal IronBarcodeLite = 749m;          // 1 developer
@@ -429,14 +430,16 @@ namespace ProductionUsage
 
         public AsposeProductionExample()
         {
-            // Initialize license at startup
-            InitializeLicense();
-            _isLicensed = Aspose.BarCode.License.IsLicensed;
+            // Initialize license at startup. There is no public
+            // Aspose.BarCode.License.IsLicensed property to query — track
+            // licensing state via the success of InitializeLicense().
+            _isLicensed = TryInitializeLicense();
         }
 
-        private void InitializeLicense()
+        private bool TryInitializeLicense()
         {
-            // Check multiple sources for license
+            // Check multiple sources for license. Returns true if any
+            // SetLicense / SetMeteredKey call succeeded without exception.
             var license = new Aspose.BarCode.License();
 
             // 1. Try environment path
@@ -444,7 +447,7 @@ namespace ProductionUsage
             if (!string.IsNullOrEmpty(envPath) && File.Exists(envPath))
             {
                 license.SetLicense(envPath);
-                return;
+                return true;
             }
 
             // 2. Try common locations
@@ -460,7 +463,7 @@ namespace ProductionUsage
                 if (File.Exists(path))
                 {
                     license.SetLicense(path);
-                    return;
+                    return true;
                 }
             }
 
@@ -472,7 +475,10 @@ namespace ProductionUsage
             {
                 var metered = new Aspose.BarCode.Metered();
                 metered.SetMeteredKey(publicKey, privateKey);
+                return true;
             }
+
+            return false;
         }
 
         public void GenerateBarcode(string data, string outputPath)

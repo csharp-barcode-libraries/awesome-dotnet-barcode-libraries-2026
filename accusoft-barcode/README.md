@@ -205,32 +205,23 @@ public class BarcodeService
 
     public BarcodeService()
     {
-        _barcodeXpress = new BarcodeXpress();
+        // Constructor takes the path containing the Barcode Xpress runtime files.
+        _barcodeXpress = new BarcodeXpress(".");
 
-        // Configure licensing
-        _barcodeXpress.Licensing.SolutionName = "YourSolutionName";
-        _barcodeXpress.Licensing.SolutionKey = Convert.ToInt64("YourSolutionKey");
+        // Configure licensing — SolutionName and SolutionKey come from Accusoft on purchase.
+        _barcodeXpress.Licensing.SetSolutionName("YourSolutionName");
+        _barcodeXpress.Licensing.SetSolutionKey(1, 2, 3, 4);
 
-        // Optional: Unlock additional features
-        _barcodeXpress.Licensing.UnlockRuntime(
-            "RuntimeLicenseKey",
-            Convert.ToInt64("RuntimeSolutionKey"));
+        // For OEM/runtime distribution, set the OEM license key string supplied by Accusoft.
+        _barcodeXpress.Licensing.SetOEMLicenseKey(
+            "2.0.AStringForOEMLicensingContactAccusoftSalesForMoreInformation...");
     }
 }
 ```
 
 **Step 3: Runtime License Deployment**
 
-For production deployment, runtime licenses must be activated:
-
-```csharp
-// Check license status
-if (!_barcodeXpress.Licensing.IsRuntimeUnlocked)
-{
-    Console.WriteLine("Warning: Running in evaluation mode");
-    Console.WriteLine("Barcode results will be partially obscured");
-}
-```
+For production deployment, runtime licenses must be activated. Without a valid OEM/runtime key, Barcode Xpress runs in watermark evaluation mode — decoded results are partially replaced with the literal text " UNLICENSED accusoft.com " and generated 2D barcodes are stamped with the same string.
 
 ### IronBarcode Installation
 
@@ -272,26 +263,34 @@ The following examples demonstrate real-world scenarios with both libraries.
 
 **BarcodeXpress:**
 ```csharp
+using System;
+using System.Drawing;
+using System.Linq;
 using Accusoft.BarcodeXpressSdk;
 
 public string[] ReadBarcodes(string imagePath)
 {
-    using var barcodeXpress = new BarcodeXpress();
+    using var barcodeXpress = new BarcodeXpress(".");
 
     // Configure licensing
-    barcodeXpress.Licensing.SolutionName = "YourSolutionName";
-    barcodeXpress.Licensing.SolutionKey = Convert.ToInt64("YourSolutionKey");
+    barcodeXpress.Licensing.SetSolutionName("YourSolutionName");
+    barcodeXpress.Licensing.SetSolutionKey(1, 2, 3, 4);
 
-    // Load image
-    barcodeXpress.reader.SetPropertyValue(
-        BarcodeXpress.cycBxeSetFilename, imagePath);
+    // Load image into a Bitmap — Barcode Xpress operates on Bitmap input
+    using var bitmap = new Bitmap(imagePath);
 
-    // Configure barcode types
-    barcodeXpress.reader.BarcodeTypes =
-        BarcodeType.LinearBarcode | BarcodeType.DataMatrixBarcode;
+    // Configure barcode types — BarcodeTypes is an Array (not a [Flags] enum).
+    // Pass the subset of BarcodeType values to search for, or use Enum.GetValues
+    // to search for every type.
+    barcodeXpress.reader.BarcodeTypes = new[]
+    {
+        BarcodeType.Code128Barcode,
+        BarcodeType.Code39Barcode,
+        BarcodeType.DataMatrixBarcode
+    };
 
     // Read barcodes
-    Result[] results = barcodeXpress.reader.Analyze();
+    Result[] results = barcodeXpress.reader.Analyze(bitmap);
 
     return results.Select(r => r.BarcodeValue).ToArray();
 }
@@ -316,24 +315,24 @@ For document imaging workflows including PDF processing, see the [Read Barcodes 
 
 **BarcodeXpress:**
 ```csharp
+using System.Drawing;
 using Accusoft.BarcodeXpressSdk;
 
 public void GenerateBarcode(string data, string outputPath)
 {
-    using var barcodeXpress = new BarcodeXpress();
+    using var barcodeXpress = new BarcodeXpress(".");
 
     // Configure licensing
-    barcodeXpress.Licensing.SolutionName = "YourSolutionName";
-    barcodeXpress.Licensing.SolutionKey = Convert.ToInt64("YourSolutionKey");
+    barcodeXpress.Licensing.SetSolutionName("YourSolutionName");
+    barcodeXpress.Licensing.SetSolutionKey(1, 2, 3, 4);
 
     // Configure generation settings
-    barcodeXpress.writer.BarcodeType = BarcodeType.Code128;
+    barcodeXpress.writer.BarcodeType = BarcodeType.Code128Barcode;
     barcodeXpress.writer.BarcodeValue = data;
-    barcodeXpress.writer.Dpi = 300;
-    barcodeXpress.writer.ImageFormat = ImageFormat.Png;
 
-    // Generate and save
-    barcodeXpress.writer.SaveToFile(outputPath);
+    // CreateBitmap returns a System.Drawing.Bitmap; persist via Bitmap.Save.
+    using Bitmap bitmap = barcodeXpress.writer.CreateBitmap();
+    bitmap.Save(outputPath);
 }
 ```
 
@@ -354,6 +353,7 @@ public void GenerateBarcode(string data, string outputPath)
 
 **BarcodeXpress (Standard Edition - 40 PPM limit):**
 ```csharp
+using System.Drawing;
 using Accusoft.BarcodeXpressSdk;
 
 public async Task<Dictionary<string, string[]>> ProcessBatch(string[] imagePaths)
@@ -362,9 +362,9 @@ public async Task<Dictionary<string, string[]>> ProcessBatch(string[] imagePaths
     int processedThisMinute = 0;
     var minuteStart = DateTime.Now;
 
-    using var barcodeXpress = new BarcodeXpress();
-    barcodeXpress.Licensing.SolutionName = "YourSolutionName";
-    barcodeXpress.Licensing.SolutionKey = Convert.ToInt64("YourSolutionKey");
+    using var barcodeXpress = new BarcodeXpress(".");
+    barcodeXpress.Licensing.SetSolutionName("YourSolutionName");
+    barcodeXpress.Licensing.SetSolutionKey(1, 2, 3, 4);
 
     foreach (var path in imagePaths)
     {
@@ -381,9 +381,8 @@ public async Task<Dictionary<string, string[]>> ProcessBatch(string[] imagePaths
             minuteStart = DateTime.Now;
         }
 
-        barcodeXpress.reader.SetPropertyValue(
-            BarcodeXpress.cycBxeSetFilename, path);
-        var barcodes = barcodeXpress.reader.Analyze();
+        using var bitmap = new Bitmap(path);
+        var barcodes = barcodeXpress.reader.Analyze(bitmap);
         results[path] = barcodes.Select(r => r.BarcodeValue).ToArray();
 
         processedThisMinute++;
@@ -399,12 +398,13 @@ using IronBarCode;
 
 public Dictionary<string, string[]> ProcessBatch(string[] imagePaths)
 {
-    var allResults = BarcodeReader.Read(imagePaths);
-
-    return allResults.GroupBy(r => r.InputPath ?? "")
-        .ToDictionary(
-            g => g.Key,
-            g => g.Select(r => r.Text).ToArray());
+    var results = new Dictionary<string, string[]>();
+    foreach (var path in imagePaths)
+    {
+        var found = BarcodeReader.Read(path);
+        results[path] = found.Select(r => r.Text).ToArray();
+    }
+    return results;
 }
 ```
 
@@ -564,17 +564,20 @@ dotnet add package IronBarcode
 
 | BarcodeXpress | IronBarcode | Notes |
 |--------------|-------------|-------|
-| `BarcodeXpress.reader.Analyze()` | `BarcodeReader.Read()` | Static method |
-| `barcodeXpress.writer.SaveToFile()` | `barcode.SaveAsPng()` | Fluent API |
+| `barcodeXpress.reader.Analyze(bitmap)` | `BarcodeReader.Read(path)` | Static method, accepts file path or stream |
+| `barcodeXpress.writer.CreateBitmap()` then `bitmap.Save()` | `BarcodeWriter.CreateBarcode(...).SaveAsPng()` | Fluent API |
 | `Result.BarcodeValue` | `result.Text` | Property name |
-| `BarcodeType.LinearBarcode` | Automatic | No specification needed |
-| `Licensing.SolutionName/Key` | `License.LicenseKey` | Single key |
-| `UnlockRuntime()` | Not needed | No runtime licenses |
+| `BarcodeType` array assignment | Automatic | No specification needed |
+| `Licensing.SetSolutionName/SetSolutionKey` | `License.LicenseKey` | Single key |
+| `Licensing.SetOEMLicenseKey()` | Not needed | No OEM/runtime key concept |
 
 ### Migration Code Example
 
 **Before (BarcodeXpress):**
 ```csharp
+using System;
+using System.Drawing;
+using System.Linq;
 using Accusoft.BarcodeXpressSdk;
 
 public class BarcodeService
@@ -583,18 +586,17 @@ public class BarcodeService
 
     public BarcodeService()
     {
-        _barcodeXpress = new BarcodeXpress();
-        _barcodeXpress.Licensing.SolutionName = "MySolution";
-        _barcodeXpress.Licensing.SolutionKey = Convert.ToInt64("12345");
-        _barcodeXpress.Licensing.UnlockRuntime("RuntimeKey", Convert.ToInt64("67890"));
+        _barcodeXpress = new BarcodeXpress(".");
+        _barcodeXpress.Licensing.SetSolutionName("MySolution");
+        _barcodeXpress.Licensing.SetSolutionKey(1, 2, 3, 4);
+        _barcodeXpress.Licensing.SetOEMLicenseKey("YourOEMLicenseString");
     }
 
     public string ReadBarcode(string imagePath)
     {
-        _barcodeXpress.reader.SetPropertyValue(
-            BarcodeXpress.cycBxeSetFilename, imagePath);
-        _barcodeXpress.reader.BarcodeTypes = BarcodeType.LinearBarcode;
-        var results = _barcodeXpress.reader.Analyze();
+        using var bitmap = new Bitmap(imagePath);
+        _barcodeXpress.reader.BarcodeTypes = Enum.GetValues(typeof(BarcodeType));
+        var results = _barcodeXpress.reader.Analyze(bitmap);
         return results.FirstOrDefault()?.BarcodeValue;
     }
 }

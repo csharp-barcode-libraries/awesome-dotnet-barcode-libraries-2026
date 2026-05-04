@@ -1,12 +1,17 @@
 /*
  * barKoder SDK vs IronBarcode: Platform Comparison
  *
- * This file provides a comprehensive platform comparison showing
- * where each SDK can and cannot be used.
+ * This file maps where each SDK can and cannot be used.
  *
- * Key Message: barKoder = JavaScript mobile frameworks
- *              IronBarcode = .NET ecosystem
- *              No overlap.
+ * Verified facts (May 2026):
+ *   - barKoder publishes Plugin.Maui.Barkoder and Barkoder.Xamarin
+ *     on NuGet. Both are camera-scanning components for mobile MAUI
+ *     and Xamarin apps.
+ *   - barKoder has NO general-purpose .NET library: no ASP.NET Core,
+ *     Azure Functions, AWS Lambda, Docker, console, worker service,
+ *     WPF, WinForms, Avalonia, or Blazor surface.
+ *   - barKoder is read-only and consumes camera frames only — no
+ *     file, stream, byte[], or PDF input.
  *
  * Author: Jacob Mellor, CTO of Iron Software
  * https://ironsoftware.com/csharp/barcode/
@@ -15,6 +20,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace BarkoderPlatformComparison
 {
@@ -23,7 +29,8 @@ namespace BarkoderPlatformComparison
     // ============================================================
 
     /// <summary>
-    /// Comprehensive platform support comparison between barKoder and IronBarcode.
+    /// Comprehensive platform support comparison between barKoder
+    /// and IronBarcode.
     /// </summary>
     public class PlatformMatrix
     {
@@ -45,10 +52,11 @@ namespace BarkoderPlatformComparison
                 ("Capacitor", true, false, "barKoder plugin available"),
 
                 // .NET Mobile
-                (".NET MAUI (iOS/Android)", false, true, "IronBarcode works programmatically"),
-                ("Xamarin.Forms", false, true, "IronBarcode works"),
-                ("Xamarin.iOS", false, true, "IronBarcode works"),
-                ("Xamarin.Android", false, true, "IronBarcode works"),
+                (".NET MAUI (camera UI)", true, false, "Plugin.Maui.Barkoder"),
+                (".NET MAUI (file/stream)", false, true, "IronBarcode"),
+                ("Xamarin.Forms", true, true, "Barkoder.Xamarin OR IronBarcode"),
+                ("Xamarin.iOS", true, true, "Both supported"),
+                ("Xamarin.Android", true, true, "Both supported"),
 
                 // .NET Desktop
                 ("WPF", false, true, "IronBarcode full support"),
@@ -72,17 +80,22 @@ namespace BarkoderPlatformComparison
                 ("Console Application", false, true, "IronBarcode full support"),
                 ("Class Library", false, true, "IronBarcode works"),
                 ("Windows Service", false, true, "IronBarcode works"),
-                ("Worker Service", false, true, "IronBarcode full support")
+                ("Worker Service", false, true, "IronBarcode full support"),
+
+                // Input modes
+                ("File / Stream / byte[] input", false, true, "barKoder is camera-only"),
+                ("PDF input", false, true, "barKoder has no PDF support"),
+                ("Barcode generation", false, true, "barKoder is reader-only")
             };
 
-            Console.WriteLine("| Platform                  | barKoder | IronBarcode | Notes                        |");
-            Console.WriteLine("|---------------------------|----------|-------------|------------------------------|");
+            Console.WriteLine("| Platform                    | barKoder | IronBarcode | Notes                          |");
+            Console.WriteLine("|-----------------------------|----------|-------------|--------------------------------|");
 
             foreach (var (platform, barKoder, ironBarcode, notes) in platforms)
             {
                 var bk = barKoder ? "Yes" : "No";
                 var ib = ironBarcode ? "Yes" : "No";
-                Console.WriteLine($"| {platform,-25} | {bk,-8} | {ib,-11} | {notes,-28} |");
+                Console.WriteLine($"| {platform,-27} | {bk,-8} | {ib,-11} | {notes,-30} |");
             }
         }
 
@@ -92,15 +105,18 @@ namespace BarkoderPlatformComparison
             Console.WriteLine("=== Platform Summary ===");
             Console.WriteLine();
             Console.WriteLine("barKoder supports:");
-            Console.WriteLine("  - 6 platforms (all JavaScript/native mobile)");
-            Console.WriteLine("  - React Native, Flutter, Cordova, Capacitor, iOS, Android");
+            Console.WriteLine("  - Mobile camera UI: iOS, Android, MAUI, Xamarin,");
+            Console.WriteLine("    React Native, Flutter, Cordova, Capacitor");
+            Console.WriteLine("  - Camera-frame input only");
+            Console.WriteLine("  - Reading only (no generation)");
             Console.WriteLine();
             Console.WriteLine("IronBarcode supports:");
-            Console.WriteLine("  - 20+ platforms (all .NET ecosystem)");
-            Console.WriteLine("  - Every .NET project type");
+            Console.WriteLine("  - Every .NET project type (server, desktop, mobile, cloud)");
+            Console.WriteLine("  - File / stream / byte[] / PDF input");
+            Console.WriteLine("  - Barcode reading and generation");
             Console.WriteLine();
-            Console.WriteLine("Overlap: ZERO");
-            Console.WriteLine("  These are completely different technology ecosystems.");
+            Console.WriteLine("Overlap is narrow: MAUI + Xamarin ONLY,");
+            Console.WriteLine("and only for the camera-UI use case.");
         }
     }
 
@@ -117,27 +133,30 @@ namespace BarkoderPlatformComparison
         {
             Console.WriteLine("=== barKoder Use Cases ===");
             Console.WriteLine();
-            Console.WriteLine("barKoder is designed for:");
+            Console.WriteLine("barKoder is designed for live camera scanning in:");
             Console.WriteLine();
-            Console.WriteLine("1. React Native mobile apps");
-            Console.WriteLine("   - Cross-platform iOS/Android from JavaScript");
+            Console.WriteLine("1. .NET MAUI mobile apps (Plugin.Maui.Barkoder)");
+            Console.WriteLine("   - C# / XAML codebase");
+            Console.WriteLine("   - BarkoderView control hosts the camera");
+            Console.WriteLine("   - IBarkoderDelegate.DidFinishScanning callback");
+            Console.WriteLine();
+            Console.WriteLine("2. Xamarin mobile apps (Barkoder.Xamarin)");
+            Console.WriteLine("   - C# / Xamarin.Forms codebase");
+            Console.WriteLine("   - Same component model as MAUI plugin");
+            Console.WriteLine();
+            Console.WriteLine("3. React Native mobile apps");
+            Console.WriteLine("   - JavaScript / TypeScript bridge");
             Console.WriteLine("   - Real-time camera scanning");
-            Console.WriteLine("   - Consumer-facing mobile apps");
             Console.WriteLine();
-            Console.WriteLine("2. Flutter mobile apps");
-            Console.WriteLine("   - Cross-platform iOS/Android from Dart");
+            Console.WriteLine("4. Flutter mobile apps");
+            Console.WriteLine("   - Dart codebase");
             Console.WriteLine("   - Camera-based scanning");
-            Console.WriteLine("   - Material Design mobile apps");
             Console.WriteLine();
-            Console.WriteLine("3. Cordova/Capacitor hybrid apps");
+            Console.WriteLine("5. Cordova / Capacitor hybrid apps");
             Console.WriteLine("   - Web technologies wrapped as mobile apps");
-            Console.WriteLine("   - Camera integration via plugins");
-            Console.WriteLine("   - PWA-style mobile development");
             Console.WriteLine();
-            Console.WriteLine("4. Native iOS/Android apps");
+            Console.WriteLine("6. Native iOS / Android apps");
             Console.WriteLine("   - Direct platform integration");
-            Console.WriteLine("   - Maximum camera control");
-            Console.WriteLine("   - Platform-specific optimization");
         }
 
         public void PrintIronBarcodeUseCases()
@@ -158,11 +177,11 @@ namespace BarkoderPlatformComparison
             Console.WriteLine("   - WinForms legacy apps");
             Console.WriteLine("   - Avalonia cross-platform desktop");
             Console.WriteLine();
-            Console.WriteLine("3. MAUI mobile (programmatic)");
+            Console.WriteLine("3. MAUI mobile (programmatic, not camera UI)");
             Console.WriteLine("   - Process images from gallery");
             Console.WriteLine("   - Process PDF attachments");
             Console.WriteLine("   - Generate barcodes for display");
-            Console.WriteLine("   - (Not camera UI - use camera library for that)");
+            Console.WriteLine("   - Pair with a camera library if camera UI is needed");
             Console.WriteLine();
             Console.WriteLine("4. Automation and utilities");
             Console.WriteLine("   - Console batch processors");
@@ -186,7 +205,7 @@ namespace BarkoderPlatformComparison
         {
             Console.WriteLine("// Console Application");
             Console.WriteLine("var results = BarcodeReader.Read(\"document.pdf\");");
-            Console.WriteLine("foreach (var b in results) Console.WriteLine(b.Text);");
+            Console.WriteLine("foreach (var b in results) Console.WriteLine(b.Value);");
         }
 
         // ASP.NET Core API
@@ -194,7 +213,7 @@ namespace BarkoderPlatformComparison
         {
             // Works exactly the same in ASP.NET Core
             var results = IronBarCode.BarcodeReader.Read(uploadedFile);
-            return results.Select(b => b.Text).ToArray();
+            return results.Select(b => b.Value).ToArray();
         }
 
         // WPF Desktop
@@ -204,7 +223,7 @@ namespace BarkoderPlatformComparison
             var results = IronBarCode.BarcodeReader.Read(imagePath);
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Found: {barcode.Text}");
+                Console.WriteLine($"Found: {barcode.Value}");
             }
         }
 
@@ -214,7 +233,7 @@ namespace BarkoderPlatformComparison
             // Works in Azure Functions
             using var stream = new MemoryStream(blobContent);
             var results = IronBarCode.BarcodeReader.Read(stream);
-            return results.Select(b => b.Text).ToArray();
+            return results.Select(b => b.Value).ToArray();
         }
 
         // Docker Container
@@ -224,7 +243,7 @@ namespace BarkoderPlatformComparison
             var results = IronBarCode.BarcodeReader.Read("/data/invoice.pdf");
             foreach (var barcode in results)
             {
-                ProcessBarcode(barcode.Text);
+                ProcessBarcode(barcode.Value);
             }
         }
 
@@ -259,15 +278,15 @@ namespace BarkoderPlatformComparison
             Console.WriteLine("  // This exact code works in:");
             Console.WriteLine("  // - Console apps");
             Console.WriteLine("  // - ASP.NET Core");
-            Console.WriteLine("  // - WPF/WinForms");
-            Console.WriteLine("  // - Azure Functions");
+            Console.WriteLine("  // - WPF / WinForms / Avalonia");
+            Console.WriteLine("  // - Azure Functions / AWS Lambda");
             Console.WriteLine("  // - Docker containers");
-            Console.WriteLine("  // - MAUI apps");
+            Console.WriteLine("  // - MAUI / Xamarin (programmatic)");
             Console.WriteLine();
             Console.WriteLine("  var results = BarcodeReader.Read(inputPath);");
             Console.WriteLine("  foreach (var barcode in results)");
             Console.WriteLine("  {");
-            Console.WriteLine("      Console.WriteLine(barcode.Text);");
+            Console.WriteLine("      Console.WriteLine(barcode.Value);");
             Console.WriteLine("  }");
         }
     }
@@ -277,7 +296,8 @@ namespace BarkoderPlatformComparison
     // ============================================================
 
     /// <summary>
-    /// Shows how organizations with mixed technology stacks can use both.
+    /// Shows how organizations can use barKoder for camera UI and
+    /// IronBarcode for everything else.
     /// </summary>
     public class HybridArchitecture
     {
@@ -285,22 +305,21 @@ namespace BarkoderPlatformComparison
         {
             Console.WriteLine("=== Hybrid Architecture Approach ===");
             Console.WriteLine();
-            Console.WriteLine("Organizations with both React Native and .NET:");
+            Console.WriteLine("Common split when both libraries are in use:");
             Console.WriteLine();
-            Console.WriteLine("Mobile Layer (React Native + barKoder):");
-            Console.WriteLine("  - Consumer mobile app");
-            Console.WriteLine("  - Camera scanning for users");
-            Console.WriteLine("  - barKoder processes camera frames");
-            Console.WriteLine("  - Sends barcode data to backend API");
+            Console.WriteLine("Mobile / MAUI camera UI (Plugin.Maui.Barkoder):");
+            Console.WriteLine("  - BarkoderView hosts the camera");
+            Console.WriteLine("  - MatrixSight / DeBlur for damaged barcodes");
+            Console.WriteLine("  - Sends decoded values (or raw images) to backend");
             Console.WriteLine();
             Console.WriteLine("Backend Layer (.NET + IronBarcode):");
             Console.WriteLine("  - ASP.NET Core API");
             Console.WriteLine("  - Document processing endpoints");
-            Console.WriteLine("  - IronBarcode extracts from PDFs");
+            Console.WriteLine("  - IronBarcode extracts barcodes from PDFs");
             Console.WriteLine("  - Generates labels and documents");
             Console.WriteLine();
             Console.WriteLine("Example Flow:");
-            Console.WriteLine("  1. Mobile app scans with barKoder → sends ID to API");
+            Console.WriteLine("  1. MAUI client scans with barKoder -> sends ID to API");
             Console.WriteLine("  2. API looks up related PDF document");
             Console.WriteLine("  3. IronBarcode extracts additional barcodes from PDF");
             Console.WriteLine("  4. Combined data returned to mobile app");
@@ -311,20 +330,20 @@ namespace BarkoderPlatformComparison
             Console.WriteLine();
             Console.WriteLine("=== Hybrid Decision Tree ===");
             Console.WriteLine();
-            Console.WriteLine("Do you have a React Native/Flutter mobile app?");
-            Console.WriteLine("├── YES: Consider barKoder for mobile camera scanning");
+            Console.WriteLine("Do you need a camera-scanning UI?");
+            Console.WriteLine("├── YES (mobile): Plugin.Maui.Barkoder, Scandit, Scanbot,");
+            Console.WriteLine("│                  or open-source MAUI camera library");
             Console.WriteLine("│");
-            Console.WriteLine("Do you have a .NET backend?");
-            Console.WriteLine("├── YES: Use IronBarcode for server-side processing");
+            Console.WriteLine("Do you need server-side / file / PDF processing?");
+            Console.WriteLine("├── YES: IronBarcode");
             Console.WriteLine("│");
-            Console.WriteLine("Do you have .NET MAUI mobile?");
-            Console.WriteLine("├── YES: Use IronBarcode for file processing");
-            Console.WriteLine("│        Use MAUI camera library for camera scanning");
+            Console.WriteLine("Do you need to generate barcodes?");
+            Console.WriteLine("├── YES: IronBarcode (barKoder is reader-only)");
             Console.WriteLine("│");
             Console.WriteLine("Summary:");
-            Console.WriteLine("  - barKoder and IronBarcode don't compete");
-            Console.WriteLine("  - They serve different technology stacks");
-            Console.WriteLine("  - Use each where appropriate");
+            Console.WriteLine("  - barKoder and IronBarcode mostly do not compete");
+            Console.WriteLine("  - barKoder = camera UI; IronBarcode = everything else");
+            Console.WriteLine("  - Many projects use both");
         }
     }
 
@@ -339,36 +358,37 @@ namespace BarkoderPlatformComparison
     {
         public void ReactNativeToDotnetMaui()
         {
-            Console.WriteLine("=== Migration: React Native → .NET MAUI ===");
+            Console.WriteLine("=== Migration: React Native -> .NET MAUI ===");
             Console.WriteLine();
             Console.WriteLine("If you're migrating a React Native app to .NET MAUI:");
             Console.WriteLine();
             Console.WriteLine("Before (React Native + barKoder):");
-            Console.WriteLine("  - JavaScript/TypeScript codebase");
-            Console.WriteLine("  - barKoder for camera scanning");
-            Console.WriteLine("  - React Native bridge to native");
+            Console.WriteLine("  - JavaScript / TypeScript codebase");
+            Console.WriteLine("  - barKoder React Native plugin for camera scanning");
             Console.WriteLine();
             Console.WriteLine("After (.NET MAUI):");
             Console.WriteLine("  - C# codebase");
-            Console.WriteLine("  - barKoder NOT available");
-            Console.WriteLine("  - Options:");
-            Console.WriteLine("    1. BarcodeScanning.Native.MAUI (camera, free)");
-            Console.WriteLine("    2. ZXing.Net.MAUI (camera, free)");
-            Console.WriteLine("    3. Scanbot SDK (camera, commercial)");
-            Console.WriteLine("    4. IronBarcode (file processing)");
+            Console.WriteLine("  - barKoder STILL available via Plugin.Maui.Barkoder");
+            Console.WriteLine("  - Camera-UI options:");
+            Console.WriteLine("    1. Plugin.Maui.Barkoder      (commercial)");
+            Console.WriteLine("    2. Scandit SDK               (commercial)");
+            Console.WriteLine("    3. Scanbot SDK               (commercial)");
+            Console.WriteLine("    4. BarcodeScanning.Native.MAUI (open-source)");
+            Console.WriteLine("    5. ZXing.Net.MAUI            (open-source)");
+            Console.WriteLine("  - For file / PDF / generation: IronBarcode");
         }
 
         public void AddingServerProcessing()
         {
             Console.WriteLine();
-            Console.WriteLine("=== Adding Server Processing to Mobile App ===");
+            Console.WriteLine("=== Adding Server Processing to a Mobile App ===");
             Console.WriteLine();
-            Console.WriteLine("Scenario: You have React Native + barKoder mobile app,");
-            Console.WriteLine("          now need server-side document processing.");
+            Console.WriteLine("Scenario: You have a barKoder mobile app (RN, MAUI, etc.)");
+            Console.WriteLine("and now need server-side document processing.");
             Console.WriteLine();
             Console.WriteLine("Mobile (keep barKoder):");
             Console.WriteLine("  - barKoder continues handling camera scanning");
-            Console.WriteLine("  - Mobile app sends barcode data to API");
+            Console.WriteLine("  - Mobile app sends barcode payloads or files to API");
             Console.WriteLine();
             Console.WriteLine("Server (add IronBarcode):");
             Console.WriteLine("  - New ASP.NET Core API");
@@ -381,7 +401,7 @@ namespace BarkoderPlatformComparison
             Console.WriteLine("  public IActionResult ProcessDocument(IFormFile file)");
             Console.WriteLine("  {");
             Console.WriteLine("      var results = BarcodeReader.Read(file.OpenReadStream());");
-            Console.WriteLine("      return Ok(results.Select(b => b.Text));");
+            Console.WriteLine("      return Ok(results.Select(b => b.Value));");
             Console.WriteLine("  }");
         }
     }
@@ -396,31 +416,34 @@ namespace BarkoderPlatformComparison
         {
             Console.WriteLine("=== Platform Decision Matrix ===");
             Console.WriteLine();
-            Console.WriteLine("Technology Stack → Barcode SDK Choice");
+            Console.WriteLine("Use case + Stack -> Barcode SDK Choice");
             Console.WriteLine();
 
             var decisions = new[]
             {
-                ("React Native", "barKoder or alternatives"),
-                ("Flutter", "barKoder or alternatives"),
-                ("Cordova / Capacitor", "barKoder or alternatives"),
-                ("iOS Native (Swift)", "barKoder or alternatives"),
-                ("Android Native (Kotlin)", "barKoder or alternatives"),
-                (".NET MAUI (camera)", "Scandit, Scanbot, BarcodeScanning.MAUI"),
-                (".NET MAUI (files)", "IronBarcode"),
+                ("React Native (camera)", "barKoder or alternatives"),
+                ("Flutter (camera)", "barKoder or alternatives"),
+                ("Cordova / Capacitor (camera)", "barKoder or alternatives"),
+                ("iOS Native (camera)", "barKoder or alternatives"),
+                ("Android Native (camera)", "barKoder or alternatives"),
+                (".NET MAUI (camera UI)", "Plugin.Maui.Barkoder, Scandit, Scanbot"),
+                (".NET MAUI (file / PDF)", "IronBarcode"),
+                ("Xamarin (camera UI)", "Barkoder.Xamarin or alternatives"),
+                ("Xamarin (file / PDF)", "IronBarcode"),
                 ("ASP.NET Core", "IronBarcode"),
-                ("WPF / WinForms", "IronBarcode"),
-                ("Azure Functions", "IronBarcode"),
+                ("WPF / WinForms / Avalonia", "IronBarcode"),
+                ("Azure Functions / Lambda", "IronBarcode"),
                 ("Docker / Linux", "IronBarcode"),
-                ("Console / Worker", "IronBarcode")
+                ("Console / Worker", "IronBarcode"),
+                ("Barcode generation", "IronBarcode (barKoder cannot generate)")
             };
 
-            Console.WriteLine("| Technology Stack        | Barcode SDK Choice                   |");
-            Console.WriteLine("|-------------------------|--------------------------------------|");
+            Console.WriteLine("| Use Case + Stack             | Barcode SDK Choice                       |");
+            Console.WriteLine("|------------------------------|------------------------------------------|");
 
             foreach (var (stack, choice) in decisions)
             {
-                Console.WriteLine($"| {stack,-23} | {choice,-36} |");
+                Console.WriteLine($"| {stack,-28} | {choice,-40} |");
             }
         }
 
@@ -430,21 +453,21 @@ namespace BarkoderPlatformComparison
             Console.WriteLine("=== Final Summary ===");
             Console.WriteLine();
             Console.WriteLine("barKoder SDK:");
-            Console.WriteLine("  - JavaScript/native mobile frameworks only");
-            Console.WriteLine("  - React Native, Flutter, Cordova, Capacitor");
-            Console.WriteLine("  - Camera scanning focus");
-            Console.WriteLine("  - MatrixSight damaged barcode algorithm");
-            Console.WriteLine("  - NO .NET support");
+            Console.WriteLine("  - Mobile camera-scanning SDK");
+            Console.WriteLine("  - .NET surface: Plugin.Maui.Barkoder, Barkoder.Xamarin");
+            Console.WriteLine("  - Plus React Native, Flutter, Cordova, Capacitor, iOS, Android");
+            Console.WriteLine("  - MatrixSight damaged-barcode algorithm");
+            Console.WriteLine("  - Camera-frame input only — no file / stream / PDF");
+            Console.WriteLine("  - Reader-only — no generation");
             Console.WriteLine();
             Console.WriteLine("IronBarcode:");
             Console.WriteLine("  - .NET ecosystem exclusively");
-            Console.WriteLine("  - All .NET project types");
-            Console.WriteLine("  - File/document processing focus");
-            Console.WriteLine("  - ML-powered error correction");
-            Console.WriteLine("  - PDF native support");
+            Console.WriteLine("  - All .NET project types (server, desktop, MAUI, console)");
+            Console.WriteLine("  - File / stream / byte[] / PDF input");
+            Console.WriteLine("  - 50+ barcode formats, read AND generate");
+            Console.WriteLine("  - ML-powered damage recovery (ReadingSpeed.ExtremeDetail)");
             Console.WriteLine();
-            Console.WriteLine("The choice is determined by your technology stack.");
-            Console.WriteLine("There is no overlap between these SDKs.");
+            Console.WriteLine("Choose by use case: camera UI vs. everything else.");
         }
     }
 

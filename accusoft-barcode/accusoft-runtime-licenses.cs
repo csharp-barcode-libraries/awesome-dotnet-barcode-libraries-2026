@@ -14,14 +14,18 @@
  */
 
 using System;
+using System.Drawing;
 
 // ============================================================================
-// PART 1: ACCUSOFT BARCODEXPRESS LICENSING SETUP
+// PART 1: ACCUSOFT BARCODE XPRESS LICENSING SETUP
 // ============================================================================
 
 namespace AccusoftBarcodeXpressExample
 {
-    // Install: dotnet add package Accusoft.BarcodeXpress.NetCore
+    // NuGet (.NET Standard 2.0 / .NET Core / .NET 5+):
+    //   dotnet add package Accusoft.BarcodeXpress.NetCore
+    // NuGet (.NET Framework):
+    //   dotnet add package Accusoft.BarcodeXpress.Net
     using Accusoft.BarcodeXpressSdk;
 
     /// <summary>
@@ -38,78 +42,58 @@ namespace AccusoftBarcodeXpressExample
 
         public AccusoftLicenseConfiguration()
         {
-            _barcodeXpress = new BarcodeXpress();
+            // Constructor takes the path to the runtime files (e.g. ".")
+            _barcodeXpress = new BarcodeXpress(".");
 
             // Step 1: Configure SDK license (required for all usage)
-            // You receive these values when purchasing the SDK
-            _barcodeXpress.Licensing.SolutionName = "YourCompanyName";
-            _barcodeXpress.Licensing.SolutionKey = Convert.ToInt64("12345678901234");
+            // You receive these values when purchasing the SDK.
+            // SetSolutionName/SetSolutionKey are methods, not properties.
+            // SetSolutionKey takes four 32-bit integers (not a parsed long).
+            _barcodeXpress.Licensing.SetSolutionName("YourCompanyName");
+            _barcodeXpress.Licensing.SetSolutionKey(1, 2, 3, 4);
 
-            // Step 2: Configure runtime license (required for production)
-            // You receive this when purchasing runtime licenses (minimum 5)
+            // Step 2: Configure OEM/runtime license (required for production)
+            // You receive this when purchasing runtime licenses
+            // (minimum 5 typically required on first-time SDK purchase).
             try
             {
-                _barcodeXpress.Licensing.UnlockRuntime(
-                    "YourRuntimeLicenseKey",
-                    Convert.ToInt64("98765432109876"));
+                _barcodeXpress.Licensing.SetOEMLicenseKey(
+                    "2.0.AStringForOEMLicensingContactAccusoftSalesForMoreInformation...");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Runtime license activation failed: {ex.Message}");
-                Console.WriteLine("Running in evaluation mode - results will be obscured");
+                Console.WriteLine($"OEM license activation failed: {ex.Message}");
+                Console.WriteLine("Running in watermark evaluation mode - results will be stamped");
             }
         }
 
         /// <summary>
-        /// Check if the license is properly configured
-        /// </summary>
-        public bool ValidateLicense()
-        {
-            // Check SDK license
-            bool sdkLicensed = !string.IsNullOrEmpty(_barcodeXpress.Licensing.SolutionName);
-
-            // Check runtime license
-            bool runtimeLicensed = _barcodeXpress.Licensing.IsRuntimeUnlocked;
-
-            if (!sdkLicensed)
-            {
-                Console.WriteLine("WARNING: SDK license not configured");
-                Console.WriteLine("Full barcode recognition is disabled");
-            }
-
-            if (!runtimeLicensed)
-            {
-                Console.WriteLine("WARNING: Runtime license not activated");
-                Console.WriteLine("Barcode results will be partially obscured");
-                Console.WriteLine("Example: '1234567890' may return as '1234...XXX'");
-            }
-
-            return sdkLicensed && runtimeLicensed;
-        }
-
-        /// <summary>
-        /// Read barcodes - demonstrates evaluation mode behavior
+        /// Read barcodes - demonstrates evaluation mode behavior.
+        /// Without a valid OEM license, decoded values are stamped with
+        /// " UNLICENSED accusoft.com " in the output (and generated 2D
+        /// barcodes are stamped with the same string).
         /// </summary>
         public void ReadBarcodesWithLicenseCheck(string imagePath)
         {
-            if (!ValidateLicense())
-            {
-                Console.WriteLine("\n--- EVALUATION MODE DEMONSTRATION ---");
-                Console.WriteLine("Without runtime license, BarcodeXpress obscures results:");
-            }
+            // Analyze takes a System.Drawing.Bitmap; the SDK does not read
+            // PDFs directly. Documented input formats: TIFF, JPEG, PNG, BMP.
+            using var bitmap = new Bitmap(imagePath);
 
-            _barcodeXpress.reader.SetPropertyValue(
-                BarcodeXpress.cycBxeSetFilename, imagePath);
+            // BarcodeTypes is a System.Array of BarcodeType values, not a
+            // [Flags] enum. Use Enum.GetValues to search for everything,
+            // or assign a smaller array to narrow the search.
+            _barcodeXpress.reader.BarcodeTypes = Enum.GetValues(typeof(BarcodeType));
 
-            var results = _barcodeXpress.reader.Analyze();
+            Result[] results = _barcodeXpress.reader.Analyze(bitmap);
 
             foreach (var result in results)
             {
                 Console.WriteLine($"Barcode Type: {result.BarcodeType}");
                 Console.WriteLine($"Value: {result.BarcodeValue}");
 
-                // In evaluation mode, this value will be partially obscured
-                // making it impossible to verify accuracy before purchase
+                // In evaluation mode, BarcodeValue is partially replaced with
+                // " UNLICENSED accusoft.com ", making accuracy verification
+                // impossible before purchase.
             }
         }
     }
@@ -125,24 +109,26 @@ namespace AccusoftBarcodeXpressExample
         /// </summary>
         public void ConfigureServerLicense(
             string solutionName,
-            long solutionKey,
-            string runtimeKey,
-            long runtimeSolutionKey,
+            int solutionKey1,
+            int solutionKey2,
+            int solutionKey3,
+            int solutionKey4,
+            string oemLicenseKey,
             string serverId)
         {
-            using var barcodeXpress = new BarcodeXpress();
+            using var barcodeXpress = new BarcodeXpress(".");
 
-            // SDK configuration
-            barcodeXpress.Licensing.SolutionName = solutionName;
-            barcodeXpress.Licensing.SolutionKey = solutionKey;
+            // SDK configuration — methods, not properties
+            barcodeXpress.Licensing.SetSolutionName(solutionName);
+            barcodeXpress.Licensing.SetSolutionKey(solutionKey1, solutionKey2, solutionKey3, solutionKey4);
 
-            // Server-specific runtime activation
-            Console.WriteLine($"Activating runtime license for server: {serverId}");
+            // Server-specific OEM/runtime activation
+            Console.WriteLine($"Activating OEM/runtime license for server: {serverId}");
 
             try
             {
-                barcodeXpress.Licensing.UnlockRuntime(runtimeKey, runtimeSolutionKey);
-                Console.WriteLine("Runtime license activated successfully");
+                barcodeXpress.Licensing.SetOEMLicenseKey(oemLicenseKey);
+                Console.WriteLine("OEM/runtime license activated successfully");
             }
             catch (Exception ex)
             {
@@ -172,7 +158,12 @@ namespace AccusoftBarcodeXpressExample
     }
 
     /// <summary>
-    /// Metered licensing alternative (pay per transaction)
+    /// Metered licensing alternative (pay per transaction).
+    /// Accusoft has documented a metered/transaction-based licensing option for
+    /// Barcode Xpress as an alternative to traditional per-installation licensing,
+    /// but the exact .NET SDK method name for configuring it is not exposed on the
+    /// public sample repositories. Contact Accusoft sales/licensing for the
+    /// current configuration call.
     /// </summary>
     public class AccusoftMeteredLicensing
     {
@@ -182,11 +173,14 @@ namespace AccusoftBarcodeXpressExample
         /// </summary>
         public void ConfigureMeteredLicense(string meteredPublicKey, string meteredPrivateKey)
         {
-            using var barcodeXpress = new BarcodeXpress();
+            using var barcodeXpress = new BarcodeXpress(".");
 
-            // Metered licensing configuration
-            // Note: Requires internet connectivity for usage tracking
-            barcodeXpress.Licensing.SetMeteredKey(meteredPublicKey, meteredPrivateKey);
+            // The exact metered-licensing API for Barcode Xpress .NET is not
+            // documented in the public Accusoft GitHub samples. Confirm the
+            // configuration call with Accusoft licensing before relying on it
+            // in production code.
+            //
+            // barcodeXpress.Licensing.<MeteredConfigurationCall>(meteredPublicKey, meteredPrivateKey);
 
             Console.WriteLine("Metered licensing configured");
             Console.WriteLine("Usage will be tracked per API call");

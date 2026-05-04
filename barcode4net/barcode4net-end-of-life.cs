@@ -1,13 +1,18 @@
 /**
  * Barcode4NET End-of-Life Documentation
  *
- * CRITICAL: Barcode4NET is end-of-life. New licenses are NOT available.
- * This file documents the product's status and why migration is mandatory.
+ * CRITICAL: Barcode4NET is effectively end-of-life. New licenses are no longer
+ * sold (existing customers may renew Support and Software Updates per
+ * ComponentSource). Last release was Barcode4NET 2.0 on June 25, 2007.
  *
- * Status: End-of-life (no new licenses)
- * Distribution: Manual download only (no NuGet)
- * Modern .NET: NOT supported
- * Capability: Generation only (no reading)
+ * Vendor: O2 Solutions (https://www.o2sol.com/barcode4net/)
+ * Distribution: barcode4net.dll (manual reference; no NuGet package)
+ * Last Release: 2.0 (June 25, 2007)
+ * Target frameworks: .NET Framework 1.1 / 2.0 / 3.x and .NET Compact Framework
+ * Modern .NET (Core / 5+ / 6+ / 8 / 9): NOT supported
+ * Capability: Generation only (no reading); 39 1D + 5 2D symbologies
+ *             (DataMatrix, PDF417, MicroPDF417, Code 16K, CODABLOCK F)
+ *             — QR Code and Aztec are NOT supported.
  */
 
 using System;
@@ -28,8 +33,10 @@ namespace Barcode4NetEndOfLifeExample
         {
             Console.WriteLine("=== Barcode4NET Licensing Status ===\n");
 
-            Console.WriteLine("New License Availability: NOT AVAILABLE");
-            Console.WriteLine("Existing License Support: Uncertain");
+            Console.WriteLine("Vendor: O2 Solutions (o2sol.com)");
+            Console.WriteLine("Last Release: 2.0 (June 25, 2007) - ~19 years old");
+            Console.WriteLine("New License Availability: NOT AVAILABLE (per ComponentSource)");
+            Console.WriteLine("Existing License Support: Renewable (Support + Software Updates)");
             Console.WriteLine("License Transfer: May not be possible");
             Console.WriteLine();
 
@@ -49,10 +56,10 @@ namespace Barcode4NetEndOfLifeExample
             Console.WriteLine("\n=== Platform Support ===\n");
 
             Console.WriteLine("Supported Platforms (all legacy):");
-            Console.WriteLine("  - Windows Forms (.NET Framework)");
-            Console.WriteLine("  - .NET Compact Framework (obsolete)");
+            Console.WriteLine("  - Windows Forms (.NET Framework 1.1 / 2.0 / 3.x)");
+            Console.WriteLine("  - .NET Compact Framework 1.0+ (obsolete)");
             Console.WriteLine("  - ASP.NET (Framework, not Core)");
-            Console.WriteLine("  - SQL Server Reporting Services");
+            Console.WriteLine("  - SQL Server Reporting Services 2000 / 2005");
             Console.WriteLine();
 
             Console.WriteLine("NOT Supported (modern platforms):");
@@ -116,14 +123,18 @@ namespace Barcode4NetEndOfLifeExample
             Console.WriteLine();
 
             Console.WriteLine("What Barcode4NET CAN do:");
-            Console.WriteLine("  - Generate barcode images from data");
-            Console.WriteLine("  - Output to various image formats");
-            Console.WriteLine("  - Customize barcode appearance");
+            Console.WriteLine("  - Generate barcode images (BMP, GIF, JPEG, PNG, TIFF)");
+            Console.WriteLine("  - Generate vector output (EMF, EPS, PDF, PS, SVG)");
+            Console.WriteLine("  - 39 1D symbologies (Code 128, Code 39, EAN-13, UPC-A, etc.)");
+            Console.WriteLine("  - 5 2D symbologies: DataMatrix, PDF417, MicroPDF417,");
+            Console.WriteLine("    Code 16K, CODABLOCK F");
             Console.WriteLine();
 
             Console.WriteLine("What Barcode4NET CANNOT do:");
+            Console.WriteLine("  X  Generate QR Code (not in supported symbologies)");
+            Console.WriteLine("  X  Generate Aztec (not in supported symbologies)");
             Console.WriteLine("  X  Read/scan barcodes from images");
-            Console.WriteLine("  X  Process PDF documents");
+            Console.WriteLine("  X  Process PDF documents (read)");
             Console.WriteLine("  X  Detect barcode format automatically");
             Console.WriteLine("  X  Batch process multiple images");
             Console.WriteLine("  X  Verify generated barcodes");
@@ -149,8 +160,8 @@ namespace Barcode4NetEndOfLifeExample
 
             var code = @"
 // Barcode4NET - Generation Only
-// This code ONLY works on .NET Framework
-// Manual DLL reference required
+// This code ONLY works on .NET Framework 1.1 / 2.0 / 3.x
+// Manual DLL reference required (barcode4net.dll)
 
 using Barcode4NET;
 using System.Drawing;

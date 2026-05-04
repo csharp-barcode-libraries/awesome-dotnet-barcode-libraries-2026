@@ -36,8 +36,8 @@ namespace SymbologyConfigurationComparison
         public void ConfigureCode128()
         {
             /*
-            using DevExpress.XtraBars.BarCode;
-            using DevExpress.XtraBars.BarCode.Symbologies;
+            using DevExpress.XtraEditors;              // BarCodeControl
+            using DevExpress.XtraPrinting.BarCode;     // *Generator symbology classes
 
             var barCode = new BarCodeControl();
 
@@ -73,8 +73,8 @@ namespace SymbologyConfigurationComparison
         public void ConfigureQRCode()
         {
             /*
-            using DevExpress.XtraBars.BarCode;
-            using DevExpress.XtraBars.BarCode.Symbologies;
+            using DevExpress.XtraEditors;              // BarCodeControl
+            using DevExpress.XtraPrinting.BarCode;     // *Generator symbology classes
 
             var barCode = new BarCodeControl();
 
@@ -109,8 +109,8 @@ namespace SymbologyConfigurationComparison
         public void ConfigureDataMatrix()
         {
             /*
-            using DevExpress.XtraBars.BarCode;
-            using DevExpress.XtraBars.BarCode.Symbologies;
+            using DevExpress.XtraEditors;              // BarCodeControl
+            using DevExpress.XtraPrinting.BarCode;     // *Generator symbology classes
 
             var barCode = new BarCodeControl();
 
@@ -138,8 +138,8 @@ namespace SymbologyConfigurationComparison
         public void ConfigurePDF417()
         {
             /*
-            using DevExpress.XtraBars.BarCode;
-            using DevExpress.XtraBars.BarCode.Symbologies;
+            using DevExpress.XtraEditors;              // BarCodeControl
+            using DevExpress.XtraPrinting.BarCode;     // *Generator symbology classes
 
             var barCode = new BarCodeControl();
 

@@ -3,7 +3,9 @@
 // and provides IronBarcode alternatives for reliable scanning.
 //
 // Install: dotnet add package BarcodeScanning.Native.Maui
+// Current version: 3.0.3 (Feb 2026)
 // Known Issues: iOS UPC-A extra digit, permission crashes, PDF417 failures
+//               on the iOS Vision and Android ML Kit code paths
 
 using BarcodeScanning;
 using Microsoft.Maui.ApplicationModel;
@@ -20,7 +22,7 @@ namespace PlatformIssuesExample
     public class UpcADigitIssue
     {
         // BarcodeScanning.Native.Maui on iOS adds extra leading zero to UPC-A
-        public string NormalizeUpcA(OnDetectionFinishedEventArgs e)
+        public string NormalizeUpcA(OnDetectionFinishedEventArg e)
         {
             foreach (var barcode in e.BarcodeResults)
             {
@@ -31,7 +33,7 @@ namespace PlatformIssuesExample
 
                 // Detection: Check platform, format, and digit count
                 if (DeviceInfo.Platform == DevicePlatform.iOS &&
-                    barcode.BarcodeFormat == BarcodeFormats.UpcA)
+                    barcode.BarcodeFormat == BarcodeFormats.Upca)
                 {
                     // iOS UPC-A often has extra leading zero
                     if (value.Length == 13 && value.StartsWith("0"))
@@ -60,14 +62,14 @@ namespace PlatformIssuesExample
             {
                 switch (barcode.BarcodeFormat)
                 {
-                    case BarcodeFormats.UpcA:
+                    case BarcodeFormats.Upca:
                         if (value.Length == 13 && value.StartsWith("0"))
                         {
                             value = value.Substring(1);
                         }
                         break;
 
-                    case BarcodeFormats.UpcE:
+                    case BarcodeFormats.Upce:
                         // UPC-E may also have format differences
                         // Add normalization as needed
                         break;
@@ -207,8 +209,9 @@ namespace PlatformIssuesExample
     }
 
     // ============================================================
-    // ISSUE 3: PDF417 Scanning "Very Problematic"
-    // Native platform APIs have poor PDF417 recognition
+    // ISSUE 3: PDF417 Scanning "Very Problematic" on iOS/Android
+    // Apple Vision and Google ML Kit have poor PDF417 recognition;
+    // the Windows ZXingCpp engine is a separate code path.
     // ============================================================
 
     public class Pdf417ReliabilityIssue
@@ -216,8 +219,8 @@ namespace PlatformIssuesExample
         private int _scanAttempts = 0;
         private const int MaxRetries = 3;
 
-        // PDF417 detection is unreliable with native APIs
-        public void HandlePdf417Detection(OnDetectionFinishedEventArgs e)
+        // PDF417 detection is unreliable with the iOS/Android engines
+        public void HandlePdf417Detection(OnDetectionFinishedEventArg e)
         {
             // Look for PDF417 results
             var pdf417Results = e.BarcodeResults
@@ -226,7 +229,7 @@ namespace PlatformIssuesExample
 
             if (pdf417Results.Count > 0)
             {
-                // Success - rare but possible
+                // Success - rare but possible on iOS/Android
                 _scanAttempts = 0;
                 ProcessPdf417(pdf417Results[0]);
             }
@@ -283,11 +286,12 @@ namespace PlatformIssuesExample
 
     public class CrossPlatformInconsistencies
     {
-        // Format enumeration may differ between platforms
+        // Format enumeration is shared, but coverage and detection vary per engine
         public string GetConsistentFormatName(BarcodeResult barcode)
         {
-            // BarcodeFormats enum comes from native APIs
-            // Naming may vary between iOS and Android
+            // BarcodeFormats enum is defined in the library, but the actual
+            // recognized set depends on the underlying engine
+            // (Apple Vision / Google ML Kit / ZXingCpp).
 
             var format = barcode.BarcodeFormat;
 
@@ -300,10 +304,10 @@ namespace PlatformIssuesExample
                 BarcodeFormats.Code93 => "CODE_93",
                 BarcodeFormats.Ean13 => "EAN_13",
                 BarcodeFormats.Ean8 => "EAN_8",
-                BarcodeFormats.UpcA => "UPC_A",
-                BarcodeFormats.UpcE => "UPC_E",
+                BarcodeFormats.Upca => "UPC_A",
+                BarcodeFormats.Upce => "UPC_E",
                 BarcodeFormats.Itf => "ITF",
-                BarcodeFormats.Codabar => "CODABAR",
+                BarcodeFormats.CodaBar => "CODABAR",
                 BarcodeFormats.DataMatrix => "DATA_MATRIX",
                 BarcodeFormats.Pdf417 => "PDF417",
                 BarcodeFormats.Aztec => "AZTEC",
@@ -349,18 +353,18 @@ namespace PlatformIssuesExample
                 // Same enum, same values, same behavior
                 // iOS, Android, Windows, macOS, Linux - all identical
                 Console.WriteLine($"Type: {barcode.BarcodeType}");
-                Console.WriteLine($"Value: {barcode.Text}");
+                Console.WriteLine($"Value: {barcode.Value}");
 
                 // UPC-A is always 12 digits - no iOS normalization needed
                 if (barcode.BarcodeType == IronBarCode.BarcodeEncoding.UPCA)
                 {
                     // Guaranteed 12 digits on all platforms
-                    Console.WriteLine($"UPC-A (12 digits): {barcode.Text}");
+                    Console.WriteLine($"UPC-A (12 digits): {barcode.Value}");
                 }
             }
         }
 
-        // PDF417 works reliably with ML-powered detection
+        // PDF417 works reliably with consistent managed-code detection
         public void ReliablePdf417(byte[] imageData)
         {
             var results = IronBarCode.BarcodeReader.Read(imageData);
@@ -370,8 +374,8 @@ namespace PlatformIssuesExample
 
             if (pdf417 != null)
             {
-                // ML-powered error correction handles damaged/partial barcodes
-                Console.WriteLine($"PDF417 detected: {pdf417.Text}");
+                // Same managed code on every platform
+                Console.WriteLine($"PDF417 detected: {pdf417.Value}");
 
                 // Driver's license data, shipping labels, etc.
                 // All decode reliably
@@ -407,13 +411,14 @@ namespace PlatformIssuesExample
        - Workaround: Defensive permission checking
        - IronBarcode: No camera needed, no permission crash
 
-    3. PDF417 Unreliable
-       - Problem: "Most scans never occur" per GitHub
+    3. PDF417 Unreliable on iOS/Android
+       - Problem: "Most scans never occur" per GitHub (Vision/ML Kit)
        - Workaround: Multiple attempts, user instructions
-       - IronBarcode: ML-powered, reliable detection
+       - IronBarcode: Reliable detection across platforms
 
-    4. Cross-Platform Inconsistencies
-       - Problem: Different results iOS vs Android
+    4. Engine-by-Platform Inconsistencies
+       - Problem: Three engines (Vision/ML Kit/ZXingCpp) — different
+         symbology coverage and decoding behavior
        - Workaround: Normalization layer
        - IronBarcode: Same managed code everywhere
 

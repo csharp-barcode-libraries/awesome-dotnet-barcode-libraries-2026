@@ -19,8 +19,8 @@ using System.IO;
 using System.Linq;
 
 // IronBarcode - modern, actively supported
-// Install: dotnet add package IronBarcode
-using IronBarcode;
+// Install: dotnet add package BarCode
+using IronBarCode;
 
 namespace Barcode4NetMigrationExample
 {
@@ -46,7 +46,7 @@ namespace Barcode4NetMigrationExample
                 ("barcode.Height", "barcode.ResizeTo(width, height)", "Method call"),
                 ("GenerateBarcode()", "SaveAsPng(), ToBitmap()", "Multiple options"),
                 ("Symbology.Code128", "BarcodeEncoding.Code128", "Similar naming"),
-                ("Symbology.QRCode", "BarcodeEncoding.QRCode", "Similar naming"),
+                ("(QR Code not supported)", "BarcodeEncoding.QRCode", "NEW: 2D matrix codes"),
                 ("N/A", "BarcodeReader.Read()", "NEW: Reading!"),
                 ("N/A", "PDF support", "NEW: Documents!"),
             };
@@ -72,11 +72,11 @@ namespace Barcode4NetMigrationExample
                 ("Symbology.EAN8", "BarcodeEncoding.EAN8"),
                 ("Symbology.UPCA", "BarcodeEncoding.UPCA"),
                 ("Symbology.UPCE", "BarcodeEncoding.UPCE"),
-                ("Symbology.QRCode", "BarcodeEncoding.QRCode"),
+                ("(QR not supported)", "BarcodeEncoding.QRCode"),
                 ("Symbology.DataMatrix", "BarcodeEncoding.DataMatrix"),
                 ("Symbology.PDF417", "BarcodeEncoding.PDF417"),
-                ("Symbology.Aztec", "BarcodeEncoding.Aztec"),
-                ("Symbology.ITF14", "BarcodeEncoding.ITF"),
+                ("(Aztec not supported)", "BarcodeEncoding.Aztec"),
+                ("Symbology.Interleaved2of5", "BarcodeEncoding.ITF"),
                 ("Symbology.Codabar", "BarcodeEncoding.Codabar"),
             };
 
@@ -150,7 +150,7 @@ public class BarcodeService
 
             var code = @"
 // IronBarcode - all .NET platforms, NuGet package
-using IronBarcode;
+using IronBarCode;
 
 public class BarcodeService
 {
@@ -187,6 +187,7 @@ public class BarcodeService
 
             var code = @"
 // Barcode4NET - each format requires property change
+// (1D and DataMatrix/PDF417 only — no QR Code support)
 var barcode = new Barcode4NET.Barcode();
 
 // Generate Code 128
@@ -194,10 +195,11 @@ barcode.Symbology = Symbology.Code128;
 barcode.Data = ""12345"";
 var code128 = barcode.GenerateBarcode();
 
-// Generate QR Code - same object, change property
-barcode.Symbology = Symbology.QRCode;
+// Generate Data Matrix - same object, change property
+// (QR Code not supported — would require a separate library)
+barcode.Symbology = Symbology.DataMatrix;
 barcode.Data = ""https://example.com"";
-var qrCode = barcode.GenerateBarcode();
+var dataMatrix = barcode.GenerateBarcode();
 ";
             Console.WriteLine(code);
         }
@@ -371,11 +373,11 @@ Console.WriteLine($""Detected: {results.First().BarcodeType}"");
             Console.WriteLine("\n=== WinForms Migration ===\n");
 
             var oldCode = @"
-// Old WinForms - Barcode4NET
+// Old WinForms - Barcode4NET (Code 128, since QR is not supported)
 private void btnGenerate_Click(object sender, EventArgs e)
 {
     var barcode = new Barcode4NET.Barcode();
-    barcode.Symbology = Symbology.QRCode;
+    barcode.Symbology = Symbology.Code128;
     barcode.Data = textBoxData.Text;
 
     pictureBoxBarcode.Image = barcode.GenerateBarcode();
@@ -385,7 +387,7 @@ private void btnGenerate_Click(object sender, EventArgs e)
             Console.WriteLine(oldCode);
 
             var newCode = @"
-// New WinForms - IronBarcode
+// New WinForms - IronBarcode (now you can use QRCode too)
 private void btnGenerate_Click(object sender, EventArgs e)
 {
     var barcode = BarcodeWriter.CreateBarcode(
@@ -466,7 +468,7 @@ public class BarcodeController : ControllerBase
             Console.WriteLine("========================================\n");
 
             Console.WriteLine("Step 1: Install IronBarcode");
-            Console.WriteLine("  dotnet add package IronBarcode");
+            Console.WriteLine("  dotnet add package BarCode");
             Console.WriteLine();
 
             Console.WriteLine("Step 2: Remove Barcode4NET DLLs");
@@ -477,7 +479,7 @@ public class BarcodeController : ControllerBase
 
             Console.WriteLine("Step 3: Update using statements");
             Console.WriteLine("  Remove: using Barcode4NET;");
-            Console.WriteLine("  Add:    using IronBarcode;");
+            Console.WriteLine("  Add:    using IronBarCode;");
             Console.WriteLine();
 
             Console.WriteLine("Step 4: Replace generation code");

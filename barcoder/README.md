@@ -603,7 +603,7 @@ public class BarcodeService
     public string ReadBarcode(string imagePath)
     {
         var results = BarcodeReader.Read(imagePath);
-        return results.FirstOrDefault()?.Text;
+        return results.FirstOrDefault()?.Value;
     }
 
     // NEW: PDF output

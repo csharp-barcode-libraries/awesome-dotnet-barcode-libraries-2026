@@ -1,6 +1,6 @@
 # Barcode4NET Migration to IronBarcode: C# Barcode Guide 2026
 
-Barcode4NET was a commercial barcode generation library for .NET Framework applications. If you're using Barcode4NET in production, you need to understand a critical situation: new licenses are no longer available, the product is effectively end-of-life, and migration to a modern alternative is required for any application that needs to scale, modernize, or add new development resources.
+Barcode4NET is a commercial barcode generation library for legacy .NET Framework applications, published by O2 Solutions and distributed via ComponentSource since 2004. The last release — Barcode4NET 2.0 — shipped on June 25, 2007, and new licenses are no longer sold (existing customers may continue to renew Support and Software Updates per ComponentSource). For any application that needs to scale, modernize, or add new development resources, migration to a modern alternative is required.
 
 This guide provides a migration path from Barcode4NET to IronBarcode, addressing the unique challenges of moving from an end-of-life commercial product.
 
@@ -8,16 +8,17 @@ This guide provides a migration path from Barcode4NET to IronBarcode, addressing
 
 ### What Happened to Barcode4NET
 
-Barcode4NET was distributed through ComponentSource and other third-party resellers. The product is no longer actively sold, and new licenses cannot be purchased.
+Barcode4NET was published by O2 Solutions and distributed through ComponentSource. The last code release — version 2.0 — shipped in 2007. ComponentSource no longer accepts new license orders; existing customers can still renew their Support and Software Updates.
 
 **Current Status:**
-- Website: barcode4.net (via ComponentSource only)
+- Vendor: O2 Solutions (https://www.o2sol.com/barcode4net/)
+- Last Release: 2.0 (June 25, 2007)
 - New Licenses: **Not Available**
-- Existing Customers: Support uncertain
-- NuGet Package: **None** (manual download only)
-- Modern .NET Support: **None**
+- Existing Customer Support: Renewable (Support + Software Updates)
+- NuGet Package: **None** (manual `barcode4net.dll` reference only)
+- Modern .NET Support: **None** (.NET Framework 1.1 / 2.0 / 3.x and .NET CF only)
 
-This isn't a gradual deprecation - the product has effectively reached end-of-life status for practical purposes.
+With no code release in nearly two decades, the product has effectively reached end-of-life status.
 
 ### What This Means for You
 
@@ -25,7 +26,7 @@ If you have Barcode4NET in production:
 
 1. **Cannot add new developers** - No new licenses available for expanded team
 2. **Cannot scale deployment** - Cannot license additional servers or environments
-3. **Cannot get support** - Support availability for existing licenses is uncertain
+3. **Limited support** - Existing customers may renew, but no active product development since 2007
 4. **Cannot modernize** - No .NET Core or .NET 6+ support path
 5. **Cannot rely on updates** - No security patches or feature development
 
@@ -40,7 +41,7 @@ The inability to purchase new licenses creates immediate business constraints:
 | New developer joins team | Cannot acquire license for their machine |
 | Expand to new server | Cannot license additional deployment |
 | Acquire company with Barcode4NET | License transfer may not be possible |
-| Audit finds unlicensed usage | Cannot rectify by purchasing |
+| Audit finds unlicensed usage | Cannot rectify by buying new seats |
 
 This isn't theoretical - these are real scenarios that force migration.
 
@@ -49,10 +50,10 @@ This isn't theoretical - these are real scenarios that force migration.
 Barcode4NET targets platforms that are no longer current:
 
 **Supported Platforms (all legacy):**
-- Windows Forms (.NET Framework only)
-- .NET Compact Framework (obsolete)
+- Windows Forms (.NET Framework 1.1 / 2.0 / 3.x)
+- .NET Compact Framework 1.0+ (obsolete)
 - ASP.NET (Framework only, not Core)
-- SQL Server Reporting Services (old integration)
+- SQL Server Reporting Services 2000 / 2005
 
 **Not Supported:**
 - .NET Core 3.1
@@ -222,7 +223,7 @@ public Bitmap CreateBarcode(string data)
 **IronBarcode Equivalent:**
 ```csharp
 // IronBarcode - generation AND reading
-using IronBarcode;
+using IronBarCode;
 
 public void CreateBarcode(string data, string outputPath)
 {
@@ -296,9 +297,10 @@ The NuGet package handles all distribution.
 | Code 39 | `Symbology.Code39` | `BarcodeEncoding.Code39` |
 | EAN-13 | `Symbology.EAN13` | `BarcodeEncoding.EAN13` |
 | UPC-A | `Symbology.UPCA` | `BarcodeEncoding.UPCA` |
-| QR Code | `Symbology.QRCode` | `BarcodeEncoding.QRCode` |
+| QR Code | *(not supported)* | `BarcodeEncoding.QRCode` |
 | Data Matrix | `Symbology.DataMatrix` | `BarcodeEncoding.DataMatrix` |
 | PDF417 | `Symbology.PDF417` | `BarcodeEncoding.PDF417` |
+| Aztec | *(not supported)* | `BarcodeEncoding.Aztec` |
 
 ## Benefits After Migration
 
@@ -328,7 +330,7 @@ The NuGet package handles all distribution.
 
 3. **PDF Document Support**
    ```csharp
-   // Generate barcodes into PDF
+   // Generate barcodes into PDF (QR Code now available — Barcode4NET never supported QR)
    var barcode = BarcodeWriter.CreateBarcode("INVOICE-001", BarcodeEncoding.QRCode);
    barcode.SaveAsPdf("invoice-barcode.pdf");
 
@@ -369,13 +371,13 @@ public byte[] CreateBarcodeForReport(string data)
 
 ### WinForms Integration
 
-Barcode4NET likely rendered directly to WinForms controls. IronBarcode approach:
+Barcode4NET shipped a `BarcodeView` WinForms control that rendered directly to the form. IronBarcode approach uses a `MemoryStream` and a `PictureBox`:
 
 ```csharp
 // Generate barcode and display in PictureBox
 private void DisplayBarcode(string data)
 {
-    var barcode = BarcodeWriter.CreateBarcode(data, BarcodeEncoding.QRCode);
+    var barcode = BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code128);
 
     using var stream = new MemoryStream(barcode.ToPngBinaryData());
     pictureBoxBarcode.Image = Image.FromStream(stream);
@@ -413,7 +415,7 @@ public IActionResult GenerateBarcode(string data)
 
 | Factor | Barcode4NET | IronBarcode |
 |--------|-------------|-------------|
-| New License | Not available | $749 (Lite) |
+| New License | Not available | $799 (Lite) |
 | Additional Licenses | Not available | Available |
 | Support | Uncertain | Included |
 | Updates | None | Included |

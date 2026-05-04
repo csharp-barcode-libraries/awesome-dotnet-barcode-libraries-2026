@@ -4,9 +4,10 @@
  * This example demonstrates the rate limiting challenges with Cloudmersive
  * Barcode API and how IronBarcode eliminates these concerns entirely.
  *
- * Cloudmersive rate limits:
- * - Free tier: 800 requests/month, 1 concurrent request
- * - Premium: 5,000+ requests/month, higher concurrency
+ * Cloudmersive rate limits (verified 2026 at cloudmersive.com/pricing-small-business):
+ * - Free tier: 600 requests/month, 1 call/second rate limit
+ * - Basic ($19.99/mo): 10,000 requests/month
+ * - Higher tiers scale to 500,000+ requests/month
  * - Exceeded requests are queued or rejected
  */
 
@@ -23,8 +24,8 @@ using Cloudmersive.APIClient.NET.Barcode.Api;
 using Cloudmersive.APIClient.NET.Barcode.Client;
 
 // IronBarcode
-// Install: dotnet add package IronBarcode
-using IronBarcode;
+// Install: dotnet add package BarCode
+using IronBarCode;
 
 namespace CloudmersiveRateLimitsExample
 {
@@ -38,7 +39,7 @@ namespace CloudmersiveRateLimitsExample
         private int _requestsThisMonth;
         private readonly int _monthlyLimit;
 
-        public CloudmersiveRateLimitHandler(string apiKey, int monthlyLimit = 800, int maxConcurrent = 1)
+        public CloudmersiveRateLimitHandler(string apiKey, int monthlyLimit = 600, int maxConcurrent = 1)
         {
             _apiKey = apiKey;
             _monthlyLimit = monthlyLimit;
@@ -249,19 +250,19 @@ namespace CloudmersiveRateLimitsExample
             Console.WriteLine($"Processing {imagePaths.Length} images\n");
 
             // Cloudmersive simulation (free tier)
-            Console.WriteLine("Cloudmersive (Free tier: 800/month, 1 concurrent):");
+            Console.WriteLine("Cloudmersive (Free tier: 600/month, 1 call/sec):");
 
             var cloudHandler = new CloudmersiveRateLimitHandler(
                 "DEMO_KEY",
-                monthlyLimit: 800,
+                monthlyLimit: 600,
                 maxConcurrent: 1);
 
             // In real scenario, would hit rate limits quickly
             Console.WriteLine($"- Max throughput: 1 request at a time");
-            Console.WriteLine($"- Monthly limit: 800 requests");
+            Console.WriteLine($"- Monthly limit: 600 requests");
             Console.WriteLine($"- Time estimate at 250ms/request: {imagePaths.Length * 250}ms");
 
-            if (imagePaths.Length > 800)
+            if (imagePaths.Length > 600)
             {
                 Console.WriteLine($"- WARNING: Would exceed monthly quota!");
             }
@@ -301,16 +302,16 @@ namespace CloudmersiveRateLimitsExample
             {
                 string cloudCost = scenario.monthly switch
                 {
-                    <= 800 => "Free",
-                    <= 5000 => "$19.99/mo",
-                    <= 50000 => "$99+/mo",
-                    _ => "$500+/mo"
+                    <= 600 => "Free",
+                    <= 10000 => "$19.99/mo",
+                    <= 50000 => "$99.99/mo",
+                    _ => "$499.99+/mo"
                 };
 
                 Console.WriteLine($"{scenario.name,-20} {scenario.monthly,-12} {cloudCost,-15} {"$0/mo",-12}");
             }
 
-            Console.WriteLine("\nIronBarcode: $749 one-time perpetual license");
+            Console.WriteLine("\nIronBarcode: $799 Lite perpetual license (one-time)");
             Console.WriteLine("Break-even: ~3-6 months at medium volume");
         }
     }

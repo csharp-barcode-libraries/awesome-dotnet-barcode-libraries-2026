@@ -2,7 +2,7 @@
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-Dynamsoft Barcode Reader is a high-performance commercial barcode SDK known for exceptional speed and mobile-first design. When C# developers need to scan barcodes from live camera feeds in mobile applications, Dynamsoft .NET consistently delivers impressive frame-by-frame decoding performance. Having tested numerous barcode solutions over the past decade, I can confirm that Dynamsoft C# real-time scanning capabilities are genuinely excellent. However, the .NET ecosystem has varied needs—mobile camera scanning represents just one use case. For server-side document processing, PDF batch operations, and simpler deployment scenarios in C# applications, IronBarcode offers a different approach optimized for those workflows. This guide provides an honest comparison to help you choose the right tool for your specific .NET requirements.
+Dynamsoft Barcode Reader is a high-performance commercial barcode SDK known for exceptional decoding speed and broad platform reach — the .NET edition runs on Windows and Linux servers as well as inside MAUI mobile apps. When C# developers need to scan barcodes from live camera feeds, Dynamsoft consistently delivers impressive frame-by-frame decoding performance. Having tested numerous barcode solutions over the past decade, I can confirm that Dynamsoft C# real-time scanning capabilities are genuinely excellent. However, the .NET ecosystem has varied needs—mobile camera scanning represents just one use case. For server-side document processing, PDF batch operations, and simpler deployment scenarios in C# applications, IronBarcode offers a different approach optimized for those workflows. This guide provides an honest comparison to help you choose the right tool for your specific .NET requirements.
 
 ## Table of Contents
 
@@ -42,14 +42,14 @@ For server-side .NET applications, different considerations apply. Processing PD
 
 ### Dynamsoft's Product Portfolio
 
-Dynamsoft offers several products beyond barcode reading:
+Dynamsoft has consolidated several products into the Dynamsoft Capture Vision (DCV) family. The .NET bundle pulls in:
 
-- **Dynamsoft Barcode Reader** - Their core barcode scanning SDK supporting 30+ symbologies
-- **Dynamsoft Label Recognizer** - OCR-style text recognition for labels and documents
+- **Dynamsoft Barcode Reader (DBR)** - Their core barcode scanning module, supporting 30+ symbologies including DPM and deformed codes
+- **Dynamsoft Label Recognizer (DLR)** - OCR-style text recognition for labels, with MRZ parsing support
+- **Dynamsoft Document Normalizer (DDN)** - Document edge detection and perspective correction
 - **Dynamsoft Camera Enhancer** - Video frame preprocessing for mobile applications
-- **Dynamsoft Document Normalizer** - Document edge detection and perspective correction
 
-The .NET SDK represents one target platform among many. Dynamsoft's primary focus areas include JavaScript (for web scanning), iOS, and Android. The .NET SDK provides capable barcode reading, though it inherits an API design optimized for video stream processing rather than static document workflows.
+These modules are routed through a single `CaptureVisionRouter` entry point in the modern API. The .NET SDK is fully supported on Windows (x86/x64) and Linux (x64), targeting .NET 6.0+ and .NET Framework 3.5+. Dynamsoft also ships JavaScript, iOS, Android, and MAUI editions, and the .NET edition is not a second-class citizen — it shares the same Capture Vision architecture and core C++ engine.
 
 ### Where IronBarcode Fits
 
@@ -63,12 +63,12 @@ Enterprise deployments require careful attention to licensing mechanics, network
 
 ### License Validation Models
 
-Dynamsoft uses runtime license validation. When your application starts, the SDK contacts Dynamsoft's license server to validate your license key. This model ensures license compliance but introduces considerations:
+Dynamsoft uses online license activation with a periodic handshake. When you call `LicenseManager.InitLicense(key, out errorMsg)` the SDK contacts Dynamsoft's license server to activate the key, and once activated it caches credentials locally and re-validates them periodically (typically once per usage period). This model gives Dynamsoft visibility into license usage but introduces considerations:
 
-- Applications require network connectivity during initialization
-- License server outages can prevent application startup
-- Air-gapped environments need offline license files
-- License files have expiration dates requiring renewal
+- The first activation requires outbound network connectivity to Dynamsoft's license servers
+- Periodic re-validation calls happen during application lifetime
+- Air-gapped environments need an offline license file obtained from Dynamsoft support
+- Activated trial keys expire and require renewal
 
 IronBarcode uses a simpler key-based activation model. You set a license key string in your code, and the library validates it locally without network calls. For developers deploying to restricted environments, isolated networks, or containerized infrastructure, this difference matters significantly.
 
@@ -94,31 +94,31 @@ Dynamsoft offers their barcode SDK across multiple platforms with different capa
 
 The JavaScript SDK enables barcode scanning directly in web browsers using the device camera. This client-side approach works well for point-of-sale applications and mobile web apps where installing a native application isn't feasible.
 
-**Pricing Model:** Credit-based consumption model. You purchase credits and consume them per scan operation. High-volume scenarios require significant credit purchases. Enterprise agreements available.
+**Pricing Model:** Annual subscription tied to active devices or domain. Public list pricing is limited; most deals route through "contact sales" with tier-based pricing depending on volume.
 
 ### Dynamsoft Barcode Reader .NET
 
-The .NET SDK provides barcode reading for Windows, macOS, and Linux through .NET Core and .NET Framework. The API follows Dynamsoft's video-centric design patterns while supporting static image input.
+The .NET SDK provides barcode reading for Windows (x86/x64) and Linux (x64) through .NET 6.0+ and .NET Framework 3.5+. The current package, `Dynamsoft.DotNet.BarcodeReader.Bundle`, sits inside the broader Dynamsoft Capture Vision family and exposes its functionality through the `CaptureVisionRouter` class.
 
-**Pricing Model:** Credit-based consumption pricing. Each barcode scan consumes credits from your purchased balance. Monthly or annual credit packages available. High-volume document processing can consume credits quickly, making cost prediction challenging for batch workloads.
+**Pricing Model:** A mix of perpetual and annual subscription tiers. Public reseller pages (e.g. ComponentSource) list .NET SDK perpetual licences starting around the low four-figure range per developer, but the Dynamsoft pricing page itself is largely "contact sales" with custom quotes for production deployments. A free 30-day trial is available.
 
 ### Dynamsoft Barcode Reader Mobile (iOS/Android)
 
 Native mobile SDKs optimized for real-time camera scanning. These represent Dynamsoft's flagship products where their speed advantage is most pronounced.
 
-**Pricing Model:** Credit-based per-scan consumption. Mobile apps consume credits on each successful decode. Active scanning applications can burn through credits rapidly, requiring careful budget planning.
+**Pricing Model:** Per-app or per-device annual licensing, typically negotiated through sales. Pricing scales with active device count rather than per-scan credit consumption.
 
 ### IronBarcode Alternative
 
-IronBarcode uses a perpetual licensing model with optional annual maintenance. A single license covers development and production deployment without per-server or per-device counting for most scenarios. The pricing simplicity appeals to organizations that struggle with tracking device counts or predicting usage volumes.
+IronBarcode uses a perpetual licensing model with optional annual maintenance. Public list pricing is $799 (Lite), $1,199 (Plus), $2,399 (Professional), and $4,799 (Unlimited). A single license covers development and production deployment without per-server or per-device counting for most scenarios. The pricing simplicity appeals to organizations that struggle with tracking device counts or predicting usage volumes.
 
 | Aspect | Dynamsoft | IronBarcode |
 |--------|-----------|-------------|
-| License Model | Credit-based consumption | Perpetual + optional maintenance |
-| Cost Structure | Pay per scan (credits) | Fixed upfront cost |
-| Usage Tracking | Credits consumed per operation | Not required |
-| Offline Activation | Requires license file | Simple key |
-| Price Predictability | Scales with deployment | Fixed upfront |
+| License Model | Annual subscription / negotiated perpetual | Perpetual + optional maintenance |
+| Cost Structure | Custom quotes; usually contact-sales | Published list price |
+| Usage Tracking | Online activation, periodic re-check | Not required |
+| Offline Activation | Requires offline license file from support | Simple key |
+| Price Predictability | Negotiated per deployment | Fixed upfront |
 
 ---
 
@@ -129,7 +129,7 @@ Getting started with either library involves NuGet installation, but the initial
 ### Dynamsoft Installation
 
 ```bash
-dotnet add package Dynamsoft.DotNet.BarcodeReader
+dotnet add package Dynamsoft.DotNet.BarcodeReader.Bundle
 ```
 
 After installation, Dynamsoft requires license initialization before any barcode operations:
@@ -137,7 +137,8 @@ After installation, Dynamsoft requires license initialization before any barcode
 ```csharp
 // Dynamsoft: Initialize license before using the SDK
 // This must happen once at application startup
-using Dynamsoft.DBR;
+using Dynamsoft.License;
+using Dynamsoft.Core;
 
 public class App
 {
@@ -146,12 +147,12 @@ public class App
         string licenseKey = "YOUR-DYNAMSOFT-LICENSE-KEY";
 
         // License initialization can fail if:
-        // - Network is unavailable (online validation)
+        // - Network is unavailable on first activation
         // - License key is invalid or expired
-        // - License server is unreachable
-        int errorCode = BarcodeReader.InitLicense(licenseKey, out string errorMsg);
+        // - License server is unreachable during a periodic re-check
+        int errorCode = LicenseManager.InitLicense(licenseKey, out string errorMsg);
 
-        if (errorCode != (int)EnumErrorCode.DBR_OK)
+        if (errorCode != (int)EnumErrorCode.EC_OK)
         {
             // Handle license initialization failure
             throw new InvalidOperationException($"License error: {errorMsg}");
@@ -160,19 +161,12 @@ public class App
 }
 ```
 
-For offline deployments, you'll need to configure a license file instead:
-
-```csharp
-// Dynamsoft: Offline license configuration
-// Requires obtaining offline license file from Dynamsoft support
-BarcodeReader reader = new BarcodeReader();
-reader.InitLicenseFromLicenseContent("license-file-content", "device-uuid");
-```
+For offline deployments, you'll need to request an offline license file from Dynamsoft support and configure it through the license manager APIs documented for your version.
 
 ### IronBarcode Installation
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 IronBarcode initialization is a single line:
@@ -180,7 +174,9 @@ IronBarcode initialization is a single line:
 ```csharp
 // IronBarcode: Set license key once
 // No network calls, no failure modes to handle
-IronBarcode.License.LicenseKey = "YOUR-IRONBARCODE-LICENSE-KEY";
+using IronBarCode;
+
+IronBarCode.License.LicenseKey = "YOUR-IRONBARCODE-LICENSE-KEY";
 
 // Start using immediately
 var results = BarcodeReader.Read("invoice.pdf");
@@ -203,31 +199,32 @@ Comparing actual code for common scenarios reveals how each library approaches b
 **Dynamsoft Approach:**
 
 ```csharp
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
 
 // After license initialization...
-BarcodeReader reader = new BarcodeReader();
-TextResult[] results = reader.DecodeFile("barcode.png", "");
+using CaptureVisionRouter cvRouter = new CaptureVisionRouter();
+CapturedResult result = cvRouter.Capture("barcode.png",
+    PresetTemplate.PT_READ_BARCODES);
 
-foreach (TextResult result in results)
+DecodedBarcodesResult barcodesResult = result.GetDecodedBarcodesResult();
+foreach (BarcodeResultItem item in barcodesResult.GetItems())
 {
-    Console.WriteLine($"Format: {result.BarcodeFormatString}");
-    Console.WriteLine($"Value: {result.BarcodeText}");
+    Console.WriteLine($"Format: {item.GetFormatString()}");
+    Console.WriteLine($"Value: {item.GetText()}");
 }
-
-reader.Dispose();
 ```
 
 **IronBarcode Approach:**
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 var results = BarcodeReader.Read("barcode.png");
 
 foreach (var result in results)
 {
-    Console.WriteLine($"Format: {result.Format}");
+    Console.WriteLine($"Format: {result.BarcodeType}");
     Console.WriteLine($"Value: {result.Value}");
 }
 ```
@@ -241,45 +238,37 @@ PDF processing reveals more significant differences.
 **Dynamsoft Approach:**
 
 ```csharp
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
-using System.Drawing;
 using System.Drawing.Imaging;
 
-// Dynamsoft doesn't natively read PDFs
-// You need a separate PDF library to extract pages as images
+// The .NET SDK can hand a PDF directly to CaptureVisionRouter on
+// Windows builds, but for cross-platform deployments many teams
+// still pre-render pages with a PDF library and pass each page in.
 using (var pdfDoc = PdfiumViewer.PdfDocument.Load("invoices.pdf"))
+using (var cvRouter = new CaptureVisionRouter())
 {
-    BarcodeReader reader = new BarcodeReader();
-
     for (int pageNum = 0; pageNum < pdfDoc.PageCount; pageNum++)
     {
-        // Render page to image
-        using (var pageImage = pdfDoc.Render(pageNum, 300, 300, true))
+        using var pageImage = pdfDoc.Render(pageNum, 300, 300, true);
+        using var ms = new MemoryStream();
+        pageImage.Save(ms, ImageFormat.Png);
+
+        CapturedResult result = cvRouter.Capture(ms.ToArray(),
+            PresetTemplate.PT_READ_BARCODES);
+
+        foreach (BarcodeResultItem item in result.GetDecodedBarcodesResult().GetItems())
         {
-            // Save to temp file or convert to byte array
-            using (var ms = new MemoryStream())
-            {
-                pageImage.Save(ms, ImageFormat.Png);
-                byte[] imageBytes = ms.ToArray();
-
-                TextResult[] results = reader.DecodeFileInMemory(imageBytes, "");
-
-                foreach (TextResult result in results)
-                {
-                    Console.WriteLine($"Page {pageNum + 1}: {result.BarcodeText}");
-                }
-            }
+            Console.WriteLine($"Page {pageNum + 1}: {item.GetText()}");
         }
     }
-
-    reader.Dispose();
 }
 ```
 
 **IronBarcode Approach:**
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 // IronBarcode handles PDFs natively
 var results = BarcodeReader.Read("invoices.pdf");
@@ -297,29 +286,27 @@ For document workflows, IronBarcode's native PDF support eliminates an entire de
 **Dynamsoft Approach:**
 
 ```csharp
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
 
 string[] files = Directory.GetFiles("invoices/", "*.png");
 
-BarcodeReader reader = new BarcodeReader();
+using var cvRouter = new CaptureVisionRouter();
 
 foreach (string file in files)
 {
-    TextResult[] results = reader.DecodeFile(file, "");
-
-    foreach (TextResult result in results)
+    CapturedResult result = cvRouter.Capture(file, PresetTemplate.PT_READ_BARCODES);
+    foreach (BarcodeResultItem item in result.GetDecodedBarcodesResult().GetItems())
     {
-        Console.WriteLine($"{Path.GetFileName(file)}: {result.BarcodeText}");
+        Console.WriteLine($"{Path.GetFileName(file)}: {item.GetText()}");
     }
 }
-
-reader.Dispose();
 ```
 
 **IronBarcode Approach:**
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 string[] files = Directory.GetFiles("invoices/", "*.*");  // Includes PDFs
 
@@ -341,25 +328,28 @@ For video frame processing, Dynamsoft's design shows its strength.
 
 ```csharp
 using Dynamsoft.CVR;
+using Dynamsoft.Core;
 using Dynamsoft.DBR;
 
 // Dynamsoft's video processing architecture
-CaptureVisionRouter router = new CaptureVisionRouter();
-router.InitSettings("barcode-scanning-template.json");
+using var router = new CaptureVisionRouter();
 
-// Process frame from camera
+// Wrap a raw frame from the camera in an ImageData struct
 byte[] frameData = GetCameraFrame(); // Your camera integration
 int width = 1920;
 int height = 1080;
 
-ImageData imageData = new ImageData();
-imageData.bytes = frameData;
-imageData.width = width;
-imageData.height = height;
-imageData.stride = width * 3;
-imageData.format = EnumImagePixelFormat.IPF_RGB_888;
+var imageData = new ImageData
+{
+    Bytes = frameData,
+    Width = width,
+    Height = height,
+    Stride = width * 3,
+    Format = EnumImagePixelFormat.IPF_RGB_888
+};
 
-CapturedResult capturedResult = router.Capture(imageData, "ReadBarcodes");
+CapturedResult capturedResult = router.Capture(imageData,
+    PresetTemplate.PT_READ_BARCODES);
 
 // Process results optimized for real-time display
 DecodedBarcodesResult barcodeResults = capturedResult.GetDecodedBarcodesResult();
@@ -368,9 +358,9 @@ DecodedBarcodesResult barcodeResults = capturedResult.GetDecodedBarcodesResult()
 **IronBarcode Approach:**
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
-// IronBarcode handles camera frames but isn't optimized for video speed
+// IronBarcode can process individual frames but isn't optimized for video speed
 byte[] frameData = GetCameraFrame();
 using var ms = new MemoryStream(frameData);
 using var bitmap = new System.Drawing.Bitmap(ms);
@@ -385,22 +375,28 @@ IronBarcode can process individual frames, but it lacks the video-optimized arch
 **Dynamsoft Approach:**
 
 ```csharp
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
 
-BarcodeReader reader = new BarcodeReader();
+using var router = new CaptureVisionRouter();
 
-// Configure to read only QR codes and Code 128
-PublicRuntimeSettings settings = reader.GetRuntimeSettings();
-settings.BarcodeFormatIds = (int)(EnumBarcodeFormat.BF_QR_CODE | EnumBarcodeFormat.BF_CODE_128);
-reader.UpdateRuntimeSettings(settings);
+// Edit the runtime template JSON to limit symbologies to QR + Code 128.
+// The Capture Vision API uses string template names rather than the
+// older PublicRuntimeSettings struct.
+SimplifiedCaptureVisionSettings settings = router.GetSimplifiedSettings(
+    PresetTemplate.PT_READ_BARCODES);
+settings.BarcodeSettings.BarcodeFormatIds =
+    (long)(EnumBarcodeFormat.BF_QR_CODE | EnumBarcodeFormat.BF_CODE_128);
+router.UpdateSettings(PresetTemplate.PT_READ_BARCODES, settings);
 
-TextResult[] results = reader.DecodeFile("mixed-barcodes.png", "");
+CapturedResult result = router.Capture("mixed-barcodes.png",
+    PresetTemplate.PT_READ_BARCODES);
 ```
 
 **IronBarcode Approach:**
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 // IronBarcode auto-detects by default, but you can filter results
 var results = BarcodeReader.Read("mixed-barcodes.png");
@@ -433,15 +429,14 @@ Dynamsoft focuses on motion blur and autofocus challenges common in camera scann
 IronBarcode includes ML-powered error correction specifically designed for document barcodes. The library can reconstruct partially damaged codes, fill in missing bars, and handle the specific degradation patterns that appear on printed documents.
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 // ML-powered reading handles damaged document barcodes
 var options = new BarcodeReaderOptions
 {
     // Enable aggressive error correction for damaged codes
     Speed = ReadingSpeed.Detailed,
-    UseAutoRotate = true,
-    MultipleBarcodes = true
+    ExpectMultipleBarcodes = true
 };
 
 var results = BarcodeReader.Read("damaged-shipping-label.png", options);
@@ -457,9 +452,10 @@ Shipping labels, medical specimens, and warehouse manifests frequently contain m
 
 ```csharp
 // Dynamsoft
-BarcodeReader reader = new BarcodeReader();
-TextResult[] results = reader.DecodeFile("multi-barcode.png", "");
-// Returns all detected barcodes
+using var router = new CaptureVisionRouter();
+CapturedResult result = router.Capture("multi-barcode.png",
+    PresetTemplate.PT_READ_BARCODES);
+// result.GetDecodedBarcodesResult().GetItems() lists every code
 
 // IronBarcode
 var results = BarcodeReader.Read("multi-barcode.png");
@@ -477,11 +473,12 @@ Document scanners don't always feed pages perfectly straight. Barcodes may appea
 **IronBarcode handles rotation automatically:**
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 var options = new BarcodeReaderOptions
 {
-    UseAutoRotate = true  // Handles rotated barcodes
+    Speed = ReadingSpeed.Balanced
+    // IronBarcode auto-rotates by default during the scan
 };
 
 var results = BarcodeReader.Read("skewed-scan.pdf", options);
@@ -496,12 +493,11 @@ Scanned documents sometimes contain small barcodes that become pixelated at lowe
 **IronBarcode's approach:**
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 var options = new BarcodeReaderOptions
 {
-    Speed = ReadingSpeed.Detailed,  // More thorough analysis
-    UseAutoRotate = true
+    Speed = ReadingSpeed.Detailed  // More thorough analysis
 };
 
 var results = BarcodeReader.Read("low-res-document.png", options);
@@ -536,7 +532,7 @@ ENV IRONBARCODE_LICENSE_KEY="your-key"
 
 ```csharp
 // In code
-IronBarcode.License.LicenseKey = Environment.GetEnvironmentVariable("IRONBARCODE_LICENSE_KEY");
+IronBarCode.License.LicenseKey = Environment.GetEnvironmentVariable("IRONBARCODE_LICENSE_KEY");
 ```
 
 IronBarcode's simpler licensing model integrates naturally with container orchestration platforms like Kubernetes without license server dependencies.
@@ -646,58 +642,61 @@ For developers with existing Dynamsoft implementations in server-side document p
 
 | Dynamsoft | IronBarcode |
 |-----------|-------------|
-| `BarcodeReader.InitLicense()` | `IronBarcode.License.LicenseKey = ""` |
-| `reader.DecodeFile(path, "")` | `BarcodeReader.Read(path)` |
-| `reader.DecodeFileInMemory(bytes, "")` | `BarcodeReader.Read(bytes)` |
-| `TextResult.BarcodeText` | `BarcodeResult.Value` |
-| `TextResult.BarcodeFormatString` | `BarcodeResult.Format` |
-| `TextResult.LocalizationResult.X1` | `BarcodeResult.X` |
-| `PublicRuntimeSettings.BarcodeFormatIds` | `BarcodeReaderOptions.ExpectBarcodeTypes` |
+| `LicenseManager.InitLicense(key, out msg)` | `IronBarCode.License.LicenseKey = "..."` |
+| `cvRouter.Capture(path, PresetTemplate.PT_READ_BARCODES)` | `BarcodeReader.Read(path)` |
+| `cvRouter.Capture(imageData, template)` | `BarcodeReader.Read(bytes)` |
+| `BarcodeResultItem.GetText()` | `BarcodeResult.Value` |
+| `BarcodeResultItem.GetFormatString()` | `BarcodeResult.BarcodeType` |
+| `BarcodeResultItem.GetLocation()` | `BarcodeResult.X` / `Y` |
+| `SimplifiedCaptureVisionSettings.BarcodeSettings.BarcodeFormatIds` | `BarcodeReaderOptions.ExpectBarcodeTypes` |
 
 ### Migration Example: Basic Reading
 
 **Before (Dynamsoft):**
 
 ```csharp
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
+using Dynamsoft.License;
+using Dynamsoft.Core;
 
-public class BarcodeService
+public class BarcodeService : IDisposable
 {
-    private BarcodeReader _reader;
+    private readonly CaptureVisionRouter _router;
 
     public BarcodeService(string licenseKey)
     {
-        int errorCode = BarcodeReader.InitLicense(licenseKey, out string errorMsg);
-        if (errorCode != (int)EnumErrorCode.DBR_OK)
+        int errorCode = LicenseManager.InitLicense(licenseKey, out string errorMsg);
+        if (errorCode != (int)EnumErrorCode.EC_OK)
         {
             throw new InvalidOperationException($"License error: {errorMsg}");
         }
-        _reader = new BarcodeReader();
+        _router = new CaptureVisionRouter();
     }
 
     public List<string> ReadBarcodes(string filePath)
     {
-        TextResult[] results = _reader.DecodeFile(filePath, "");
-        return results.Select(r => r.BarcodeText).ToList();
+        CapturedResult result = _router.Capture(filePath, PresetTemplate.PT_READ_BARCODES);
+        return result.GetDecodedBarcodesResult()
+            .GetItems()
+            .Select(i => i.GetText())
+            .ToList();
     }
 
-    public void Dispose()
-    {
-        _reader?.Dispose();
-    }
+    public void Dispose() => _router?.Dispose();
 }
 ```
 
 **After (IronBarcode):**
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 public class BarcodeService
 {
     public BarcodeService(string licenseKey)
     {
-        IronBarcode.License.LicenseKey = licenseKey;
+        IronBarCode.License.LicenseKey = licenseKey;
         // No network validation, no error handling needed
     }
 
@@ -716,6 +715,7 @@ public class BarcodeService
 **Before (Dynamsoft with PDF library):**
 
 ```csharp
+using Dynamsoft.CVR;
 using Dynamsoft.DBR;
 using PdfiumViewer;
 
@@ -724,30 +724,28 @@ public List<BarcodeData> ProcessPdfInvoices(string pdfPath)
     var barcodes = new List<BarcodeData>();
 
     using (var pdfDoc = PdfDocument.Load(pdfPath))
+    using (var router = new CaptureVisionRouter())
     {
-        BarcodeReader reader = new BarcodeReader();
-
         for (int page = 0; page < pdfDoc.PageCount; page++)
         {
             using (var pageImage = pdfDoc.Render(page, 300, 300, true))
             using (var ms = new MemoryStream())
             {
                 pageImage.Save(ms, ImageFormat.Png);
-                TextResult[] results = reader.DecodeFileInMemory(ms.ToArray(), "");
+                CapturedResult result = router.Capture(ms.ToArray(),
+                    PresetTemplate.PT_READ_BARCODES);
 
-                foreach (var result in results)
+                foreach (var item in result.GetDecodedBarcodesResult().GetItems())
                 {
                     barcodes.Add(new BarcodeData
                     {
-                        Value = result.BarcodeText,
-                        Format = result.BarcodeFormatString,
+                        Value = item.GetText(),
+                        Format = item.GetFormatString(),
                         Page = page + 1
                     });
                 }
             }
         }
-
-        reader.Dispose();
     }
 
     return barcodes;
@@ -757,7 +755,7 @@ public List<BarcodeData> ProcessPdfInvoices(string pdfPath)
 **After (IronBarcode):**
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 public List<BarcodeData> ProcessPdfInvoices(string pdfPath)
 {
@@ -766,7 +764,7 @@ public List<BarcodeData> ProcessPdfInvoices(string pdfPath)
     return results.Select(r => new BarcodeData
     {
         Value = r.Value,
-        Format = r.Format.ToString(),
+        Format = r.BarcodeType.ToString(),
         Page = r.PageNumber
     }).ToList();
 }
@@ -799,7 +797,7 @@ public static BarcodeEncoding MapFormat(EnumBarcodeFormat dynamsoft)
 
 **Issue: License initialization timing**
 
-Dynamsoft requires `InitLicense()` before any barcode operations. IronBarcode's `License.LicenseKey` can be set at any time, though setting it early in application startup is recommended.
+Dynamsoft requires `LicenseManager.InitLicense()` before any barcode operations. IronBarcode's `License.LicenseKey` can be set at any time, though setting it early in application startup is recommended.
 
 **Issue: Video stream processing**
 
@@ -822,11 +820,11 @@ For detailed code examples and documentation, visit the [IronBarcode documentati
 ## References
 
 - <a href="https://www.dynamsoft.com/barcode-reader/overview/" rel="nofollow">Dynamsoft Barcode Reader Overview</a>
-- <a href="https://www.dynamsoft.com/barcode-reader/docs/core/introduction/" rel="nofollow">Dynamsoft SDK Documentation</a>
-- <a href="https://www.nuget.org/packages/Dynamsoft.DotNet.BarcodeReader" rel="nofollow">Dynamsoft NuGet Package</a>
+- <a href="https://www.dynamsoft.com/barcode-reader/docs/server/programming/dotnet/user-guide.html" rel="nofollow">Dynamsoft .NET SDK User Guide</a>
+- <a href="https://www.nuget.org/packages/Dynamsoft.DotNet.BarcodeReader.Bundle" rel="nofollow">Dynamsoft.DotNet.BarcodeReader.Bundle on NuGet</a>
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/docs/)
 - [IronBarcode NuGet Package](https://www.nuget.org/packages/BarCode)
 
 ---
 
-*Last verified: January 2026*
+*Last verified: May 2026*

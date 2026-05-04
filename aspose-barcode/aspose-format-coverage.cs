@@ -1,17 +1,17 @@
-/**
+﻿/**
  * Format Coverage Comparison: Aspose.BarCode vs IronBarcode
  *
  * This example demonstrates how each library handles barcode format
  * detection and multi-format scenarios.
  *
  * Key Differences:
- * - Aspose.BarCode supports 60+ symbologies (strength)
+ * - Aspose.BarCode supports 80+ symbologies (strength)
  * - Aspose.BarCode requires manual format specification
  * - IronBarcode supports 50+ symbologies with automatic detection
  * - IronBarcode's auto-detection eliminates format guessing
  *
  * NuGet Packages Required:
- * - Aspose.BarCode: Aspose.BarCode version 24.x+
+ * - Aspose.BarCode: Aspose.BarCode version 26.x+
  * - IronBarcode: IronBarcode version 2024.x+
  */
 
@@ -81,7 +81,7 @@ namespace UnknownFormatReading
             var results = IronBarCode.BarcodeReader.Read(imagePath);
             var first = results.FirstOrDefault();
 
-            return first != null ? $"{first.BarcodeType}: {first.Text}" : null;
+            return first != null ? $"{first.BarcodeType}: {first.Value}" : null;
         }
     }
 }
@@ -191,7 +191,7 @@ namespace MultiFormatProcessing
             return results.Select(r => new BarcodeResult
             {
                 Type = r.BarcodeType.ToString(),
-                Value = r.Text
+                Value = r.Value
             }).ToList();
         }
 
@@ -210,7 +210,7 @@ namespace MultiFormatProcessing
             return results.Select(r => new BarcodeResult
             {
                 Type = r.BarcodeType.ToString(),
-                Value = r.Text
+                Value = r.Value
             }).ToList();
         }
     }
@@ -230,7 +230,7 @@ namespace MultiFormatProcessing
 namespace SymbologyGeneration
 {
     /// <summary>
-    /// Aspose.BarCode supports 60+ symbologies for generation.
+    /// Aspose.BarCode supports 80+ symbologies for generation.
     /// Each requires the appropriate EncodeType specification.
     /// </summary>
     public class AsposeExample
@@ -426,7 +426,7 @@ namespace FormatDetection
             {
                 result.Found = true;
                 result.Type = first.BarcodeType.ToString();
-                result.Value = first.Text;
+                result.Value = first.Value;
             }
             else
             {
@@ -542,7 +542,7 @@ namespace GS1Standards
             return barcodes.Select(b => new GS1Result
             {
                 Type = b.BarcodeType.ToString(),
-                RawValue = b.Text
+                RawValue = b.Value
             }).ToList();
         }
     }
@@ -611,3 +611,4 @@ namespace GS1Standards
  * For most developers, automatic detection provides more value than
  * marginally more symbology support with manual specification.
  */
+

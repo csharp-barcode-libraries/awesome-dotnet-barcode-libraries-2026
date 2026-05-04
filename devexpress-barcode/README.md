@@ -25,9 +25,9 @@ DevExpress is a major provider of UI controls and frameworks for .NET developers
 
 The DevExpress barcode component is distributed as part of platform-specific assemblies:
 
-- **DevExpress.XtraEditors.vXX.X.dll** (WinForms) - Contains BarCodeControl
-- **DevExpress.Xpf.Printing.vXX.X.dll** (WPF) - Contains BarCode
-- **DevExpress.Blazor.dll** (Blazor) - Contains DxBarCode
+- **DevExpress.XtraEditors.vXX.X.dll** (WinForms) - `BarCodeControl` lives in `DevExpress.XtraEditors`; symbology generators live in `DevExpress.XtraPrinting.BarCode` (in `DevExpress.Printing.vXX.X.Core.dll`)
+- **DevExpress.Xpf.Printing.vXX.X.dll** (WPF) - Contains `BarCode`
+- **DevExpress.Blazor.dll** (Blazor) - Contains `DxBarCode`
 
 Unlike standalone barcode libraries, these are not available as individual NuGet packages. You install the entire DevExpress platform suite to access the barcode control.
 
@@ -71,12 +71,12 @@ DevExpress does not sell barcode functionality separately. Understanding your op
 
 | Subscription | New License | Annual Renewal | Barcode Included |
 |-------------|-------------|----------------|------------------|
-| DXperience (WinForms + WPF) | $1,199 | $550/year | Yes |
-| Universal (All platforms) | $1,799 | $850/year | Yes |
-| Blazor Subscription | $399 | $199/year | Yes (Blazor only) |
-| DevExtreme (JS/Angular) | N/A | N/A | No .NET barcode |
+| DXperience (WinForms + WPF) | $1,699.99 | $849.99/year | Yes |
+| Universal (All platforms) | $2,299.99 | $1,149.99/year | Yes |
+| ASP.NET & Blazor (incl. DevExtreme) | $1,099.99 | $549.99/year | Yes (Blazor only) |
+| DevExtreme (JS/Angular only) | N/A | N/A | No .NET barcode |
 
-**There is no "barcode only" purchase option.** If you need DevExpress Barcode, you must purchase at minimum a $399 Blazor subscription or $1,199 DXperience subscription.
+**There is no "barcode only" purchase option.** If you need the DevExpress .NET BarCodeControl, you must purchase at minimum a $1,099.99 ASP.NET & Blazor subscription or a $1,699.99 DXperience subscription.
 
 ### No Perpetual License Available
 
@@ -105,22 +105,22 @@ DevExpress DXperience Subscription:
 └── BarCodeControl (~0.5% of total)
 
 If you only need barcode functionality:
-- Year 1: $1,199 (new license)
-- Year 2: $550 (renewal)
-- Year 3: $550 (renewal)
-- Year 4: $550 (renewal)
-- Year 5: $550 (renewal)
-- 5-year total: $3,399
+- Year 1: $1,699.99 (new license)
+- Year 2: $849.99 (renewal)
+- Year 3: $849.99 (renewal)
+- Year 4: $849.99 (renewal)
+- Year 5: $849.99 (renewal)
+- 5-year total: $5,099.95
 
-IronBarcode Professional:
-- Year 1: $2,999 (one-time, 10 devs)
+IronBarcode Plus (perpetual, up to 3 devs):
+- Year 1: $1,199 (one-time)
 - Years 2-5: $0
-- 5-year total: $2,999
+- 5-year total: $1,199
 
 Single developer comparison:
-- DevExpress 5-year: $3,399
-- IronBarcode Lite 5-year: $749
-- Savings: $2,650
+- DevExpress 5-year: $5,099.95
+- IronBarcode Lite 5-year: $799
+- Savings: $4,300.95
 ```
 
 ---
@@ -134,7 +134,7 @@ Single developer comparison:
 | **Generation** | Yes | Yes |
 | **Reading/Recognition** | No | Yes |
 | **1D Barcode Formats** | 25+ | 30+ |
-| **2D Barcode Formats** | QR, DataMatrix, PDF417, Aztec | QR, DataMatrix, PDF417, Aztec, MaxiCode |
+| **2D Barcode Formats** | QR, Micro QR, GS1 QR, EPC QR, DataMatrix, GS1 DataMatrix, PDF417, Aztec | QR, DataMatrix, PDF417, Aztec, MaxiCode |
 | **PDF Barcode Extraction** | No | Yes (native) |
 | **PDF Barcode Embedding** | Via Reporting only | Direct API |
 | **Automatic Format Detection** | No (manual Symbology) | Yes |
@@ -145,15 +145,15 @@ Single developer comparison:
 
 ### Symbology Support Detail
 
-**DevExpress Supported Formats:**
+**DevExpress Supported Formats** (per `DevExpress.XtraPrinting.BarCode` namespace):
 
-1D: Codabar, Code 11, Code 39, Code 39 Extended, Code 93, Code 93 Extended, Code 128, EAN-8, EAN-13, UPC-A, UPC-E, UPC Supplemental 2, UPC Supplemental 5, Industrial 2 of 5, Interleaved 2 of 5, Matrix 2 of 5, MSI/Plessey, PostNet, USPS Intelligent Mail
+1D: Codabar, Code 11, Code 39, Code 39 Extended, Code 93, Code 93 Extended, Code 128, EAN-8, EAN-13, EAN-128 / GS1-128, UPC-A, UPC-E0, UPC-E1, UPC Supplemental 2, UPC Supplemental 5, ITF-14, Industrial 2 of 5, Interleaved 2 of 5, Matrix 2 of 5, MSI/Plessey, PostNet, USPS Intelligent Mail, Intelligent Mail Package, Deutsche Post Identcode, Deutsche Post Leitcode, GS1 DataBar, SSCC, Pharmacode
 
-2D: QR Code, DataMatrix, PDF417, Aztec
+2D: QR Code, Micro QR Code, GS1 QR Code, EPC QR Code, DataMatrix (ECC200), GS1 DataMatrix, PDF417, Aztec
 
 **IronBarcode Additional Formats:**
 
-All DevExpress formats plus: MaxiCode, Micro QR, Micro PDF417, GS1-128, GS1 DataBar, RSS-14, RSS Limited, RSS Expanded, Royal Mail, Australia Post, Pharmacode, Telepen, Code 16K, and more.
+IronBarcode adds, among others: MaxiCode, Micro PDF417, RSS Expanded Stacked, Royal Mail, Australia Post, Telepen, Code 16K. IronBarcode also reads every format it generates — DevExpress does neither reading nor decoding for any format.
 
 ### Reading Capability (The Key Difference)
 
@@ -172,7 +172,7 @@ For reading barcodes with DevExpress controls, their support team suggests using
 
 **Step 1: Subscription Activation**
 
-1. Purchase DevExpress subscription ($399-$1,799)
+1. Purchase DevExpress subscription ($1,099.99 ASP.NET & Blazor up to $2,299.99 Universal)
 2. Log into DevExpress Customer Portal
 3. Download DevExpress installer or obtain NuGet feed credentials
 4. Install via DevExpress Project Wizard or NuGet
@@ -192,9 +192,12 @@ DevExpress packages are not on public NuGet.org. You need to configure their pri
 
 **Step 3: Package Installation**
 
+DevExpress packages are not published under a single `Barcode` package. The `BarCodeControl` is shipped inside `DevExpress.Win.Navigation` (which transitively pulls in `DevExpress.Printing.Core` for the `*Generator` classes). Most teams install the broader product meta-packages instead:
+
 ```bash
-# For WinForms
-dotnet add package DevExpress.Win.BarcodeControl
+# For WinForms (BarCodeControl + symbology generators)
+dotnet add package DevExpress.Win.Navigation
+# (or the full WinForms meta-package: DevExpress.Win)
 
 # For WPF
 dotnet add package DevExpress.Wpf.Printing
@@ -215,8 +218,8 @@ DevExpress validates your subscription at build time. Without an active subscrip
 **Step 1: NuGet Installation**
 
 ```bash
-# Single package from public NuGet.org
-dotnet add package IronBarcode
+# Single package from public NuGet.org (package id is "BarCode")
+dotnet add package BarCode
 ```
 
 **Step 2: License Configuration**
@@ -248,8 +251,8 @@ No private NuGet feeds, no subscription verification at build time, no additiona
 **DevExpress (WinForms):**
 
 ```csharp
-using DevExpress.XtraBars.BarCode;
-using DevExpress.XtraBars.BarCode.Symbologies;
+using DevExpress.XtraEditors;              // BarCodeControl
+using DevExpress.XtraPrinting.BarCode;     // Code128Generator, QRCodeGenerator, DataMatrixGenerator, ...
 
 public void GenerateBarcode()
 {
@@ -337,7 +340,7 @@ var results = BarcodeReader.Read("barcode.png");
 foreach (var barcode in results)
 {
     Console.WriteLine($"Type: {barcode.BarcodeType}");
-    Console.WriteLine($"Value: {barcode.Text}");
+    Console.WriteLine($"Value: {barcode.Value}");
 }
 ```
 
@@ -348,7 +351,8 @@ foreach (var barcode in results)
 **DevExpress (Manual Configuration Required):**
 
 ```csharp
-using DevExpress.XtraBars.BarCode.Symbologies;
+using DevExpress.XtraEditors;              // BarCodeControl
+using DevExpress.XtraPrinting.BarCode;     // *Generator + enums
 
 public void ConfigureSymbology()
 {
@@ -426,7 +430,7 @@ For detailed symbology configuration comparisons, see [DevExpress Symbology Conf
 |--------|------------|-------------|
 | **License Model** | Subscription only | Perpetual with optional renewal |
 | **Standalone Barcode** | Not available | Yes |
-| **Minimum Entry (1 dev)** | $399/year (Blazor) or $1,199 (WinForms/WPF) | $749 one-time |
+| **Minimum Entry (1 dev)** | $1,099.99/year (ASP.NET & Blazor) or $1,699.99/year (DXperience) | $799 one-time (Lite) |
 | **Renewal Required** | Yes (for updates) | No |
 | **Barcode Reading** | Not included (use third-party) | Included |
 
@@ -436,48 +440,48 @@ For detailed symbology configuration comparisons, see [DevExpress Symbology Conf
 
 ```
 DevExpress DXperience:
-  Year 1: $1,199 (new license)
-  Year 2: $550 (renewal)
-  Year 3: $550 (renewal)
-  Year 4: $550 (renewal)
-  Year 5: $550 (renewal)
+  Year 1: $1,699.99 (new license)
+  Year 2: $849.99 (renewal)
+  Year 3: $849.99 (renewal)
+  Year 4: $849.99 (renewal)
+  Year 5: $849.99 (renewal)
   ─────────────────────
-  Total: $3,399
+  Total: $5,099.95
 
 IronBarcode Lite:
-  Year 1: $749 (one-time)
+  Year 1: $799 (one-time)
   Year 2: $0
   Year 3: $0
   Year 4: $0
   Year 5: $0
   ─────────────────────
-  Total: $749
+  Total: $799
 
-Savings with IronBarcode: $2,650
+Savings with IronBarcode: $4,300.95
 ```
 
 **Scenario: 10-Developer Team, Full Platform Coverage**
 
 ```
 DevExpress Universal:
-  Year 1: $17,990 (10 × $1,799)
-  Year 2: $8,500 (10 × $850)
-  Year 3: $8,500
-  Year 4: $8,500
-  Year 5: $8,500
+  Year 1: $22,999.90 (10 × $2,299.99)
+  Year 2: $11,499.90 (10 × $1,149.99)
+  Year 3: $11,499.90
+  Year 4: $11,499.90
+  Year 5: $11,499.90
   ─────────────────────
-  Total: $51,990
+  Total: $68,999.50
 
-IronBarcode Professional:
-  Year 1: $2,999 (one-time, 10 devs)
+IronBarcode Pro (perpetual, up to 10 devs):
+  Year 1: $2,399 (one-time)
   Year 2: $0
   Year 3: $0
   Year 4: $0
   Year 5: $0
   ─────────────────────
-  Total: $2,999
+  Total: $2,399
 
-Savings with IronBarcode: $48,991
+Savings with IronBarcode: $66,600.50
 ```
 
 ### Hidden Cost: Reading Requires Third-Party
@@ -486,15 +490,15 @@ If you need barcode reading with DevExpress, you must purchase or integrate a th
 
 ```
 DevExpress DXperience + ZXing.Net:
-  DevExpress: $3,399 (5-year)
-  ZXing.Net: $0 (open source)
+  DevExpress: $5,099.95 (5-year)
+  ZXing.Net: $0 (open source, but unmaintained since 2024)
   Integration effort: Varies
   Limitation: Manual format specification, no ML correction
 
 DevExpress DXperience + IronBarcode (hybrid):
-  DevExpress: $3,399 (5-year)
-  IronBarcode: $749
-  Total: $4,148
+  DevExpress: $5,099.95 (5-year)
+  IronBarcode: $799 (Lite, perpetual)
+  Total: $5,898.95
   At which point: Why not just use IronBarcode for generation too?
 ```
 
@@ -516,7 +520,7 @@ DevExpress DXperience + IronBarcode (hybrid):
 
 1. **You need reading AND writing** - If your workflow involves both generating barcodes and reading them from images or documents, IronBarcode provides both in a single library. DevExpress cannot do reading.
 
-2. **You only need barcode functionality** - If you don't need DataGrids, Charts, Schedulers, and 200+ other controls, paying $749 once for IronBarcode is more economical than $1,199+/year for DevExpress.
+2. **You only need barcode functionality** - If you don't need DataGrids, Charts, Schedulers, and 200+ other controls, paying $799 once for IronBarcode Lite is more economical than $1,099.99+/year for DevExpress.
 
 3. **You prefer perpetual licensing** - If you want to pay once and own your license rather than annual subscription renewals, IronBarcode's perpetual model provides budget certainty.
 
@@ -547,22 +551,22 @@ Common reasons for moving from DevExpress Barcode to IronBarcode:
 **Remove DevExpress (platform specific):**
 
 ```xml
-<!-- Remove from .csproj -->
-<PackageReference Include="DevExpress.Win.BarcodeControl" Version="xx.x.x" />
-<!-- Or remove nuget.config private feed -->
+<!-- Remove from .csproj (only if no other DevExpress controls are used) -->
+<PackageReference Include="DevExpress.Win.Navigation" Version="xx.x.x" />
+<!-- Or remove the nuget.config entry that points at the DevExpress private feed -->
 ```
 
 **Add IronBarcode:**
 
 ```xml
-<PackageReference Include="IronBarcode" Version="2024.x.x" />
+<PackageReference Include="BarCode" Version="2025.x.x" />
 ```
 
 Or via CLI:
 
 ```bash
-dotnet remove package DevExpress.Win.BarcodeControl
-dotnet add package IronBarcode
+dotnet remove package DevExpress.Win.Navigation
+dotnet add package BarCode
 ```
 
 ### API Mapping Reference
@@ -582,8 +586,8 @@ dotnet add package IronBarcode
 **Before (DevExpress WinForms):**
 
 ```csharp
-using DevExpress.XtraBars.BarCode;
-using DevExpress.XtraBars.BarCode.Symbologies;
+using DevExpress.XtraEditors;              // BarCodeControl
+using DevExpress.XtraPrinting.BarCode;     // Code128Generator + Code128CharacterSet
 
 // Create control
 var barCode = new BarCodeControl();
@@ -656,7 +660,8 @@ BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
 
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/docs/) - Official guides and API reference
 - [IronBarcode on NuGet](https://www.nuget.org/packages/BarCode) - Package download
-- [DevExpress Barcode Documentation](https://docs.devexpress.com/WindowsForms/DevExpress.XtraBars.BarCode.BarCodeControl) - Official DevExpress guides
+- [DevExpress BarCodeControl Documentation](https://docs.devexpress.com/WindowsForms/DevExpress.XtraEditors.BarCodeControl) - Official DevExpress guide
+- [DevExpress.XtraPrinting.BarCode Namespace](https://docs.devexpress.com/CoreLibraries/DevExpress.XtraPrinting.BarCode) - Symbology generator class reference
 
 ### Code Example Files
 

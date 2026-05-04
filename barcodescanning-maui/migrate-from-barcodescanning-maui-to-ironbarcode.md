@@ -1,12 +1,12 @@
 # Migrating from BarcodeScanning.Native.Maui to IronBarcode
 
-This guide provides a complete migration path from BarcodeScanning.Native.Maui to IronBarcode, covering the camera event pattern replacement, namespace changes, code migration examples, and the handling of scenarios that BarcodeScanning.Native.Maui cannot address — Windows MAUI, file and PDF input, server-side processing, and barcode generation.
+This guide provides a complete migration path from BarcodeScanning.Native.Maui to IronBarcode, covering the camera event pattern replacement, namespace changes, code migration examples, and the handling of scenarios that BarcodeScanning.Native.Maui cannot address — file and PDF input, server-side processing, and barcode generation.
 
 ## Why Migrate from BarcodeScanning.MAUI
 
 Teams migrating from BarcodeScanning.Native.Maui report these triggers:
 
-**Windows MAUI Target Required:** BarcodeScanning.Native.Maui wraps iOS and Android native APIs. It has no Windows implementation and none is planned. If your MAUI app targets Windows alongside iOS and Android, you need a library that works on all three targets without platform-specific branching.
+**Single Engine Across Platforms Required:** BarcodeScanning.Native.Maui wraps three different recognition engines depending on platform — Apple Vision on iOS/macOS, Google ML Kit on Android, and ZXingCpp on Windows (added in 3.0.1). Symbology coverage and decoding behavior differ between them. If your MAUI app needs identical results on every target without engine-specific branching, you need a library with one shared code path.
 
 **File or PDF Input Added to Requirements:** BarcodeScanning.Native.Maui only accepts live camera frames. When users need to upload an image from their gallery, or when a server-side endpoint needs to extract barcodes from PDFs, the library has no code path to offer. Any file or PDF barcode scenario requires a different tool.
 
@@ -23,9 +23,9 @@ Teams migrating from BarcodeScanning.Native.Maui report these triggers:
 BarcodeScanning.Native.Maui ties your barcode reading entirely to the live camera event model. The moment any requirement falls outside that model, the library offers nothing:
 
 ```csharp
-// BarcodeScanning.Native.Maui: only works inside this event, only on iOS/Android,
-// only with live camera frames — no file, no PDF, no Windows, no server
-private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArgs e)
+// BarcodeScanning.Native.Maui: only works inside this event,
+// only with live camera frames — no file, no PDF, no server
+private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArg e)
 {
     var barcode = e.BarcodeResults.FirstOrDefault();
     if (barcode != null)
@@ -37,7 +37,7 @@ IronBarcode accepts any data input — camera capture, file, PDF, byte array —
 
 ```csharp
 // IronBarcode: works on iOS, Android, Windows, macOS, and server
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 private async void ScanBarcodeButton_Clicked(object sender, EventArgs e)
@@ -65,17 +65,18 @@ private async void ScanBarcodeButton_Clicked(object sender, EventArgs e)
 | **Read from stream** | No | Yes — `BarcodeReader.Read(stream)` |
 | **Read from PDF** | No | Yes — `BarcodeReader.Read(pdf)` |
 | **Barcode generation** | No | Yes — `BarcodeWriter` + `QRCodeWriter` |
-| **Windows MAUI support** | No | Yes |
-| **iOS MAUI support** | Yes | Yes |
-| **Android MAUI support** | Yes | Yes |
-| **macOS MAUI support** | Not documented | Yes |
+| **Windows MAUI support** | Yes (since 3.0.1, ZXingCpp engine) | Yes |
+| **iOS MAUI support** | Yes (Apple Vision) | Yes |
+| **Android MAUI support** | Yes (Google ML Kit) | Yes |
+| **macOS MAUI support** | Yes (Mac Catalyst) | Yes |
+| **Single engine across platforms** | No — three engines (Vision/ML Kit/ZXingCpp) | Yes — same managed code |
 | **Server-side / ASP.NET** | No | Yes |
 | **Docker / Azure / AWS Lambda** | No | Yes |
 | **iOS UPC-A accuracy** | Returns 13 digits (bug), requires manual normalization | Returns correct 12-digit UPC-A |
-| **PDF417 reliability** | "Most scans never occur" (GitHub issues) | Supported |
+| **PDF417 reliability** | "Most scans never occur" on iOS/Android (GitHub issues) | Supported |
 | **Multi-barcode detection** | Yes (multiple per frame via `e.BarcodeResults`) | Yes (`ExpectMultipleBarcodes` option) |
-| **Reading speed control** | None | `ReadingSpeed.Balanced` / `Faster` / `Slower` |
-| **License** | MIT (open source, free) | Commercial — Lite $749, Plus $1,499, Professional $2,999, Unlimited $5,999 |
+| **Reading speed control** | None | `ReadingSpeed.Balanced` / `Faster` / `Detailed` |
+| **License** | MIT (open source, free) | Commercial — Lite $799, Plus $1,199, Professional $2,399, Unlimited $4,799 (perpetual) |
 | **.NET Framework support** | No (MAUI only) | Yes — .NET Framework 4.6.2+ |
 
 ## Quick Start: BarcodeScanning.MAUI to IronBarcode Migration
@@ -91,7 +92,7 @@ dotnet remove package BarcodeScanning.Native.Maui
 Install IronBarcode:
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Step 2: Update Namespaces
@@ -153,7 +154,7 @@ The `CameraView` control provided a real-time viewfinder with continuous frame d
 ```csharp
 using BarcodeScanning;
 
-private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArgs e)
+private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArg e)
 {
     var barcode = e.BarcodeResults.FirstOrDefault();
     if (barcode != null)
@@ -177,7 +178,7 @@ private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArgs e)
 **IronBarcode Approach — code-behind:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 private async void ScanButton_Clicked(object sender, EventArgs e)
@@ -195,14 +196,14 @@ private async void ScanButton_Clicked(object sender, EventArgs e)
 }
 ```
 
-This code runs on iOS, Android, and Windows MAUI without any platform-specific branching. The user experience changes from a live in-app viewfinder to the platform's native camera screen — appropriate for most business applications. The [IronBarcode MAUI reading guide](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) covers additional configuration options.
+This code runs on iOS, Android, Windows, and macOS MAUI without any platform-specific branching. The user experience changes from a live in-app viewfinder to the platform's native camera screen — appropriate for most business applications. The [IronBarcode MAUI reading guide](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) covers additional configuration options.
 
 ### Handling Multiple Barcodes Per Scan
 
 **BarcodeScanning.MAUI Approach:**
 
 ```csharp
-private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArgs e)
+private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArg e)
 {
     foreach (var barcode in e.BarcodeResults)
     {
@@ -234,7 +235,7 @@ private async void ScanButton_Clicked(object sender, EventArgs e)
 
     var results = BarcodeReader.Read(ms.ToArray(), options);
     foreach (var result in results)
-        Console.WriteLine($"{result.Format}: {result.Value}");
+        Console.WriteLine($"{result.BarcodeType}: {result.Value}");
 }
 ```
 
@@ -247,7 +248,7 @@ If your codebase has the UPC-A leading-zero workaround, remove it entirely. Iron
 **BarcodeScanning.MAUI Approach — workaround in place:**
 
 ```csharp
-private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArgs e)
+private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArg e)
 {
     var barcode = e.BarcodeResults.FirstOrDefault();
     if (barcode == null) return;
@@ -255,7 +256,7 @@ private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArgs e)
     var value = barcode.DisplayValue;
 
     // Workaround: Apple Vision returns 13 digits for UPC-A
-    if (barcode.BarcodeFormat == BarcodeFormat.UPC_A && value.Length == 13)
+    if (barcode.BarcodeFormat == BarcodeFormats.Upca && value.Length == 13)
         value = value.Substring(1);
 
     ProcessBarcode(value, barcode.BarcodeFormat.ToString());
@@ -281,11 +282,11 @@ private async void ScanButton_Clicked(object sender, EventArgs e)
     if (first == null) return;
 
     // result.Value is the correct 12-digit UPC-A — no normalization needed
-    ProcessBarcode(first.Value, first.Format.ToString());
+    ProcessBarcode(first.Value, first.BarcodeType.ToString());
 }
 ```
 
-Delete any matches for `BarcodeFormat.UPC_A` paired with `Substring(1)` — that code is dead after migration.
+Delete any matches for `BarcodeFormats.Upca` paired with `Substring(1)` — that code is dead after migration.
 
 ### Adding File and PDF Support
 
@@ -313,7 +314,7 @@ private async void ReadFileButton_Clicked(object sender, EventArgs e)
 
     var results = BarcodeReader.Read(file.FullPath);
     foreach (var result in results)
-        ResultLabel.Text += $"\n{result.Format}: {result.Value}";
+        ResultLabel.Text += $"\n{result.BarcodeType}: {result.Value}";
 }
 
 // Read barcodes from a PDF directly — no intermediate image step
@@ -321,7 +322,7 @@ private void ReadPdfBarcodes()
 {
     var results = BarcodeReader.Read("shipment-manifest.pdf");
     foreach (var result in results)
-        Console.WriteLine($"{result.Format}: {result.Value}");
+        Console.WriteLine($"{result.BarcodeType}: {result.Value}");
 }
 ```
 
@@ -351,7 +352,7 @@ public async Task<IActionResult> ScanBarcode(IFormFile file)
     await file.CopyToAsync(ms);
 
     var results = BarcodeReader.Read(ms.ToArray());
-    var values = results.Select(r => new { r.Value, Format = r.Format.ToString() });
+    var values = results.Select(r => new { r.Value, Format = r.BarcodeType.ToString() });
     return Ok(values);
 }
 ```
@@ -395,19 +396,19 @@ The [IronBarcode generation documentation](https://ironsoftware.com/csharp/barco
 |-----------------------------|-------------|
 | `CameraView` XAML control | Remove — use `Button` + `MediaPicker.CapturePhotoAsync()` |
 | `OnDetectionFinished` event | `BarcodeReader.Read(imageBytes)` return value |
-| `OnDetectionFinishedEventArgs e` | IEnumerable result from `BarcodeReader.Read()` |
+| `OnDetectionFinishedEventArg e` | IEnumerable result from `BarcodeReader.Read()` |
 | `e.BarcodeResults` | Return value of `BarcodeReader.Read()` |
 | `e.BarcodeResults.FirstOrDefault()` | `results.FirstOrDefault()` |
 | `barcode.DisplayValue` | `result.Value` |
-| `barcode.BarcodeFormat` | `result.Format` |
+| `barcode.BarcodeFormat` | `result.BarcodeType` |
 | `BarcodeFormats="All"` | Auto-detected — no configuration needed |
 | `CameraEnabled="True"` | `await MediaPicker.CapturePhotoAsync()` |
-| iOS + Android only | iOS, Android, Windows, macOS MAUI |
+| Three engines (Vision/ML Kit/ZXingCpp) | Single managed engine on every platform |
 | No file input | `BarcodeReader.Read(filePath)` |
 | No PDF input | `BarcodeReader.Read("document.pdf")` |
 | No generation | `BarcodeWriter.CreateBarcode()` / `QRCodeWriter.CreateQrCode()` |
 | iOS UPC-A returns 13 digits | Returns correct 12 digits — no normalization needed |
-| PDF417 unreliable | Supported |
+| PDF417 unreliable on iOS/Android | Supported |
 
 ## Common Migration Issues and Solutions
 
@@ -440,7 +441,7 @@ This requires wiring up a camera frame source separately from IronBarcode. Evalu
 
 **BarcodeScanning.MAUI:** `barcode.DisplayValue` returns the decoded string; `barcode.BarcodeFormat` returns a BarcodeScanning library enum value.
 
-**Solution:** Replace `DisplayValue` with `result.Value` and `barcode.BarcodeFormat` with `result.Format`. The iteration pattern is the same:
+**Solution:** Replace `DisplayValue` with `result.Value` and `barcode.BarcodeFormat` with `result.BarcodeType`. The iteration pattern is the same:
 
 ```csharp
 // Before
@@ -477,10 +478,10 @@ grep -rn "using BarcodeScanning" --include="*.xaml" .
 grep -rn "CameraView" --include="*.cs" .
 grep -rn "CameraView" --include="*.xaml" .
 grep -rn "OnDetectionFinished" --include="*.cs" .
-grep -rn "OnDetectionFinishedEventArgs" --include="*.cs" .
+grep -rn "OnDetectionFinishedEventArg" --include="*.cs" .
 grep -rn "e\.BarcodeResults" --include="*.cs" .
 grep -rn "DisplayValue" --include="*.cs" .
-grep -rn "BarcodeFormat\.UPC_A" --include="*.cs" .
+grep -rn "BarcodeFormats\.Upca" --include="*.cs" .
 grep -rn "scanner:" --include="*.xaml" .
 ```
 
@@ -489,7 +490,7 @@ Document each hit. Note which files contain `CameraView` XAML usage (require XAM
 ### Code Update Tasks
 
 1. Remove `BarcodeScanning.Native.Maui` NuGet package
-2. Install `IronBarcode` NuGet package
+2. Install `BarCode` NuGet package
 3. Add `IronBarCode.License.LicenseKey = "YOUR-KEY";` in `MauiProgram.cs` or `App.xaml.cs`
 4. Replace `using BarcodeScanning;` with `using IronBarCode;` in all `.cs` files
 5. Remove `xmlns:scanner="..."` namespace declarations from all XAML files
@@ -497,8 +498,8 @@ Document each hit. Note which files contain `CameraView` XAML usage (require XAM
 7. Remove `OnDetectionFinished="..."` event wiring from XAML
 8. Replace `OnDetectionFinished` event handlers with `async` button click handlers using `BarcodeReader.Read()`
 9. Replace `barcode.DisplayValue` with `result.Value` throughout
-10. Replace `barcode.BarcodeFormat` with `result.Format` throughout
-11. Delete all `BarcodeFormat.UPC_A` + `Substring(1)` normalization workarounds
+10. Replace `barcode.BarcodeFormat` with `result.BarcodeType` throughout
+11. Delete all `BarcodeFormats.Upca` + `Substring(1)` normalization workarounds
 12. Add `ExpectMultipleBarcodes = true` to `BarcodeReaderOptions` where multi-barcode detection was previously relying on `e.BarcodeResults` returning multiple items
 13. Remove `MainThread.BeginInvokeOnMainThread()` wrappers from result display code where the async pattern makes them unnecessary
 14. Verify `AndroidManifest.xml` and `Info.plist` camera permissions are present
@@ -507,7 +508,7 @@ Document each hit. Note which files contain `CameraView` XAML usage (require XAM
 
 - Verify iOS barcode scanning works and UPC-A values are returned as 12-digit strings without leading zeros
 - Verify Android barcode scanning produces correct values for all formats used in the application
-- Verify Windows MAUI barcode scanning works if Windows is a build target
+- Verify Windows and macOS MAUI barcode scanning works if those are build targets
 - Test PDF417 scanning against real shipping labels, driver's licenses, or boarding passes if these are used
 - Test multi-barcode scenarios with `ExpectMultipleBarcodes = true` and confirm all barcodes in an image are returned
 - Verify file picker scanning (`BarcodeReader.Read(filePath)`) works on all MAUI targets
@@ -517,13 +518,13 @@ Document each hit. Note which files contain `CameraView` XAML usage (require XAM
 
 ## Key Benefits of Migrating to IronBarcode
 
-**Full Windows MAUI Support:** IronBarcode runs on all four MAUI targets — iOS, Android, Windows, and macOS — using the same code and the same package. No platform-specific barcode implementation is needed for Windows, and no `#if WINDOWS` blocks are required in application code.
+**Single Engine Across MAUI Targets:** IronBarcode runs on all four MAUI targets — iOS, Android, Windows, and macOS — using one managed code path. There is no Vision/ML Kit/ZXingCpp split, no `#if WINDOWS` blocks for engine differences, and no per-platform symbology table to keep aligned.
 
 **Any Input Source:** `BarcodeReader.Read()` accepts file paths, byte arrays, streams, and PDF documents. Any barcode scenario — camera capture, file upload, gallery image, server-side PDF processing — uses the same static method with the same result type.
 
 **Correct UPC-A Values:** IronBarcode returns the correct 12-digit UPC-A value on iOS without any normalization code in the application. Historical UPC-A data stored with a leading zero due to BarcodeScanning.Native.Maui's behavior does not affect the accuracy of values read after migration.
 
-**Reliable PDF417:** PDF417 is fully supported and reads reliably. Shipping labels, driver's licenses, and boarding passes scan without the "most scans never occur" limitation documented in BarcodeScanning.Native.Maui's GitHub issues.
+**Reliable PDF417:** PDF417 is fully supported and reads reliably. Shipping labels, driver's licenses, and boarding passes scan without the "most scans never occur" limitation documented in BarcodeScanning.Native.Maui's GitHub issues for the iOS/Android engines.
 
 **Barcode Generation:** `BarcodeWriter.CreateBarcode()` and `QRCodeWriter.CreateQrCode()` generate Code128, QR, DataMatrix, and other formats as PNG files or byte arrays. Generation and reading are available from the same package with no additional dependency.
 

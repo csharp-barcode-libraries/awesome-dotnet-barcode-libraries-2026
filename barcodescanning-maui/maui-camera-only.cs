@@ -3,7 +3,10 @@
 // and contrasts with IronBarcode's universal approach.
 //
 // Install: dotnet add package BarcodeScanning.Native.Maui
-// Platforms: iOS 14.0+, Android API 21+ (NO Windows, NO macOS)
+// Current version: 3.0.3 (Feb 2026)
+// Platforms: iOS, Android, Windows (since 3.0.1, ZXingCpp), macOS Catalyst
+// Recognition engines differ by platform: Apple Vision (iOS/macOS),
+// Google ML Kit (Android), ZXingCpp (Windows).
 
 using BarcodeScanning;
 using Microsoft.Maui.Controls;
@@ -46,7 +49,8 @@ namespace CameraOnlyExample
         }
 
         // Camera detection event - fired when barcode appears in camera frame
-        private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArgs e)
+        // Note: e.BarcodeResults is IReadOnlySet<BarcodeResult> — no integer indexer
+        private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArg e)
         {
             // WARNING: This ONLY fires when camera sees a barcode
             // You CANNOT:
@@ -54,19 +58,19 @@ namespace CameraOnlyExample
             //   - Process a PDF document
             //   - Process a screenshot
             //   - Process a base64 string
-            //   - Run on Windows MAUI
 
             if (e.BarcodeResults.Count > 0)
             {
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    var barcode = e.BarcodeResults[0];
+                    var barcode = e.BarcodeResults.First();
                     ResultLabel.Text = $"Scanned: {barcode.DisplayValue}";
 
-                    // Note: Format names come from native APIs
-                    // iOS uses Apple Vision framework naming
-                    // Android uses ML Kit naming
-                    // These may differ for the same barcode type
+                    // Note: Format names come from three different engines
+                    // iOS/macOS uses Apple Vision framework
+                    // Android uses Google ML Kit
+                    // Windows uses ZXingCpp
+                    // Symbology coverage and naming may differ across them
                     Console.WriteLine($"Format: {barcode.BarcodeFormat}");
                     Console.WriteLine($"Raw Value: {barcode.RawValue}");
                     Console.WriteLine($"Display Value: {barcode.DisplayValue}");
@@ -133,18 +137,18 @@ namespace CameraOnlyExample
             Console.WriteLine("It requires live camera feed only.");
         }
 
-        // LIMITATION: Cannot run on Windows MAUI
-        public void CannotRunOnWindows()
+        // NOTE: Windows MAUI support was added in version 3.0.1
+        // Windows uses a different recognition engine than iOS/Android
+        public void WindowsUsesDifferentEngine()
         {
-            // BarcodeScanning.Native.Maui explicitly does not support Windows
-            // From GitHub: Windows support is NOT on the roadmap
+            // Windows target depends on the third-party ZXingCpp package
+            // (not Apple Vision and not Google ML Kit)
+            // Symbology coverage and decoding behavior on Windows
+            // therefore differ from the iOS and Android code paths
 
-            // If you add CameraView to a Windows MAUI app:
-            // - Compilation may succeed
-            // - Runtime will fail or show nothing
-
-            Console.WriteLine("Windows MAUI is NOT supported.");
-            Console.WriteLine("Only iOS and Android are supported.");
+            Console.WriteLine("Windows MAUI: supported via ZXingCpp (since 3.0.1).");
+            Console.WriteLine("iOS/macOS: Apple Vision. Android: Google ML Kit.");
+            Console.WriteLine("Behavior is engine-dependent and not identical across platforms.");
         }
     }
 
@@ -154,7 +158,8 @@ namespace CameraOnlyExample
     // ============================================================
 
     /*
-    Install: dotnet add package IronBarcode
+    Install: dotnet add package BarCode
+    (NuGet package id is "BarCode"; namespace is "IronBarCode" with capital C)
 
     IronBarcode provides image-based processing that works universally.
     For MAUI mobile apps, capture an image first, then process it.
@@ -171,7 +176,7 @@ namespace CameraOnlyExample
             foreach (var barcode in results)
             {
                 Console.WriteLine($"Format: {barcode.BarcodeType}");
-                Console.WriteLine($"Value: {barcode.Text}");
+                Console.WriteLine($"Value: {barcode.Value}");
             }
         }
 
@@ -187,7 +192,7 @@ namespace CameraOnlyExample
             {
                 // Results are consistent across all platforms
                 // No iOS vs Android differences to handle
-                Console.WriteLine($"Value: {barcode.Text}");
+                Console.WriteLine($"Value: {barcode.Value}");
             }
         }
 
@@ -200,7 +205,7 @@ namespace CameraOnlyExample
             foreach (var barcode in results)
             {
                 Console.WriteLine($"Page: {barcode.PageNumber}");
-                Console.WriteLine($"Value: {barcode.Text}");
+                Console.WriteLine($"Value: {barcode.Value}");
             }
         }
 
@@ -211,7 +216,7 @@ namespace CameraOnlyExample
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Value: {barcode.Text}");
+                Console.WriteLine($"Value: {barcode.Value}");
             }
         }
     }
@@ -252,7 +257,7 @@ namespace CameraOnlyExample
                     {
                         var barcode = results.First();
                         await DisplayAlert("Barcode Found",
-                            $"Type: {barcode.BarcodeType}\nValue: {barcode.Text}",
+                            $"Type: {barcode.BarcodeType}\nValue: {barcode.Value}",
                             "OK");
                     }
                     else
@@ -290,24 +295,25 @@ namespace CameraOnlyExample
     // ============================================================
 
     /*
-    BarcodeScanning.Native.Maui:
+    BarcodeScanning.Native.Maui (v3.0.3):
     - Camera-only: CameraView control fires events when barcode in frame
-    - MAUI mobile only: iOS and Android
-    - No Windows: Not supported, not planned
+    - MAUI: iOS, Android, Windows (since 3.0.1, ZXingCpp), macOS Catalyst
+    - Three engines: Apple Vision / Google ML Kit / ZXingCpp depending on platform
     - No image processing: Cannot read files, streams, byte arrays, PDFs
     - Free: MIT license
 
     IronBarcode:
     - Image processing: Read from any source (file, stream, bytes, PDF)
     - Universal .NET: MAUI (all platforms), ASP.NET, Console, WPF, etc.
-    - Windows MAUI: Full support
+    - Single managed engine across all targets
     - PDF native: Built-in document processing
-    - Commercial: Licensed, supported
+    - Commercial: Licensed, supported (perpetual: $799 / $1,199 / $2,399 / $4,799)
 
-    For production MAUI apps that need reliability, Windows support,
-    or document processing, IronBarcode is the appropriate choice.
+    For production MAUI apps that need a single engine across platforms,
+    document processing, or server-side reuse, IronBarcode is the
+    appropriate choice.
 
-    For quick mobile camera prototypes with zero budget,
+    For quick MAUI camera prototypes with zero budget,
     BarcodeScanning.Native.Maui may be sufficient.
     */
 }

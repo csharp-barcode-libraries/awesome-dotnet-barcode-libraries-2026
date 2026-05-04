@@ -21,8 +21,8 @@ using Cloudmersive.APIClient.NET.Barcode.Client;
 using Cloudmersive.APIClient.NET.Barcode.Model;
 
 // IronBarcode (local processing)
-// Install: dotnet add package IronBarcode
-using IronBarcode;
+// Install: dotnet add package BarCode
+using IronBarCode;
 
 namespace CloudmersiveCloudDependencyExample
 {
@@ -59,7 +59,7 @@ namespace CloudmersiveCloudDependencyExample
         public void SetupIronBarcode()
         {
             // Optional: Configure license for production (removes watermark)
-            // IronBarcode.License.LicenseKey = "YOUR_LICENSE_KEY";
+            // IronBarCode.License.LicenseKey = "YOUR_LICENSE_KEY";
 
             // No API keys, no network configuration, no external dependencies
             Console.WriteLine("IronBarcode ready - processes locally, works offline");
@@ -166,10 +166,14 @@ namespace CloudmersiveCloudDependencyExample
                         result = await generateApi.GenerateBarcodeEAN13Async(data);
                         break;
                     case "CODE128":
-                        // Note: Cloudmersive has separate methods for different formats
+                        // Note: Cloudmersive exposes a separate method per symbology
+                        result = await generateApi.GenerateBarcodeCode128Async(data);
+                        break;
+                    case "UPCA":
                         result = await generateApi.GenerateBarcodeUPCAAsync(data);
                         break;
                     default:
+                        // Cloudmersive has no generic generator; format must map to a known method
                         throw new ArgumentException($"Unsupported format: {format}");
                 }
 
