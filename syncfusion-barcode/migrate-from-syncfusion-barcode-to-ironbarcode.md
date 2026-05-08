@@ -8,7 +8,7 @@ This guide provides a complete migration path from Syncfusion's barcode controls
 
 **OPX as a Paid Wrapper Around Free Software:** Barcode Reader OPX uses ZXing.Net internally — an open-source barcode reading library published under the Apache 2.0 license. Apache 2.0 is a permissive license; any .NET developer can install ZXing.Net directly with `dotnet add package ZXing.Net` and use it in commercial applications at no cost. A complete Syncfusion read-and-generate workflow requires two separate Syncfusion products, two license agreements, and two API surfaces — while the reading capability could have been sourced directly from the free library that OPX wraps.
 
-**Community License Cliff:** Syncfusion's Community License requires four conditions to be true simultaneously and continuously: annual gross revenue below $1,000,000, five or fewer developers, ten or fewer total employees, and total outside capital raised below $3,000,000. Government organizations are ineligible regardless of size. Crossing any single condition creates an immediate commercial licensing obligation. A Series A funding round typically pushes the capital raised past $3,000,000 on the day it closes, triggering a license fee regardless of team size or revenue. The commercial transition goes from $0 to approximately $995 per developer per year at the Standard tier — and that price covers the entire Essential Studio suite, not only the barcode component.
+**Community License Cliff:** Syncfusion's Community License requires four conditions to be true simultaneously and continuously: annual gross revenue below $1,000,000, five or fewer developers, ten or fewer total employees, and total outside capital raised below $3,000,000. Tax-funded governmental organizations are ineligible regardless of size (non-tax-funded agencies may qualify after signing a master license agreement directly with Syncfusion). Crossing any single condition creates an immediate commercial licensing obligation. A Series A funding round typically pushes the capital raised past $3,000,000 on the day it closes, triggering a license fee regardless of team size or revenue. Syncfusion no longer publishes a public per-seat price on its pricing page — the commercial transition goes from $0 to a custom-quoted annual subscription per developer that covers the entire Essential Studio suite, not only the barcode component.
 
 **Version-Specific Key Rotation:** Syncfusion license keys are tied to specific Essential Studio version ranges. Upgrading from version 24.x to 25.x requires obtaining a new key from the account portal, updating that key in every deployment environment's secrets store, and redeploying to prevent trial watermarks from appearing in production outputs. For teams with frequent release cadences or multiple deployment targets, this rotation becomes a recurring operational overhead that is disproportionate to the underlying requirement of generating a barcode image.
 
@@ -46,7 +46,7 @@ BarcodeWriter.CreateBarcode("SHIP-2024-001", BarcodeEncoding.Code128)
 // Read — same package, no additional product required
 var results = BarcodeReader.Read("shipping-label.png");
 foreach (var result in results)
-    Console.WriteLine($"{result.Format}: {result.Value}");
+    Console.WriteLine($"{result.BarcodeType}: {result.Value}");
 ```
 
 ## IronBarcode vs Syncfusion Barcode: Feature Comparison
@@ -64,7 +64,7 @@ foreach (var result in results)
 | QR code with embedded logo | No | Yes — `.AddBrandLogo()` |
 | Automatic format detection on read | N/A | Yes |
 | Community / free tier | Community License (four simultaneous conditions) | 30-day trial (watermark only) |
-| Commercial license model | Annual subscription (Essential Studio) | Perpetual from $749 |
+| Commercial license model | Annual subscription (Essential Studio, custom quote) | Perpetual from $799 (Lite) |
 | License key scope | Version-specific, rotates with major NuGet updates | Version-stable within major release |
 | Platform registration steps | 3–4 steps (RegisterLicense + AddSyncfusionBlazor + ConfigureSyncfusionCore + razor imports) | One line, all platforms |
 | 1D format range | Code 128, Code 39, EAN, UPC, Codabar, and others | All Syncfusion formats plus PDF417, Aztec, MaxiCode, GS1, USPS IMb, and 50+ |
@@ -81,10 +81,13 @@ Remove the Syncfusion barcode package for the platform in use. If the project ta
 dotnet remove package Syncfusion.Blazor.BarcodeGenerator
 
 # WinForms
-dotnet remove package Syncfusion.Barcode.WinForms
+dotnet remove package Syncfusion.SfBarcode.Windows
 
 # WPF
 dotnet remove package Syncfusion.SfBarcode.WPF
+
+# WinUI
+dotnet remove package Syncfusion.Barcode.WinUI
 
 # MAUI
 dotnet remove package Syncfusion.Maui.Barcode
@@ -96,10 +99,10 @@ If no other Syncfusion packages remain in the project after removing the barcode
 dotnet remove package Syncfusion.Licensing
 ```
 
-Install IronBarcode — one package for all platforms:
+Install IronBarcode — one package for all platforms (NuGet package id is `BarCode`):
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Step 2: Update Namespaces
@@ -277,14 +280,15 @@ If the project used Barcode Reader OPX — or deferred a reading requirement to 
 **Syncfusion Approach (Barcode Reader OPX):**
 
 ```csharp
-// Requires separate Syncfusion Barcode Reader OPX purchase
+// Requires separate Syncfusion Barcode Reader OPX add-on, used in
+// conjunction with Syncfusion Essential PDF and the ZXing assembly.
 // OPX wraps ZXing.Net internally (Apache 2.0 — free to use directly)
-using Syncfusion.BarcodeReader;
+using Syncfusion.BarcodeReader.OPX;
 
-var reader = new BarcodeReader();
-var results = reader.ReadBarcodes("warehouse-scan.png");
-foreach (var result in results)
-    Console.WriteLine($"Value: {result.Value}");
+var reader = new BarcodeReader("warehouse-scan.pdf", FormatType.PDF);
+BarcodeResult result = reader.ScanBarcode();
+Console.WriteLine($"Type: {result.BarcodeType}");
+Console.WriteLine($"Value: {result.BarcodeText}");
 ```
 
 **IronBarcode Approach:**
@@ -296,9 +300,8 @@ using IronBarCode;
 var results = BarcodeReader.Read("warehouse-scan.png");
 foreach (var result in results)
 {
-    Console.WriteLine($"Format: {result.Format}");
+    Console.WriteLine($"Type: {result.BarcodeType}");
     Console.WriteLine($"Value: {result.Value}");
-    Console.WriteLine($"Confidence: {result.Confidence}%");
 }
 ```
 

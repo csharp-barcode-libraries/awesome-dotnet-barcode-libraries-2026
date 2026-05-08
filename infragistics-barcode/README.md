@@ -35,11 +35,11 @@ The WinForms barcode component provides generation capabilities:
 
 A separate assembly provides barcode recognition:
 
-- Assembly: `InfragisticsWPF.Controls.Barcodes.BarcodeReader.dll`
-- Available only in the WPF package
-- Supports approximately 15 symbologies
-- Uses event-driven API pattern (DecodeComplete callback)
-- Can decode from images or webcam frames
+- Class: `Infragistics.Controls.Barcodes.BarcodeReader` (Ultimate UI for WPF)
+- Available only in the WPF product
+- Supports six symbology families: QR, EAN/UPC, Code 39 (including Code 39 Extended), Code 128, MaxiCode, and Interleaved 2 of 5 — DataMatrix is NOT supported by the reader
+- Uses event-driven API pattern (`DecodeComplete` callback)
+- Can decode from `BitmapSource` images or webcam frames
 
 ### The Critical Limitation
 
@@ -60,17 +60,17 @@ Infragistics sells products primarily through the Ultimate subscription:
 
 | Product | Price (2026) | Includes |
 |---------|-------------|----------|
-| Infragistics Ultimate | $1,675/year per developer | All platforms |
-| Ultimate with Priority Support | $2,675/year per developer | Priority support added |
-| Indigo.Design + Ultimate | $2,900/year per developer | Design tools + all UI |
+| Infragistics Ultimate | ~$2,300+/year per developer (v25.2 listed at ~$2,307–$2,351 on ComponentSource) | All platforms |
+| Infragistics Professional | ~$1,599/year per developer | Web/desktop UI components (no design tools) |
+| Ignite UI | Separate web-only bundle | Angular/React/Web Components/Blazor |
 
-*Pricing as of January 2026. Visit Infragistics pricing page for current rates.*
+*Pricing as of early 2026 from ComponentSource. The Infragistics public pricing page does not display per-developer figures — confirm with sales for your tier.*
 
 Individual platform packages (like WPF-only) are available but often not much cheaper than Ultimate, pushing developers toward the full bundle.
 
 ### What You're Buying for Barcode Functionality
 
-When purchasing Infragistics Ultimate at $1,675/year for barcode features:
+When purchasing Infragistics Ultimate at ~$2,300+/year for barcode features:
 
 ```
 Infragistics Ultimate Contents:
@@ -101,7 +101,7 @@ The suite bundling creates several concerns:
 Even after purchasing Ultimate, you still can't read barcodes on WinForms or web platforms. The WPF-only reader doesn't help if your application targets other frameworks.
 
 **Renewal Dependency:**
-The $1,675/year subscription must continue for updates and support. Stopping payment means no new features and potentially no bug fixes.
+The annual subscription must continue for updates and support. Stopping payment means no new features and potentially no bug fixes.
 
 **Value Proposition:**
 If you only need barcode functionality, you're paying for 100+ controls you may never use, and you still don't get consistent reading across platforms.
@@ -139,12 +139,12 @@ The disparity is significant: Infragistics provides reading on exactly one platf
 
 | Feature | Infragistics | IronBarcode |
 |---------|-------------|-------------|
-| Symbologies (Read) | ~15 | 50+ |
-| Symbologies (Write) | ~20 | 50+ |
+| Symbology families (Read) | 6 (QR, EAN/UPC, Code 39, Code 128, MaxiCode, Interleaved 2 of 5) | 30+ |
+| Symbologies (Write) | ~20 (XamBarcode + UltraWinBarcode combined) | 30+ |
 | QR Code Reading | Yes (WPF only) | Yes (everywhere) |
-| DataMatrix Reading | Yes (WPF only) | Yes (everywhere) |
+| DataMatrix Reading | **No** (not supported by the WPF reader) | Yes (everywhere) |
 | PDF Barcode Reading | No | Yes |
-| Automatic Detection | No | Yes |
+| Automatic Detection | Yes — `Symbology.All` searches every supported family | Yes |
 | ML Error Correction | No | Yes |
 
 ---
@@ -153,46 +153,39 @@ The disparity is significant: Infragistics provides reading on exactly one platf
 
 ### Infragistics Barcode Installation
 
-**Step 1: NuGet Packages (Platform-Specific)**
+**Step 1: Install via the Infragistics installer or private NuGet feed**
 
-For WPF with reading capability:
-```bash
-dotnet add package Infragistics.WPF.Barcodes
-dotnet add package Infragistics.WPF.BarcodeReader
+Infragistics Ultimate is not on public nuget.org. Distribution is via the platform installer (which drops assemblies under `Program Files`) or via Infragistics' private NuGet feed:
+
+```
+https://packages.infragistics.com/nuget/labs/
 ```
 
-For WinForms (generation only):
-```bash
-dotnet add package Infragistics.Win.UltraWinBarcode
+After registering the feed with your credentials, you reference the umbrella WPF or WinForms packages — there is no standalone `Infragistics.WPF.BarcodeReader` package on the public feed.
+
+For WPF with reading capability, the assemblies you need are:
+
+```xml
+<Reference Include="InfragisticsWPF.Controls.Barcodes.BarcodeReader" />
+<Reference Include="InfragisticsWPF.Controls.Barcodes.XamBarcode" />
 ```
+
+For WinForms (generation only), the relevant assembly is `Infragistics.Win.UltraWinBarcode` shipped inside the WinForms suite — referenced from the GAC or the install directory.
 
 **Step 2: License Configuration**
 
-Infragistics uses runtime license verification:
+Infragistics uses runtime license verification configured through `licenses.licx`:
 
 ```csharp
-// License key must be set in your assembly
-// Usually configured via licenses.licx file or startup code
-
-// Check license status
-var licenseStatus = Infragistics.Win.UltraLicenseKeyProvider.GetLicenseKey();
-```
-
-**Step 3: Assembly References (WPF BarcodeReader)**
-
-For barcode reading, you need the specific BarcodeReader assembly:
-
-```xml
-<Reference Include="InfragisticsWPF.Controls.Barcodes.BarcodeReader">
-  <HintPath>..\packages\Infragistics.WPF.BarcodeReader.dll</HintPath>
-</Reference>
+// Build action: licenses.licx file processes embedded license tokens at compile time.
+// Runtime checks are performed against your registered serial.
 ```
 
 ### IronBarcode Installation
 
 **Step 1: Single NuGet Package**
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 **Step 2: License Configuration (One Line)**
@@ -212,9 +205,9 @@ var results = BarcodeReader.Read("barcode.png");
 
 | Setup Step | Infragistics | IronBarcode |
 |------------|-------------|-------------|
-| NuGet packages | 2+ per platform | 1 universal |
-| License deployment | Complex key system | Single key string |
-| Assembly references | Manual for reader | Automatic |
+| Distribution | Installer + private NuGet feed (credentialed) | Public NuGet (`BarCode`) |
+| License deployment | `licenses.licx` + serial | Single key string |
+| Assembly references | Manual per platform | Automatic |
 | Platform configuration | Per-platform setup | None needed |
 | Reading capability | Check platform first | Always available |
 
@@ -254,21 +247,21 @@ namespace InfragisticsWpfReader
             // Load image as WPF BitmapSource
             var bitmap = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
 
-            // Specify symbologies to look for (no auto-detection)
-            _reader.SymbologyTypes = SymbologyType.Code128 |
-                                     SymbologyType.QR |
-                                     SymbologyType.EAN13;
+            // Symbology is passed as a Decode() parameter, not a property.
+            // The Symbology enum is [Flags]; combine families with bitwise OR.
+            // Note: EAN-8/EAN-13/UPC-A/UPC-E share a single EanUpc flag.
+            var symbologies = Symbology.Code128 | Symbology.QRCode | Symbology.EanUpc;
 
-            // Start async decode
-            _reader.Decode(bitmap);
+            // Start async decode (DecodeAsync) or synchronous (Decode)
+            _reader.DecodeAsync(bitmap, symbologies);
             // Result comes via event callback...
         }
 
         private void OnDecodeComplete(object sender, ReaderDecodeArgs e)
         {
-            if (e.SymbologyValue != null)
+            if (e.SymbolFound)
             {
-                Console.WriteLine($"Found: {e.Symbology} = {e.SymbologyValue}");
+                Console.WriteLine($"Found: {e.Symbology} = {e.Value}");
             }
         }
     }
@@ -299,14 +292,14 @@ namespace UniversalBarcodeService
             // Automatic format detection - no specification needed
             var results = BarcodeReader.Read(imagePath);
 
-            return results.FirstOrDefault()?.Text ?? "No barcode found";
+            return results.FirstOrDefault()?.Value ?? "No barcode found";
         }
 
         public string[] ReadFromPdf(string pdfPath)
         {
             // PDF support not available in Infragistics
             var results = BarcodeReader.Read(pdfPath);
-            return results.Select(r => r.Text).ToArray();
+            return results.Select(r => r.Value).ToArray();
         }
     }
 }
@@ -347,15 +340,14 @@ public class InfragisticsBarcodeReader
 
         var bitmap = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
 
-        // Must specify symbologies
-        _reader.SymbologyTypes = SymbologyType.Code128 |
-                                 SymbologyType.Code39 |
-                                 SymbologyType.QR |
-                                 SymbologyType.EAN13 |
-                                 SymbologyType.DataMatrix;
+        // Symbology is a Decode parameter, not a reader property.
+        // Note: DataMatrix is NOT in the Symbology enum — the WPF reader
+        // does not support DataMatrix. Code 39 is exposed as Code39Ext.
+        var symbologies = Symbology.Code128 | Symbology.Code39Ext |
+                          Symbology.QRCode | Symbology.EanUpc;
 
-        // Trigger decode
-        _reader.Decode(bitmap);
+        // Trigger async decode
+        _reader.DecodeAsync(bitmap, symbologies);
 
         // Wait for callback
         return await _resultSource.Task;
@@ -363,9 +355,9 @@ public class InfragisticsBarcodeReader
 
     private void OnDecodeComplete(object sender, ReaderDecodeArgs e)
     {
-        if (e.SymbologyValue != null)
+        if (e.SymbolFound)
         {
-            _resultSource?.TrySetResult(e.SymbologyValue);
+            _resultSource?.TrySetResult(e.Value);
         }
         else
         {
@@ -402,7 +394,7 @@ public class IronBarcodeReader
     public string ReadBarcode(string imagePath)
     {
         var results = BarcodeReader.Read(imagePath);
-        return results.FirstOrDefault()?.Text ?? "No barcode found";
+        return results.FirstOrDefault()?.Value ?? "No barcode found";
     }
 
     // Batch processing is trivial
@@ -415,7 +407,7 @@ public class IronBarcodeReader
             .GroupBy(r => r.InputPath ?? "")
             .ToDictionary(
                 g => g.Key,
-                g => g.First().Text
+                g => g.First().Value
             );
     }
 
@@ -425,7 +417,7 @@ public class IronBarcodeReader
         return await Task.Run(() =>
         {
             var results = BarcodeReader.Read(imagePath);
-            return results.FirstOrDefault()?.Text ?? "No barcode found";
+            return results.FirstOrDefault()?.Value ?? "No barcode found";
         });
     }
 }
@@ -450,54 +442,54 @@ For detailed event-driven API comparison, see: [Event-Driven API Code Example](i
 
 | Scenario | Infragistics (Annual) | IronBarcode |
 |----------|----------------------|-------------|
-| Single developer | $1,675/year | $749 one-time |
-| 10 developers | $16,750/year | $2,999 one-time |
-| 5-year TCO (10 developers) | $83,750 | $2,999 |
+| Single developer | ~$2,300+/year (Ultimate) | $799 one-time (Lite) |
+| 10 developers | ~$23,000+/year | $2,399 one-time (Pro covers up to 10 devs) |
+| 5-year TCO (10 developers) | ~$115,000+ | $2,399 |
 
-*Note: Infragistics Ultimate pricing. Individual platform packages may vary.*
+*Note: Infragistics Ultimate pricing per ComponentSource for v25.2 (~$2,307–$2,351 per developer per year). IronBarcode tiers: $799 Lite / $1,199 Plus / $2,399 Pro / $4,799 Unlimited (perpetual).*
 
 ### 5-Year Total Cost Analysis
 
 For a team needing barcode functionality:
 
 ```
-Infragistics Ultimate (10 developers):
-  Year 1: $16,750 ($1,675 × 10)
-  Year 2: $16,750
-  Year 3: $16,750
-  Year 4: $16,750
-  Year 5: $16,750
+Infragistics Ultimate (10 developers, ~$2,300/dev/year):
+  Year 1: ~$23,000
+  Year 2: ~$23,000
+  Year 3: ~$23,000
+  Year 4: ~$23,000
+  Year 5: ~$23,000
   ─────────────────
-  Total: $83,750
+  Total: ~$115,000
 
   Note: Reading still only works on WPF!
 
-IronBarcode Professional:
-  Year 1: $2,999 (one-time, 10 developers)
+IronBarcode Pro (10 developers):
+  Year 1: $2,399 (one-time)
   Year 2: $0
   Year 3: $0
   Year 4: $0
   Year 5: $0
   ─────────────────
-  Total: $2,999
+  Total: $2,399
 
   Includes: Full reading on ALL platforms
 
-Savings with IronBarcode: $80,751
+Savings with IronBarcode over 5 years: ~$112,000
 ```
 
 ### Cost Per Feature Analysis
 
 | Feature Needed | Infragistics | IronBarcode |
 |----------------|-------------|-------------|
-| WPF generation | $1,675/year | $749 one-time |
-| WPF reading | $1,675/year | $749 one-time |
-| WinForms generation | $1,675/year | $749 one-time |
-| WinForms reading | **Not available** | $749 one-time |
-| ASP.NET reading | **Not available** | $749 one-time |
-| PDF reading | **Not available** | $749 one-time |
+| WPF generation | ~$2,300/year | $799 one-time |
+| WPF reading | ~$2,300/year | $799 one-time |
+| WinForms generation | ~$2,300/year | $799 one-time |
+| WinForms reading | **Not available** | $799 one-time |
+| ASP.NET reading | **Not available** | $799 one-time |
+| PDF reading | **Not available** | $799 one-time |
 
-With IronBarcode, $749 covers all platforms and features. With Infragistics, $1,675/year still leaves WinForms and web without reading capability.
+With IronBarcode, $799 (Lite) covers a single developer across all platforms and features. With Infragistics, ~$2,300+/year still leaves WinForms and web without reading capability.
 
 ---
 
@@ -535,23 +527,24 @@ With IronBarcode, $749 covers all platforms and features. With Infragistics, $1,
 
 ### Package Changes
 
-**Remove Infragistics packages:**
+**Remove Infragistics references:**
 ```xml
-<!-- Remove from .csproj -->
-<PackageReference Include="Infragistics.WPF.Barcodes" />
-<PackageReference Include="Infragistics.WPF.BarcodeReader" />
-<PackageReference Include="Infragistics.Win.UltraWinBarcode" />
+<!-- Remove from .csproj — assemblies referenced from the Infragistics install,
+     or PackageReferences pulled from the private feed
+     (https://packages.infragistics.com/nuget/labs/) -->
+<Reference Include="InfragisticsWPF.Controls.Barcodes.BarcodeReader" />
+<Reference Include="InfragisticsWPF.Controls.Barcodes.XamBarcode" />
+<Reference Include="Infragistics.Win.UltraWinBarcode" />
 ```
 
-**Add IronBarcode:**
+**Add IronBarcode (public NuGet, package id `BarCode`):**
 ```xml
-<PackageReference Include="IronBarcode" Version="2024.*" />
+<PackageReference Include="BarCode" Version="*" />
 ```
 
 Or via CLI:
 ```bash
-dotnet remove package Infragistics.WPF.BarcodeReader
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### License Configuration Migration
@@ -583,8 +576,10 @@ IronBarCode.License.LicenseKey = "YOUR-KEY-HERE";
 |-------------|-------------|-------|
 | `BarcodeReader` class | `BarcodeReader.Read()` | Static method |
 | `reader.DecodeComplete` event | Not needed | Synchronous return |
-| `reader.SymbologyTypes = ...` | Automatic | No format specification |
-| `reader.Decode(bitmap)` | `BarcodeReader.Read(path)` | Direct file input |
+| `reader.Decode(bitmap, Symbology.All)` | Automatic | No format specification |
+| `reader.Decode(bitmap, ...)` | `BarcodeReader.Read(path)` | Direct file input |
+| `e.Value` (in `ReaderDecodeArgs`) | `result.Value` | Same name |
+| `e.Symbology` (in `ReaderDecodeArgs`) | `result.BarcodeType` | Renamed |
 | Event callback pattern | Direct result | Simpler code flow |
 
 ### Code Migration Examples
@@ -622,15 +617,17 @@ public void Initialize()
 
 public void ReadBarcode(BitmapSource image)
 {
-    _reader.SymbologyTypes = SymbologyType.QR | SymbologyType.Code128;
-    _reader.Decode(image);
+    _reader.DecodeAsync(image, Symbology.QRCode | Symbology.Code128);
     // Result comes later via event...
 }
 
 private void OnDecodeComplete(object sender, ReaderDecodeArgs e)
 {
-    _result = e.SymbologyValue;
-    // Now you can use _result...
+    if (e.SymbolFound)
+    {
+        _result = e.Value;
+        // Now you can use _result...
+    }
 }
 ```
 
@@ -640,7 +637,7 @@ public string ReadBarcode(string imagePath)
 {
     // Synchronous, returns immediately
     var results = BarcodeReader.Read(imagePath);
-    return results.FirstOrDefault()?.Text ?? "No barcode found";
+    return results.FirstOrDefault()?.Value ?? "No barcode found";
 }
 ```
 
@@ -663,7 +660,7 @@ barcode.Data = "12345678";
 ```csharp
 // Full read/write on WinForms
 var results = BarcodeReader.Read("barcode.png");
-var text = results.First().Text;
+var value = results.First().Value;
 
 // Generation also works
 BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
@@ -702,7 +699,7 @@ BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
 ### Documentation Links
 
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/docs/) - Official IronBarcode guides
-- [IronBarcode on NuGet](https://www.nuget.org/packages/BarCode) - Package download
+- [IronBarcode on NuGet (`BarCode`)](https://www.nuget.org/packages/BarCode) - Package download
 - [Infragistics BarcodeReader Documentation](https://www.infragistics.com/products/wpf/barcodes/barcode-reader) - Official Infragistics guides
 
 ### Code Example Files

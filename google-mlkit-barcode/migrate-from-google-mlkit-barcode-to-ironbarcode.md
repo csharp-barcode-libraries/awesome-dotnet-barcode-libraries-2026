@@ -1,8 +1,8 @@
 # Porting Barcode Logic from Google ML Kit to IronBarcode in .NET
 
-This guide is for teams in one of two situations: you are porting an Android application to .NET MAUI or .NET 9 and need to replace ML Kit's barcode scanner with a managed alternative, or you were recommended Google ML Kit in a cross-platform barcode discussion and discovered — when you went to add the NuGet package — that it does not exist.
+This guide is for teams in one of two situations: you are porting an Android application to .NET MAUI or .NET 9 and need to replace ML Kit's barcode scanner with a managed alternative, or you were recommended Google ML Kit in a cross-platform barcode discussion and discovered — when you went to add the NuGet package — that no first-party .NET package exists.
 
-Google ML Kit Barcode Scanning is a native Android and iOS library. It ships as a Maven dependency (`com.google.mlkit:barcode-scanning`) for Kotlin/Java and as a CocoaPod (`GoogleMLKit/BarcodeScanning`) for Swift. There is no official .NET SDK, no `dotnet add package google-mlkit-barcode`, and no C# API from Google. Community-maintained Xamarin bindings have appeared over the years but they break when ML Kit updates its underlying SDK, which it does frequently.
+Google ML Kit Barcode Scanning is a native Android and iOS library. It ships as a Maven dependency (`com.google.mlkit:barcode-scanning:17.3.0`, or the unbundled `com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1`) for Kotlin/Java, and as a CocoaPod (`GoogleMLKit/BarcodeScanning`) for Swift. Google does not publish a .NET SDK. Community-maintained Xamarin and MAUI bindings have appeared over the years (`Xamarin.GooglePlayServices.MLKit.BarcodeScanning`, `BarcodeScanning.Native.Maui`, and others), but they trail upstream releases and only work on Android and iOS.
 
 IronBarcode is a native .NET library that installs from NuGet, integrates with standard .NET patterns, and runs on Windows, Linux, macOS, Docker, Azure, and AWS. This guide shows how to translate the patterns you wrote in Kotlin or Java into equivalent C# code.
 
@@ -16,20 +16,20 @@ When porting from ML Kit to IronBarcode, a few things change structurally — no
 
 **No InputImage construction.** ML Kit's `InputImage` must be constructed from an Android-specific source: `InputImage.fromFilePath(context, uri)`, `InputImage.fromBitmap(bitmap, rotation)`, or `InputImage.fromMediaImage(image, rotation)`. IronBarcode accepts a file path string, a `Stream`, a `byte[]`, or a `System.Drawing.Bitmap`. No Android context, no URI, no rotation metadata.
 
-**No Google Play Services.** ML Kit's on-device model runs through Google Play Services. Devices without Play Services cannot use the standard model. IronBarcode has no such dependency — it runs identically on any platform .NET supports.
+**No Google Play Services constraint.** The unbundled ML Kit model runs through Google Play Services. Devices without Play Services cannot use it; the bundled model works without Play Services but adds about 2.4 MB to your APK. IronBarcode has no such dependency — it runs identically on any platform .NET supports.
 
 ## Quick Setup in .NET
 
 Remove any Xamarin/MAUI ML Kit binding packages if they exist in your project, then install IronBarcode:
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 Add the license key at application startup — in `Program.cs`, `MauiProgram.cs`, or `Startup.cs` depending on your app type:
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 IronBarCode.License.LicenseKey = "YOUR-LICENSE-KEY";
@@ -76,7 +76,7 @@ try
     if (barcode != null)
     {
         Console.WriteLine($"Value: {barcode.Value}");
-        Console.WriteLine($"Format: {barcode.Format}");
+        Console.WriteLine($"Type: {barcode.BarcodeType}");
     }
 }
 catch (Exception ex)
@@ -85,7 +85,7 @@ catch (Exception ex)
 }
 ```
 
-The result is available immediately as a return value. `barcode.Value` corresponds to `barcode.rawValue`. `barcode.Format` corresponds to `barcode.format`. Error handling uses standard try/catch instead of a separate failure listener.
+The result is available immediately as a return value. `barcode.Value` corresponds to `barcode.rawValue`. `barcode.BarcodeType` corresponds to `barcode.format`. Error handling uses standard try/catch instead of a separate failure listener.
 
 ### Multi-Barcode Read
 
@@ -124,8 +124,8 @@ var options = new BarcodeReaderOptions
 var results = BarcodeReader.Read("warehouse-shelf.jpg", options);
 foreach (var barcode in results)
 {
-    Console.WriteLine($"Format: {barcode.Format}, Value: {barcode.Value}");
-    ProcessBarcode(barcode.Value, barcode.Format);
+    Console.WriteLine($"Type: {barcode.BarcodeType}, Value: {barcode.Value}");
+    ProcessBarcode(barcode.Value, barcode.BarcodeType);
 }
 ```
 
@@ -169,7 +169,7 @@ The bitwise OR combination works the same way as ML Kit's vararg format list.
 
 ## Result Access: rawValue and format
 
-ML Kit's result object exposes `rawValue` (a `String?`) and `format` (an `Int` constant). IronBarcode's result exposes `Value` (a `string`) and `Format` (a `BarcodeEncoding` enum value).
+ML Kit's result object exposes `rawValue` (a `String?`) and `format` (an `Int` constant). IronBarcode's result exposes `Value` (a `string`) and `BarcodeType` (a `BarcodeEncoding` enum value).
 
 ```kotlin
 // ML Kit Kotlin — result fields
@@ -182,12 +182,11 @@ val displayValue: String? = barcode.displayValue
 ```csharp
 // IronBarcode C# — result fields
 string value = barcode.Value;
-BarcodeEncoding format = barcode.Format;
+BarcodeEncoding type = barcode.BarcodeType;
 System.Drawing.Bitmap barcodeImage = barcode.BarcodeImage;
-string textValue = barcode.Text; // human-readable display value
 ```
 
-`barcode.Value` is always a non-null string in IronBarcode — if the read succeeded, the value is present. `barcode.Format` is the `BarcodeEncoding` enum member, which you can compare directly: `if (barcode.Format == BarcodeEncoding.QRCode)`.
+`barcode.Value` is always a non-null string in IronBarcode — if the read succeeded, the value is present. `barcode.BarcodeType` is the `BarcodeEncoding` enum member, which you can compare directly: `if (barcode.BarcodeType == BarcodeEncoding.QRCode)`.
 
 ## What's Different in .NET
 
@@ -210,7 +209,7 @@ foreach (var barcode in results)
 
 **No context parameter.** Every ML Kit call that constructs an `InputImage` requires an Android `Context`. IronBarcode needs only a file path or stream. Removing context threading from barcode logic simplifies the code considerably.
 
-**No Google Play Services.** The standard ML Kit model runs through Play Services — `BarcodeScanning.getClient()` checks Play Services availability at runtime and throws if unavailable. IronBarcode has no runtime service check. It either reads the image or throws a standard exception.
+**No Google Play Services constraint.** The unbundled ML Kit model runs through Play Services — `BarcodeScanning.getClient()` checks Play Services availability at runtime and throws if unavailable. IronBarcode has no runtime service check. It either reads the image or throws a standard exception.
 
 **Standard exception handling.** ML Kit's `addOnFailureListener` receives a Java `Exception` subclass. In .NET, failures surface as standard `System.Exception` throws, catchable with try/catch in the normal way.
 
@@ -231,7 +230,7 @@ var options = new BarcodeReaderOptions
 var results = BarcodeReader.Read("invoice-batch.pdf", options);
 foreach (var barcode in results)
 {
-    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Format} — {barcode.Value}");
+    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.BarcodeType} — {barcode.Value}");
 }
 ```
 
@@ -294,7 +293,7 @@ using IronBarCode;
 
 // Process a folder of scanned document images
 var imageFiles = Directory.GetFiles("/data/scans", "*.jpg");
-var allResults = new List<(string File, string Value, BarcodeEncoding Format)>();
+var allResults = new List<(string File, string Value, BarcodeEncoding Type)>();
 
 foreach (var file in imageFiles)
 {
@@ -307,14 +306,14 @@ foreach (var file in imageFiles)
     var results = BarcodeReader.Read(file, options);
     foreach (var barcode in results)
     {
-        allResults.Add((file, barcode.Value, barcode.Format));
+        allResults.Add((file, barcode.Value, barcode.BarcodeType));
     }
 }
 
 // Write results to CSV, database, etc.
-foreach (var (file, value, format) in allResults)
+foreach (var (file, value, type) in allResults)
 {
-    Console.WriteLine($"{file}: [{format}] {value}");
+    Console.WriteLine($"{file}: [{type}] {value}");
 }
 ```
 
@@ -324,8 +323,8 @@ This pattern — reading a folder of images, extracting barcodes, aggregating re
 
 | Feature | Google ML Kit | IronBarcode |
 |---|---|---|
-| .NET NuGet package | None | `IronBarcode` |
-| C# / .NET API | None | Yes |
+| First-party .NET NuGet package | None | `BarCode` |
+| C# / .NET API from vendor | None | Yes |
 | Barcode reading | Yes (Android/iOS) | Yes (all platforms) |
 | Barcode generation | No | Yes |
 | QR code generation | No | Yes |
@@ -337,21 +336,22 @@ This pattern — reading a folder of images, extracting barcodes, aggregating re
 | ASP.NET Core | No | Yes |
 | Azure Functions | No | Yes |
 | Docker / Linux | No | Yes |
-| Google Play Services required | Yes | No |
-| Firebase dependency (iOS) | Yes | No |
+| Google Play Services required (unbundled) | Yes | No |
+| Firebase dependency | No (since June 2020) | No |
 | Synchronous .NET API | No | Yes |
-| Dependency injection friendly | No | Yes (static API) |
 | `ExpectMultipleBarcodes` option | Via result list | `BarcodeReaderOptions` |
 | Format specification | `setBarcodeFormats()` | `ExpectedBarcodeTypes` |
 | Speed/accuracy tradeoff | Fixed (model-based) | `ReadingSpeed` enum |
-| Pricing | Free (mobile, Play Services) | From $749 perpetual |
-| Platforms | Android, iOS | Windows, Linux, macOS, Docker, Azure, AWS |
+| Pricing | Free (on-device API) | From $799 perpetual (Lite) |
+| Platforms | Android, iOS | Windows, Linux, macOS, Docker, Azure, AWS, MAUI |
 
 ## Migration Checklist
 
 If you are porting an Android codebase or replacing an unofficial Xamarin ML Kit binding, search your project for these patterns and apply the translations above:
 
-- `com.google.mlkit:barcode-scanning` in Gradle files → remove, add `IronBarcode` NuGet
+- `com.google.mlkit:barcode-scanning` in Gradle files → remove, add `BarCode` NuGet
+- `com.google.android.gms:play-services-mlkit-barcode-scanning` (unbundled) → same removal
+- `pod 'GoogleMLKit/BarcodeScanning'` in Podfile → remove
 - `BarcodeScannerOptions.Builder()` → `new BarcodeReaderOptions { }`
 - `BarcodeScanning.getClient(options)` → remove (no scanner instance in IronBarcode)
 - `InputImage.fromFilePath(context, uri)` → file path string argument
@@ -360,11 +360,11 @@ If you are porting an Android codebase or replacing an unofficial Xamarin ML Kit
 - `.addOnSuccessListener { barcodes -> }` → iterate return value of `Read()`
 - `.addOnFailureListener { e -> }` → try/catch around `Read()`
 - `barcode.rawValue` → `barcode.Value`
-- `barcode.format` → `barcode.Format`
+- `barcode.format` → `barcode.BarcodeType`
 - `Barcode.FORMAT_QR_CODE` → `BarcodeEncoding.QRCode`
 - `Barcode.FORMAT_CODE_128` → `BarcodeEncoding.Code128`
 - `Barcode.FORMAT_ALL_FORMATS` → omit `ExpectedBarcodeTypes`
-- `using Google.MLKit.BarcodeScanning;` (Xamarin binding) → `using IronBarCode;`
+- Community Xamarin binding `using` directives → `using IronBarCode;`
 - `IronBarCode.License.LicenseKey` should be set in `MauiProgram.cs`, `Program.cs`, or `Startup.cs`
 
 The structural change from callback-based to synchronous code is the main work. The format constants and result field names are direct mappings. PDF and generation support are purely additive — they require no migration, only new code.

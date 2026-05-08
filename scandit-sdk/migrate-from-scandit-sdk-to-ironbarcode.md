@@ -8,7 +8,7 @@ This guide covers the migration path for teams using Scandit's .NET packages to 
 
 **Camera Pipeline Overhead:** Every Scandit integration begins with the same initialization sequence regardless of whether a camera is present in the deployment environment: construct a `DataCaptureContext`, configure `BarcodeCaptureSettings`, enumerate the symbologies to enable, acquire a `Camera` instance, assign it as the frame source, transition the camera to an active state, and enable barcode capture. This initialization exists because Scandit processes live video frames. For server-side file processing, the sequence provides no benefit and introduces stateful complexity that has no equivalent in the target environment — there is no camera in a Docker container and no frame source in an Azure Function.
 
-**No Public Pricing:** Scandit does not publish pricing. SparkScan, MatrixScan, ID Scanning, AR Overlays, and Parser are individually priced products that each require a separate sales inquiry. A budget proposal, vendor comparison, or cost-benefit analysis cannot be completed without entering a sales cycle that may span days or weeks. IronBarcode [lists its pricing publicly](https://ironsoftware.com/csharp/barcode/licensing/) — $749, $1,499, or $2,999 as a one-time perpetual purchase — so the number is on the page before a line of code is written.
+**No Public Pricing:** Scandit does not publish dollar figures on its [pricing page](https://www.scandit.com/pricing/). SparkScan, MatrixScan, ID Scanning, AR Overlays, and Parser sit across Core, Standard, and Advanced editions, and every paid configuration requires a tailored quote that depends on edition, device count, and scan volume. A budget proposal, vendor comparison, or cost-benefit analysis cannot be completed without entering a sales cycle that may span days or weeks. IronBarcode [lists its pricing publicly](https://ironsoftware.com/csharp/barcode/licensing/) — $799 Lite, $1,199 Plus, $2,399 Professional, or $4,799 Unlimited as a one-time perpetual purchase — so the number is on the page before a line of code is written.
 
 **Mandatory Symbology Declaration:** Scandit requires explicit enablement of each barcode format before a scanning session begins. In real-time camera scanning, this is a performance optimization — restricting symbologies reduces per-frame processing overhead. In file-based document processing, where incoming documents may carry any barcode format from any supplier or partner, mandatory format declaration becomes a constraint. Enumerating every possible symbology removes the performance benefit; writing format-guessing logic on top of the library adds engineering overhead.
 
@@ -39,11 +39,11 @@ barcodeCapture.IsEnabled = true;
 
 ```csharp
 // IronBarcode: direct file reading
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 IronBarCode.License.LicenseKey = "YOUR-KEY";
 var results = BarcodeReader.Read("barcode.png");
 foreach (var result in results)
-    Console.WriteLine($"{result.Value} ({result.Format})");
+    Console.WriteLine($"{result.Value} ({result.BarcodeType})");
 ```
 
 The entire camera pipeline block — context creation, settings, symbology enablement, camera acquisition, frame source assignment, state transition — is replaced by a license key assignment and a single method call.
@@ -74,15 +74,16 @@ The entire camera pipeline block — context creation, settings, symbology enabl
 Remove Scandit packages:
 
 ```bash
-dotnet remove package Scandit.BarcodePicker
-dotnet remove package Scandit.DataCapture.Core
+dotnet remove package Scandit.DataCapture.Barcode.Maui
+dotnet remove package Scandit.DataCapture.Core.Maui
 dotnet remove package Scandit.DataCapture.Barcode
+dotnet remove package Scandit.DataCapture.Core
 ```
 
 Install IronBarcode:
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Step 2: Update Namespaces
@@ -129,7 +130,7 @@ Processing a static image file is a core supported scenario in IronBarcode and a
 **IronBarcode Approach:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 IronBarCode.License.LicenseKey = "YOUR-KEY";
@@ -138,7 +139,7 @@ var results = BarcodeReader.Read("product-label.png");
 foreach (var result in results)
 {
     Console.WriteLine($"Value: {result.Value}");
-    Console.WriteLine($"Format: {result.Format}");
+    Console.WriteLine($"Type: {result.BarcodeType}");
     Console.WriteLine($"Image Region: {result.ImageRegion}");
 }
 ```
@@ -163,7 +164,7 @@ PDF barcode extraction is entirely new territory when migrating from Scandit, wh
 **IronBarcode Approach:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 IronBarCode.License.LicenseKey = "YOUR-KEY";
@@ -171,7 +172,7 @@ IronBarCode.License.LicenseKey = "YOUR-KEY";
 var results = BarcodeReader.Read("shipping-manifest.pdf");
 foreach (var result in results)
 {
-    Console.WriteLine($"Page {result.PageNumber}: {result.Value} ({result.Format})");
+    Console.WriteLine($"Page {result.PageNumber}: {result.Value} ({result.BarcodeType})");
 }
 ```
 
@@ -204,7 +205,7 @@ barcodeCapture.BarcodeScanned += (sender, args) =>
 **IronBarcode Approach:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 IronBarCode.License.LicenseKey = "YOUR-KEY";
@@ -213,7 +214,7 @@ var results = BarcodeReader.Read("document.png");
 foreach (var result in results)
 {
     // Same processing logic, now in standard control flow
-    LogBarcodeResult(result.Value, result.Format.ToString());
+    LogBarcodeResult(result.Value, result.BarcodeType.ToString());
     UpdateInventory(result.Value);
 }
 ```
@@ -236,7 +237,7 @@ A stateless server endpoint reading barcodes from an uploaded file represents th
 **IronBarcode Approach:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 [ApiController]
@@ -258,7 +259,7 @@ public class BarcodeController : ControllerBase
         return Ok(results.Select(r => new
         {
             r.Value,
-            Format = r.Format.ToString(),
+            Type = r.BarcodeType.ToString(),
             r.PageNumber
         }));
     }
@@ -284,7 +285,7 @@ High-volume document queues require parallel processing across multiple threads.
 **IronBarcode Approach:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 using System.Collections.Concurrent;
 
@@ -308,7 +309,7 @@ Parallel.ForEach(files, file =>
 });
 
 foreach (var (file, result) in allResults)
-    Console.WriteLine($"{Path.GetFileName(file)}: {result.Value} ({result.Format})");
+    Console.WriteLine($"{Path.GetFileName(file)}: {result.Value} ({result.BarcodeType})");
 ```
 
 For advanced patterns covering [async and multithreaded barcode reading](https://ironsoftware.com/csharp/barcode/how-to/async-multithread/), including throughput tuning and thread count configuration, the IronBarcode documentation provides detailed guidance.
@@ -327,7 +328,7 @@ For advanced patterns covering [async and multithreaded barcode reading](https:/
 | `BarcodeScanned +=` event handler | Standard `foreach` over return value | No event system needed |
 | `args.Session.NewlyRecognizedBarcodes` | Return value of `BarcodeReader.Read()` | Direct collection |
 | `barcode.Data` | `result.Value` | Same semantic content |
-| `barcode.Symbology` | `result.Format` | Equivalent format enumeration |
+| `barcode.Symbology` | `result.BarcodeType` | Equivalent format enumeration |
 | `using Scandit.DataCapture.Core` | `using IronBarCode` | Single namespace |
 | `using Scandit.DataCapture.Barcode` | `using IronBarCode` | Included in same namespace |
 | SparkScan product | `BarcodeReader.Read(path)` | No separate product required |
@@ -421,8 +422,8 @@ Document all scanning contexts — identify which code paths handle real-time ca
 
 ### Code Update Tasks
 
-1. Remove Scandit NuGet packages (`Scandit.BarcodePicker`, `Scandit.DataCapture.Core`, `Scandit.DataCapture.Barcode`)
-2. Install `IronBarcode` NuGet package
+1. Remove Scandit NuGet packages (`Scandit.DataCapture.Barcode.Maui`, `Scandit.DataCapture.Core.Maui`, `Scandit.DataCapture.Barcode`, `Scandit.DataCapture.Core`)
+2. Install `BarCode` NuGet package
 3. Replace `using Scandit.DataCapture.*` imports with `using IronBarCode`
 4. Delete the `DataCaptureContext` initialization block in its entirety
 5. Delete all `Camera.GetDefaultCamera()` and `SetFrameSourceAsync` calls
@@ -430,7 +431,7 @@ Document all scanning contexts — identify which code paths handle real-time ca
 7. Replace `barcodeCapture.IsEnabled = true` with `BarcodeReader.Read(filePath)`
 8. Convert `BarcodeScanned +=` event handlers to `foreach` over `BarcodeReader.Read()` results
 9. Replace `barcode.Data` with `result.Value`
-10. Replace `barcode.Symbology` with `result.Format`
+10. Replace `barcode.Symbology` with `result.BarcodeType`
 11. Remove PDF-to-image rendering pipelines where IronBarcode now reads PDFs directly
 12. Add `IronBarCode.License.LicenseKey = "YOUR-KEY"` at application startup
 
@@ -454,7 +455,7 @@ Verify the following after completing code updates:
 
 **Synchronous Stateless API:** The direct return value model replaces event-driven callback patterns with standard sequential code. Error handling, logging, and downstream processing integrate naturally with existing application architecture without requiring event subscription management or async state machine coordination.
 
-**Published Transparent Pricing:** Perpetual license tiers listed publicly at $749, $1,499, and $2,999 enable budget proposals, vendor comparisons, and procurement processes to proceed without a sales cycle. The license cost is determinable before writing a line of integration code.
+**Published Transparent Pricing:** Perpetual license tiers listed publicly at $799 (Lite), $1,199 (Plus), $2,399 (Professional), and $4,799 (Unlimited) enable budget proposals, vendor comparisons, and procurement processes to proceed without a sales cycle. The license cost is determinable before writing a line of integration code.
 
 **Full Cloud and Container Support:** IronBarcode's stateless, hardware-independent API runs without modification in Azure Functions, AWS Lambda, Docker containers on Linux, and any other compute environment where the .NET runtime is available. No camera simulation, no hardware dependency workarounds, and no platform-specific configuration is required to deploy in these environments.
 

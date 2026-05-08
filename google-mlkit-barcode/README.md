@@ -8,15 +8,15 @@ Google ML Kit offers barcode scanning as part of Google's machine learning API s
 |---------|---------------|-------------|
 | **Native .NET SDK** | No | Yes |
 | **Platform** | iOS/Android native | All .NET platforms |
-| **.NET MAUI Support** | Via platform bindings only | Native library |
+| **.NET MAUI Support** | Via community bindings only | Native library |
 | **ASP.NET Support** | No | Yes |
 | **Console App Support** | No | Yes |
 | **Server-Side Support** | No | Yes |
-| **Firebase Required** | Yes | No |
-| **Google Account Required** | Yes | No |
+| **Firebase Required** | No (standalone since June 2020) | No |
+| **Google Play Services (Android)** | Required for unbundled model | Not required |
 | **Offline Capable** | On-device (mobile only) | Yes (all platforms) |
 | **PDF Processing** | No | Native support |
-| **Pricing** | Free (with Firebase) | $749 perpetual |
+| **Pricing** | Free (on-device API) | From $799 perpetual (Lite) |
 
 ## What is Google ML Kit?
 
@@ -25,11 +25,11 @@ Google ML Kit is a suite of machine learning APIs from Google that provides vari
 **Key Characteristics:**
 - Website: developers.google.com/ml-kit/vision/barcode-scanning
 - Platforms: Native iOS and Android SDKs
-- Processing: On-device (no cloud requirement for basic scanning)
-- Integration: Requires Firebase project and configuration
-- Last verified: January 2026
+- Processing: On-device (no cloud requirement)
+- Distribution: Maven (`com.google.mlkit:barcode-scanning:17.3.0` bundled, or `com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1` unbundled) and CocoaPod (`GoogleMLKit/BarcodeScanning`)
+- Last verified: May 2026
 
-The barcode scanning API supports common 1D and 2D formats and uses Google's machine learning models for recognition.
+The barcode scanning API supports common 1D and 2D formats and uses Google's machine learning models for recognition. Note: ML Kit was originally a Firebase product, but Google split it out as standalone "ML Kit" in June 2020. The current standalone product at `mlkit.dev` does **not** require Firebase. The legacy "Firebase ML Kit" branding still exists for the older Firebase-bound product, which is now deprecated.
 
 ## Critical Limitation: Mobile Platform Only
 
@@ -39,10 +39,10 @@ This is the fundamental issue for .NET developers: **Google ML Kit does not prov
 - Native Swift/Objective-C SDK for iOS
 - Native Kotlin/Java SDK for Android
 - On-device machine learning processing
-- Integration with Firebase services
+- No Firebase dependency for the standalone ML Kit Barcode Scanning API
 
 ### What Google ML Kit Does NOT Offer
-- Native .NET library or NuGet package
+- Native .NET library or NuGet package from Google
 - Direct C# API
 - Server-side processing capability
 - Desktop application support
@@ -51,36 +51,29 @@ This is the fundamental issue for .NET developers: **Google ML Kit does not prov
 ### Using ML Kit from .NET?
 
 To use ML Kit from .NET, you would need:
-1. Platform-specific bindings in a MAUI application
-2. Native code interop for iOS/Android
-3. Firebase project configuration
-4. Separate implementations per platform
+1. A community-maintained Xamarin/MAUI binding (e.g., `Xamarin.GooglePlayServices.MLKit.BarcodeScanning`, or wrapper packages such as `BarcodeScanning.Native.Maui`)
+2. Native code interop for iOS and Android
+3. Separate platform-specific implementations
+4. Tracking community binding releases against upstream ML Kit updates
 
-This is fundamentally different from having a .NET library. You're not writing C# that calls ML Kit directly - you're writing platform-specific native code that happens to be orchestrated from a .NET application.
+This is fundamentally different from having a .NET library. You're not writing C# that calls ML Kit directly — you're writing platform-specific native code orchestrated through community bindings from a MAUI or Xamarin project, on Android and iOS only.
 
-## Firebase Dependency
+## Dependency Footprint
 
-Using Google ML Kit requires Firebase integration:
+Using Google ML Kit on Android imposes some platform-level requirements, though Firebase is not among them:
 
-### Firebase Requirements
-1. **Google Account** - Must have a Google account
-2. **Firebase Project** - Must create and configure a Firebase project
-3. **Configuration Files** - Must add google-services.json (Android) or GoogleService-Info.plist (iOS)
-4. **Google Play Services** - Android devices must have Google Play Services installed
-5. **Firebase SDK** - Must include Firebase SDK in your application
+### Android Requirements
+1. **Google Play Services** — required for the unbundled (smaller) model variant; the bundled variant runs without it but adds about 2.4 MB to APK size
+2. **Minimum SDK / Play Services version** — current ML Kit versions require recent Google Play Services
+3. **Gradle dependency** — `implementation 'com.google.mlkit:barcode-scanning:17.3.0'` or `implementation 'com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1'`
+
+### iOS Requirements
+1. **CocoaPods integration** — `pod 'GoogleMLKit/BarcodeScanning'`
+2. **Info.plist camera permission** for camera-based scanning
+3. **Bitcode and architecture compatibility** with the prebuilt framework
 
 ### Privacy and Data Considerations
-- Firebase collects analytics by default
-- Google account association
-- Google's data policies apply
-- Not suitable for applications avoiding Google ecosystem
-
-### Enterprise Considerations
-Some organizations have policies against:
-- Google account requirements in production applications
-- Firebase data collection
-- Dependency on Google services
-- External ML processing for sensitive data
+The standalone on-device ML Kit Barcode Scanning API processes images locally on the device and does not require sending data to Google's servers. Note: if your app also uses Firebase Analytics or other Firebase services, those have their own data collection behaviour — that is separate from ML Kit Barcode Scanning itself.
 
 ## Platform Support Comparison
 
@@ -90,7 +83,7 @@ Understanding where each solution works is essential:
 |----------|--------------|-------------|
 | iOS Native (Swift/Obj-C) | Yes | N/A (not native platform) |
 | Android Native (Kotlin/Java) | Yes | N/A (not native platform) |
-| .NET MAUI (iOS/Android) | Via bindings | Yes (native library) |
+| .NET MAUI (iOS/Android) | Via community bindings | Yes (native library) |
 | .NET MAUI Windows | No | Yes |
 | .NET MAUI macOS | No | Yes |
 | WPF | No | Yes |
@@ -107,12 +100,12 @@ Understanding where each solution works is essential:
 ### The .NET Developer Reality
 
 If you're building:
-- **Web API processing documents** - Use IronBarcode
-- **Desktop application scanning files** - Use IronBarcode
-- **Server-side batch processing** - Use IronBarcode
-- **Azure Function processing uploads** - Use IronBarcode
-- **MAUI app with camera scanning** - ML Kit is an option (with complexity)
-- **MAUI app processing files/PDFs** - Use IronBarcode
+- **Web API processing documents** — Use IronBarcode
+- **Desktop application scanning files** — Use IronBarcode
+- **Server-side batch processing** — Use IronBarcode
+- **Azure Function processing uploads** — Use IronBarcode
+- **MAUI app with camera scanning** — ML Kit (via community binding) is an option on Android/iOS only
+- **MAUI app processing files/PDFs** — Use IronBarcode
 
 ## Why Does Google ML Kit Appear in .NET Barcode Searches?
 
@@ -126,7 +119,7 @@ Developers searching for "barcode scanning C#" may find ML Kit references becaus
 
 ### 2. MAUI Developers
 .NET MAUI developers targeting mobile may consider:
-- Using ML Kit through native bindings
+- Using ML Kit through community bindings
 - Camera-focused mobile scanning scenarios
 - Applications that might benefit from Google's ML models
 
@@ -140,7 +133,7 @@ Teams may be:
 
 ### Google ML Kit - Native Code Required
 
-Since ML Kit doesn't have a .NET SDK, there is no direct C# code to compare. Here's what ML Kit integration would look like:
+Since ML Kit doesn't have a .NET SDK from Google, there is no direct C# code to compare. Here's what ML Kit integration looks like:
 
 **Android (Kotlin):**
 ```kotlin
@@ -173,8 +166,8 @@ barcodeScanner.process(image) { barcodes, error in
 ### IronBarcode - Native .NET
 
 ```csharp
-// Install: dotnet add package IronBarcode
-using IronBarcode;
+// Install: dotnet add package BarCode
+using IronBarCode;
 
 // Works in any .NET project - console, web, desktop, MAUI, etc.
 var results = BarcodeReader.Read("barcode.png");
@@ -196,11 +189,12 @@ If you needed ML Kit in a MAUI application, you would need platform-specific cod
 
 #if ANDROID
 // Android-specific ML Kit binding code
-// Requires Xamarin.Google.MLKit.BarcodeScanning NuGet package
-// Requires proper initialization and permissions
+// Requires a community Xamarin/MAUI binding such as
+// Xamarin.GooglePlayServices.MLKit.BarcodeScanning, or a
+// wrapper such as BarcodeScanning.Native.Maui
 #elif IOS
 // iOS-specific ML Kit binding code
-// Requires different NuGet package and setup
+// Requires the matching iOS-side community binding and setup
 #endif
 ```
 
@@ -215,18 +209,17 @@ var result = BarcodeReader.Read(imagePath);
 
 ### Consider Google ML Kit When:
 - Building native iOS or Android application (not .NET)
-- Already deeply integrated with Firebase
-- Need ML Kit's other features (face detection, pose, text)
 - Camera-based real-time scanning is the primary use case
-- Willing to manage platform-specific implementations
+- You also need ML Kit's other features (face detection, pose, text recognition)
+- You are willing to manage platform-specific implementations and community bindings if approaching from MAUI/Xamarin
 
 ### Use IronBarcode When:
 - Building any .NET application (web, desktop, server, mobile)
 - Processing images or PDFs (not just camera input)
 - Need server-side barcode processing
 - Want single codebase across platforms
-- Prefer to avoid Google/Firebase dependencies
-- Need offline capability without mobile device
+- Prefer to avoid platform-specific native bindings
+- Need offline capability without a mobile device
 - Building ASP.NET, console, or desktop applications
 
 ## Migration Guide: Native Mobile to .NET
@@ -252,7 +245,7 @@ Choose your .NET platform:
 ### Step 3: Install IronBarcode
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Step 4: Implement Barcode Reading
@@ -260,16 +253,16 @@ dotnet add package IronBarcode
 Replace ML Kit native code with IronBarcode:
 
 ```csharp
-using IronBarcode;
+using IronBarCode;
 
 // From file
 var results = BarcodeReader.Read("image.png");
 
 // From stream (e.g., camera capture saved to stream)
-var results = BarcodeReader.Read(imageStream);
+var streamResults = BarcodeReader.Read(imageStream);
 
 // From PDF documents
-var results = BarcodeReader.Read("document.pdf");
+var pdfResults = BarcodeReader.Read("document.pdf");
 
 // Automatic format detection - no configuration needed
 foreach (var barcode in results)
@@ -279,15 +272,14 @@ foreach (var barcode in results)
 }
 ```
 
-### Step 5: Remove Firebase Dependencies
+### Step 5: Drop the Mobile-Only Constraint
 
-Benefits of removing Firebase/ML Kit:
-- No Google account requirement
-- No Firebase project configuration
-- No google-services.json / GoogleService-Info.plist
-- No Google Play Services requirement
-- Simplified build and deployment
-- Reduced application size
+Benefits of moving from ML Kit to IronBarcode for a .NET stack:
+- No Google Play Services constraint on Android-only deployment
+- No need for separate iOS and Android implementations
+- No community-binding maintenance burden
+- Same code path runs server-side, desktop, and MAUI
+- Reduced overall solution complexity
 
 ## IronBarcode Universal Approach
 
@@ -308,13 +300,12 @@ This identical code runs in:
 - Azure Functions
 - AWS Lambda
 
-### No External Dependencies
+### No External Service Dependencies
 ```csharp
-// No Firebase
-// No Google account
-// No platform-specific configuration
+// No platform-specific native binding
+// No Google Play Services
 // Just install the NuGet package and use it
-using IronBarcode;
+using IronBarCode;
 
 var barcode = BarcodeWriter.CreateBarcode("Hello World", BarcodeEncoding.QRCode);
 barcode.SaveAsPng("output.png");
@@ -379,11 +370,13 @@ ML Kit supports these formats on mobile devices:
 - **1D:** Codabar, Code 39, Code 93, Code 128, EAN-8, EAN-13, ITF, UPC-A, UPC-E
 - **2D:** Aztec, Data Matrix, PDF417, QR Code
 
+ML Kit does **not** support MaxiCode, DotCode, Han Xin, or pharmaceutical 1D variants.
+
 ### IronBarcode Format Support
-IronBarcode supports 50+ formats across all platforms:
-- **1D:** All ML Kit formats plus Code 11, MSI, Plessey, Pharmacode, RSS/GS1, and more
-- **2D:** All ML Kit formats plus MaxiCode, MicroQR, and specialty formats
-- **Document:** Native PDF barcode extraction without image conversion
+IronBarcode supports a wider set of formats across all platforms:
+- **1D:** All ML Kit formats plus additional industrial 1D variants such as RSS/GS1 DataBar
+- **2D:** All ML Kit formats plus additional 2D variants beyond ML Kit's set
+- **Document:** Native PDF barcode extraction without manual page rasterization
 
 The broader format support in IronBarcode means fewer edge cases where barcodes cannot be read, especially in enterprise document processing scenarios.
 
@@ -407,35 +400,35 @@ For camera-based mobile scanning with immediate feedback, ML Kit performs well. 
 
 ## Conclusion
 
-Google ML Kit is an excellent solution for native mobile developers building iOS or Android applications who are already invested in the Google/Firebase ecosystem. Its on-device ML processing provides fast barcode scanning for camera-based mobile use cases.
+Google ML Kit is an excellent solution for native mobile developers building iOS or Android applications. Its on-device ML processing provides fast barcode scanning for camera-based mobile use cases, and the standalone Barcode Scanning API no longer requires Firebase.
 
-For .NET developers, however, ML Kit is not a direct option. There is no .NET SDK, and using ML Kit from .NET requires complex platform-specific bindings that only work on mobile platforms.
+For .NET developers, however, ML Kit is not a direct option. Google does not publish a .NET SDK, and using ML Kit from .NET requires community-maintained Xamarin or MAUI bindings that only work on mobile platforms.
 
 IronBarcode provides what .NET developers actually need:
-- Native .NET library with simple NuGet installation
+- Native .NET library with simple NuGet installation (`BarCode`)
 - Works across all .NET platforms (web, desktop, server, mobile)
-- No external service dependencies (Google, Firebase)
+- No external service dependencies and no platform-specific native bindings
 - Server-side and batch processing support
 - PDF document processing
 - Consistent API regardless of deployment target
-- 50+ barcode format support vs ML Kit's limited set
+- Broader symbology coverage than ML Kit's set
 
 If you arrived at this comparison while searching for .NET barcode solutions, IronBarcode is likely what you're looking for. If you specifically need Google ML Kit for a native mobile application, you're working outside the .NET ecosystem for that component.
 
 ## Code Examples
 
 - [mlkit-mobile-only.cs](mlkit-mobile-only.cs) - Platform comparison and .NET alternative
-- [mlkit-firebase-dependency.cs](mlkit-firebase-dependency.cs) - Firebase requirements and IronBarcode's simpler approach
+- [mlkit-firebase-dependency.cs](mlkit-firebase-dependency.cs) - Setup footprint comparison and IronBarcode's simpler approach
 
 ## References
 
 - <a href="https://developers.google.com/ml-kit/vision/barcode-scanning" rel="nofollow">Google ML Kit Barcode Scanning</a>
-- <a href="https://firebase.google.com/docs/ml-kit" rel="nofollow">Firebase ML Kit Documentation</a>
 - <a href="https://developers.google.com/ml-kit/vision/barcode-scanning/android" rel="nofollow">ML Kit Android Setup</a>
 - <a href="https://developers.google.com/ml-kit/vision/barcode-scanning/ios" rel="nofollow">ML Kit iOS Setup</a>
+- <a href="https://developers.google.com/ml-kit" rel="nofollow">ML Kit (standalone, post-Firebase split)</a>
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/)
 - [IronBarcode NuGet Package](https://www.nuget.org/packages/BarCode)
 
 ---
 
-*Last verified: January 2026*
+*Last verified: May 2026*

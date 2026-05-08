@@ -26,9 +26,10 @@ Syncfusion Essential Studio is one of the largest commercial UI control suites f
 The Syncfusion barcode component exists as platform-specific packages:
 
 - **Syncfusion.Blazor.BarcodeGenerator** - Blazor component
-- **Syncfusion.SfBarcode.XForms** - Xamarin Forms control
-- **Syncfusion.Barcode.WinForms** - WinForms control
+- **Syncfusion.Xamarin.SfBarcode** - Xamarin Forms control
+- **Syncfusion.SfBarcode.Windows** - WinForms control
 - **Syncfusion.SfBarcode.WPF** - WPF control
+- **Syncfusion.Barcode.WinUI** - WinUI control
 - **Syncfusion.Maui.Barcode** - .NET MAUI control
 
 Each platform requires its own NuGet package, with platform-specific APIs and behaviors.
@@ -68,27 +69,26 @@ Understanding Syncfusion's pricing requires understanding their suite-based lice
 
 When you need Syncfusion Barcode for commercial use, you're purchasing one of these options:
 
-| License Tier | Annual Cost | Includes |
+| License Tier | Pricing Model | Includes |
 |-------------|-------------|----------|
-| Essential Studio Enterprise | $2,995/year per developer | All 1,800+ controls |
-| Essential Studio Standard | $995/year per developer | Single platform controls |
-| Blazor Suite | $995/year per developer | All Blazor controls |
+| Essential Studio Enterprise | Annual subscription per developer (custom quote — see syncfusion.com/sales/pricing) | All Syncfusion UI components, document SDKs, and OPX add-ons |
+| Essential Studio Team / Project | Annual subscription per developer or per project | UI Component Suite |
+| Community License | Free (eligibility-restricted) | Same components as commercial tiers |
 
-The barcode component represents approximately 0.05% of Essential Studio's 1,800+ controls, yet you must purchase the entire suite to access it commercially.
+Syncfusion no longer publishes a public per-seat price on its pricing page; the published path is a custom quote from sales. Historical third-party listings have placed the per-developer Essential Studio price in the low-thousands-of-dollars-per-year range. The barcode component is a small slice of Syncfusion's UI Component Suite — you purchase access to the suite, not to the barcode control alone.
 
 ### The Community License
 
 Syncfusion offers a Community License that appears free but carries significant restrictions:
 
-**Eligibility Requirements (ALL must be met):**
+**Eligibility Requirements (ALL must be met, per Syncfusion's published Community License terms at syncfusion.com/products/communitylicense):**
 - Company annual gross revenue less than $1 million USD
 - 5 or fewer developers
 - 10 or fewer total employees
-- Never received more than $3 million in outside capital
+- Never received more than $3 million USD in outside capital from sources such as private equity or venture capital
 
 **Exclusions:**
-- Government organizations are NOT eligible
-- Educational institutions have separate programs
+- Tax-funded governmental organizations are NOT eligible (non-tax-funded agencies may qualify after signing a master license agreement directly with Syncfusion)
 - Revenue includes all company revenue, not just software revenue
 
 **The Audit Concern:**
@@ -100,19 +100,19 @@ The Community License requires periodic license key renewal and self-certificati
 When evaluating total cost, consider the barcode-specific value:
 
 ```
-Syncfusion Essential Studio Enterprise: $2,995/year
-├── 1,800+ UI controls
-├── Charts, Grids, Schedulers, etc.
-└── Barcode generation control
+Syncfusion Essential Studio (annual subscription, custom quote):
+├── Full UI Component Suite (DataGrid, Charts, Schedulers, etc.)
+├── Document SDKs (PDF, Word, Excel) at higher tiers
+└── Barcode generation control (small slice of the suite)
 
-Barcode functionality % of total: ~0.05%
-Implied barcode cost: $2,995 × 0.05% ≈ $1.50/year
-
-But you pay: $2,995/year
+Even at the lowest published historical tier, an annual per-developer
+subscription that recurs every year is structurally more expensive
+over a multi-year horizon than a single perpetual license for the
+barcode functionality alone.
 
 If you only need barcode functionality:
-- 5-year Syncfusion cost: $14,975
-- 5-year IronBarcode cost: $749 (one-time perpetual)
+- IronBarcode Lite: $799 perpetual (one-time)
+- Essential Studio: recurring annual subscription per developer
 ```
 
 This calculation reveals the hidden cost of suite bundling when barcode is your only requirement.
@@ -174,10 +174,13 @@ All Syncfusion formats plus: PDF417, Micro PDF417, Aztec, MaxiCode, RSS-14, RSS 
 dotnet add package Syncfusion.Blazor.BarcodeGenerator
 
 # For WinForms
-dotnet add package Syncfusion.Barcode.WinForms
+dotnet add package Syncfusion.SfBarcode.Windows
 
 # For WPF
 dotnet add package Syncfusion.SfBarcode.WPF
+
+# For WinUI
+dotnet add package Syncfusion.Barcode.WinUI
 
 # For MAUI
 dotnet add package Syncfusion.Maui.Barcode
@@ -222,7 +225,7 @@ builder.ConfigureSyncfusionCore();
 **Step 1: Single Package**
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 **Step 2: License Configuration**
@@ -327,7 +330,7 @@ var results = BarcodeReader.Read("barcode.png");
 foreach (var barcode in results)
 {
     Console.WriteLine($"Type: {barcode.BarcodeType}");
-    Console.WriteLine($"Value: {barcode.Text}");
+    Console.WriteLine($"Value: {barcode.Value}");
 }
 ```
 
@@ -357,7 +360,7 @@ var results = BarcodeReader.Read("document.pdf");
 
 foreach (var barcode in results)
 {
-    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
 }
 
 // Or generate barcode and save directly to PDF
@@ -376,35 +379,30 @@ BarcodeWriter.CreateBarcode("12345", BarcodeEncoding.Code128)
 | Aspect | Syncfusion | IronBarcode |
 |--------|------------|-------------|
 | **License Model** | Annual subscription | Perpetual with optional renewal |
-| **Base Price (1 dev)** | $995-2,995/year | $749 one-time |
-| **Team License (10 dev)** | $9,950+/year | $2,999 one-time |
-| **Renewal Required** | Yes (annual) | No (optional for updates) |
-| **Free Tier** | Community License (restrictions) | 30-day trial (full features) |
+| **Base Price (1 dev)** | Custom quote (see syncfusion.com/sales/pricing) | $799 one-time (Lite) |
+| **Multi-developer scaling** | Per-developer annual subscription | $1,199 Plus / $2,399 Pro / $4,799 Unlimited (perpetual) |
+| **Renewal Required** | Yes (annual) | No (optional for updates and support) |
+| **Free Tier** | Community License (eligibility restrictions) | 30-day trial (full features, watermark on output) |
 
 ### 5-Year Total Cost of Ownership
 
-**Scenario: 10-Developer Team**
+**Structural comparison: 10-developer team**
 
 ```
 Syncfusion Essential Studio:
-  Year 1: $9,950 (10 × $995)
-  Year 2: $9,950
-  Year 3: $9,950
-  Year 4: $9,950
-  Year 5: $9,950
-  ─────────────────────
-  Total: $49,750
+  Annual per-developer subscription, recurring every year
+  10 developers × annual subscription × 5 years
+  Pricing requires a sales quote from syncfusion.com/sales/pricing
+  Renewal is required to retain license validity
 
-IronBarcode Professional:
-  Year 1: $2,999 (one-time)
-  Year 2: $0
-  Year 3: $0
-  Year 4: $0
-  Year 5: $0
-  ─────────────────────
-  Total: $2,999
+IronBarcode Pro (covers up to 10 developers):
+  Year 1: $2,399 (one-time perpetual)
+  Years 2–5: $0 (license remains valid)
+  Total: $2,399
 
-Savings with IronBarcode: $46,751
+The savings depend on the negotiated Syncfusion quote, but the
+structural difference — recurring annual subscription versus a single
+perpetual payment — compounds every year.
 ```
 
 ### Community License Risk Assessment
@@ -439,7 +437,7 @@ The Community License is effectively a trial period for startups. Budget for com
 
 1. **You need reading AND writing** - If your workflow involves both generating barcodes and reading them from images or documents, IronBarcode provides both in a single library.
 
-2. **You only need barcode functionality** - If you don't need 1,799 other UI controls, paying $749 once for IronBarcode is more economical than $995+/year for Essential Studio.
+2. **You only need barcode functionality** - If you don't need the rest of Essential Studio's UI components, paying $799 once for IronBarcode Lite is more economical than a recurring annual Essential Studio subscription.
 
 3. **You process PDFs** - If you extract barcodes from PDF documents or embed barcodes into PDFs, IronBarcode handles this natively without additional libraries.
 
@@ -473,20 +471,20 @@ Common reasons for moving from Syncfusion Barcode to IronBarcode:
 <!-- Remove from .csproj -->
 <PackageReference Include="Syncfusion.Blazor.BarcodeGenerator" Version="x.x.x" />
 <!-- Or -->
-<PackageReference Include="Syncfusion.Barcode.WinForms" Version="x.x.x" />
+<PackageReference Include="Syncfusion.SfBarcode.Windows" Version="x.x.x" />
 ```
 
 **Add IronBarcode:**
 
 ```xml
-<PackageReference Include="IronBarcode" Version="2024.x.x" />
+<PackageReference Include="BarCode" Version="2026.x.x" />
 ```
 
 Or via CLI:
 
 ```bash
 dotnet remove package Syncfusion.Blazor.BarcodeGenerator
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### License Configuration Migration

@@ -14,7 +14,7 @@ The decision to migrate away from ZXing.Net.MAUI is typically triggered by one o
 
 **Format Specification Silent Failure:** ZXing.Net.MAUI inherits ZXing.Net's requirement to declare every barcode format to scan before scanning begins. Formats omitted from `BarcodeReaderOptions.Formats` are silently ignored even when clearly visible in the camera frame. A user who points the device at a barcode format that the developer did not anticipate sees no error — the application simply does not detect anything. In environments where barcode formats are controlled by external suppliers, customers, or third-party systems, this silent miss becomes a persistent support issue.
 
-**Pre-Release Stability:** ZXing.Net.MAUI is published at v0.5.0 — a pre-release designation under semantic versioning. No API stability guarantees, no bug fix timelines, and no production readiness commitments are made. For enterprise applications subject to dependency audits or software composition analysis, a pre-release community library without commercial support may not clear the approval process.
+**Pre-1.0 Stability:** ZXing.Net.MAUI is published at v0.7.4 — a stable NuGet release but still pre-1.0 under semantic versioning. No API stability guarantees, no bug fix timelines, and no production readiness commitments are made. For enterprise applications subject to dependency audits or software composition analysis, a pre-1.0 community library without commercial support may not clear the approval process.
 
 ### The Fundamental Problem
 
@@ -68,7 +68,7 @@ public partial class ScannerPage : ContentPage
 IronBarcode replaces the event loop with a single async call on a button tap, removes format configuration entirely, and eliminates lifecycle management from the page:
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 // IronBarcode: stateless, all platforms, auto-detection, no lifecycle boilerplate
 using IronBarCode;
 
@@ -96,7 +96,7 @@ public partial class ScannerPage : ContentPage
 
 | Feature | ZXing.Net.MAUI | IronBarcode |
 |---|---|---|
-| Release status | Pre-release (v0.5.0) | Stable, commercial release |
+| Release status | v0.7.4 (stable but still pre-1.0) | Stable, commercial release |
 | iOS MAUI | Yes (iPhone 15 Pro focus broken) | Yes |
 | Android MAUI | Yes (Camera 1.5.0 build issues) | Yes |
 | Windows MAUI | Not supported | Yes |
@@ -122,6 +122,8 @@ Remove the ZXing.Net.MAUI NuGet package:
 
 ```bash
 dotnet remove package ZXing.Net.Maui.Controls
+# (And ZXing.Net.Maui core if it was added directly:
+# dotnet remove package ZXing.Net.Maui)
 ```
 
 ZXing.Net.MAUI requires a one-time registration call in `MauiProgram.cs`. Remove this line if it is present:
@@ -136,7 +138,7 @@ The `using ZXing.Net.Maui;` import that supports this call can also be removed f
 ### Step 2: Install IronBarcode
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 The [.NET MAUI barcode scanner tutorial](https://ironsoftware.com/csharp/barcode/get-started/net-maui-barcode-scanner-reader-tutorial/) covers the full project configuration, including `Info.plist` camera permission entries for iOS and `AndroidManifest.xml` permission declarations for Android.
@@ -241,7 +243,7 @@ XAML:
 
 Code-behind:
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 public partial class ScannerPage : ContentPage
@@ -260,7 +262,7 @@ public partial class ScannerPage : ContentPage
         var results = BarcodeReader.Read(ms.ToArray());
         var first = results.FirstOrDefault();
         ResultLabel.Text = first != null
-            ? $"{first.Format}: {first.Value}"
+            ? $"{first.BarcodeType}: {first.Value}"
             : "No barcode found";
     }
 
@@ -359,7 +361,7 @@ With ZXing.Net.MAUI, adding a Windows target to a project either failed to compi
 **IronBarcode Approach:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 // No platform conditionals — same code runs on iOS, Android, Windows, and macOS
 private async void ScanButton_Clicked(object sender, EventArgs e)
 {
@@ -391,13 +393,13 @@ ZXing.Net.MAUI has no API for reading barcodes from PDF documents. If this is a 
 **IronBarcode Approach:**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 // Read all barcodes from all pages of a PDF
 var pdfResults = BarcodeReader.Read("invoice.pdf");
 foreach (var barcode in pdfResults)
-    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Format} — {barcode.Value}");
+    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.BarcodeType} — {barcode.Value}");
 
 // Read from a user-selected file using MAUI FilePicker
 private async void ReadFileButton_Clicked(object sender, EventArgs e)
@@ -410,7 +412,7 @@ private async void ReadFileButton_Clicked(object sender, EventArgs e)
 
     var fileResults = BarcodeReader.Read(file.FullPath);
     foreach (var result in fileResults)
-        ResultLabel.Text += $"\n{result.Format}: {result.Value}";
+        ResultLabel.Text += $"\n{result.BarcodeType}: {result.Value}";
 }
 ```
 
@@ -431,7 +433,7 @@ The complete PDF barcode reading workflow — including multi-page documents, pa
 | `BarcodeDetectionEventArgs e` | `IEnumerable<BarcodeResult>` | Different result delivery |
 | `e.Results` | Return value of `BarcodeReader.Read()` | |
 | `barcode.Value` | `result.Value` | Same property name |
-| `barcode.Format` | `result.Format` | Same property name |
+| `barcode.Format` | `result.BarcodeType` | Renamed |
 | `BarcodeFormats.QRCode` | `BarcodeEncoding.QRCode` | Enum rename |
 | `BarcodeFormats.Code128` | `BarcodeEncoding.Code128` | Enum rename |
 | `BarcodeFormats.Ean13` | `BarcodeEncoding.EAN13` | Enum rename |
@@ -493,7 +495,7 @@ Document all scan pages identified by the audit. Note which `OnAppearing` and `O
 1. Remove the `ZXing.Net.Maui.Controls` NuGet package from the project file
 2. Remove `builder.UseBarcodeReader()` from `MauiProgram.cs`
 3. Remove the `using ZXing.Net.Maui;` and `using ZXing.Net.Maui.Controls;` namespace imports from all files
-4. Install the `IronBarcode` NuGet package
+4. Install the `BarCode` NuGet package (the IronBarcode product)
 5. Add `using IronBarCode;` to all files that will use barcode reading
 6. Add `IronBarCode.License.LicenseKey = "YOUR-KEY";` to application startup
 7. Remove the `xmlns:zxing` namespace declaration from all XAML files
@@ -531,4 +533,4 @@ After the migration compiles cleanly, verify the following:
 
 **File and Document Processing:** The migration opens the ability to read barcodes from PDF documents, image files, and byte streams with no additional library. Workflows that were previously outside the scope of ZXing.Net.MAUI — reading barcodes from uploaded invoices, processing digital tickets, batch scanning image directories — become available through the same `BarcodeReader.Read()` call used for camera captures.
 
-**Production-Grade Stability:** IronBarcode ships as a stable commercial release with an active development cadence, commercial support, and regular updates tracking .NET version releases. Dependency audits, software composition analysis, and enterprise approval processes encounter a supported library with a documented maintenance commitment rather than a community pre-release package.
+**Production-Grade Stability:** IronBarcode ships as a stable commercial release with an active development cadence, commercial support, and regular updates tracking .NET version releases. Dependency audits, software composition analysis, and enterprise approval processes encounter a supported library with a documented maintenance commitment rather than a community pre-1.0 package.

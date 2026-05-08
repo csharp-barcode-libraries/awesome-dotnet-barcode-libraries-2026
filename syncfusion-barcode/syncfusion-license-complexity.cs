@@ -8,6 +8,14 @@
 // 1. Syncfusion requires version-specific license keys
 // 2. Syncfusion Community License has strict eligibility requirements
 // 3. IronBarcode uses a single, simple license key
+//
+// NuGet packages:
+//   Syncfusion: per-platform packages (e.g. Syncfusion.SfBarcode.Windows,
+//               Syncfusion.SfBarcode.WPF, Syncfusion.Barcode.WinUI,
+//               Syncfusion.Blazor.BarcodeGenerator, Syncfusion.Maui.Barcode)
+//               plus Syncfusion.Licensing for the RegisterLicense API.
+//   IronBarcode: single package "BarCode" (note: NuGet id is "BarCode"
+//                with capital C; namespace is IronBarCode).
 // =============================================================================
 
 using System;
@@ -121,9 +129,12 @@ namespace LicenseComplexityComparison
         // Automatic Disqualifications:
 
         /// <summary>
-        /// Government organizations are NOT eligible regardless of size.
+        /// Tax-funded governmental organizations are NOT eligible regardless
+        /// of size. Non-tax-funded government agencies may qualify after
+        /// signing a master license agreement directly with Syncfusion.
+        /// Source: https://www.syncfusion.com/products/communitylicense
         /// </summary>
-        public const bool GovernmentOrgsEligible = false;
+        public const bool TaxFundedGovernmentOrgsEligible = false;
 
         /// <summary>
         /// Check if organization qualifies for Community License.
@@ -133,10 +144,10 @@ namespace LicenseComplexityComparison
             int developerCount,
             int employeeCount,
             decimal outsideCapital,
-            bool isGovernment)
+            bool isTaxFundedGovernment)
         {
-            // Government organizations never qualify
-            if (isGovernment)
+            // Tax-funded governmental organizations never qualify
+            if (isTaxFundedGovernment)
                 return false;
 
             // All financial/team thresholds must be met

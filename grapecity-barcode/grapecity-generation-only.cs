@@ -1,32 +1,40 @@
 // =============================================================================
-// GrapeCity ComponentOne Barcode: Generation-Only Limitation Demo
+// MESCIUS ComponentOne Barcode (formerly GrapeCity): Generation-Only Demo
 // =============================================================================
 // This example demonstrates that ComponentOne barcode is generation-only,
 // while IronBarcode provides both generation AND reading capabilities.
 //
+// Vendor note: GrapeCity rebranded its developer-tools division to MESCIUS
+// in 2023. The product is now sold as MESCIUS ComponentOne; the C1.* package
+// prefix and the C1BarCode class name did not change in the rebrand.
+//
 // Author: Jacob Mellor, CTO of Iron Software
-// Last verified: January 2026
+// Last verified: May 2026
 // =============================================================================
 
 /*
  * INSTALLATION
  *
- * ComponentOne:
- * dotnet add package C1.Win.C1BarCode
+ * ComponentOne (WinForms):
+ * dotnet add package C1.Win.BarCode
+ * (also: C1.WPF.BarCode, C1.WinUI.BarCode, C1.Blazor.BarCode for other platforms)
  *
  * IronBarcode:
- * dotnet add package IronBarcode
+ * dotnet add package BarCode
+ * (the NuGet id is "BarCode"; the imported namespace is "IronBarCode")
  */
 
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 
-// ComponentOne namespaces
-// using C1.Win.C1BarCode;
+// ComponentOne namespaces (would be uncommented when the suite is installed)
+// using C1.Win.Barcode;
+// using C1.BarCode;
 
-// IronBarcode namespace
+// IronBarcode namespace - capital 'C' in IronBarCode is intentional
 using IronBarCode;
 
 namespace BarcodeComparison
@@ -42,12 +50,12 @@ namespace BarcodeComparison
         // =====================================================================
 
         /// <summary>
-        /// ComponentOne barcode generation - works fine for creating barcodes.
+        /// ComponentOne (MESCIUS) barcode generation - works fine for creating barcodes.
         /// </summary>
         public void GenerateWithComponentOne(string data, string outputPath)
         {
             /*
-            // ComponentOne generation code
+            // ComponentOne generation code (C1.Win.BarCode)
             var barcode = new C1BarCode();
 
             // Set barcode type
@@ -105,9 +113,11 @@ namespace BarcodeComparison
                 "You need a separate library like IronBarcode for reading.");
 
             /*
-             * The GrapeCity documentation confirms this limitation:
-             * "C1BarCode provides barcode generation functionality"
-             * Notice: No mention of reading, scanning, or recognition.
+             * The MESCIUS ComponentOne documentation confirms this limitation:
+             * the C1BarCode control description covers generation, checksum
+             * computation, and image output. There is no decoding, scanning,
+             * or recognition API in the public C1.Win.Barcode / C1.WPF.BarCode
+             * surface.
              *
              * If you need to read barcodes with ComponentOne, you must:
              * 1. Purchase a second barcode library (like IronBarcode)
@@ -127,8 +137,8 @@ namespace BarcodeComparison
             if (results.Any())
             {
                 var barcode = results.First();
-                Console.WriteLine($"IronBarcode: Found {barcode.BarcodeType}: {barcode.Text}");
-                return barcode.Text;
+                Console.WriteLine($"IronBarcode: Found {barcode.BarcodeType}: {barcode.Value}");
+                return barcode.Value;
             }
 
             Console.WriteLine("IronBarcode: No barcode found");
@@ -167,8 +177,8 @@ namespace BarcodeComparison
             var barcodes = new List<string>();
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
-                barcodes.Add(barcode.Text);
+                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
+                barcodes.Add(barcode.Value);
             }
 
             return barcodes;
@@ -226,7 +236,7 @@ namespace BarcodeComparison
                 foreach (var barcode in results)
                 {
                     // Extract invoice data
-                    var invoiceNumber = barcode.Text;
+                    var invoiceNumber = barcode.Value;
                     var page = barcode.PageNumber;
                     var type = barcode.BarcodeType;
 
@@ -306,7 +316,7 @@ namespace BarcodeComparison
             var demo = new GenerationOnlyComparison();
 
             Console.WriteLine("=".PadRight(70, '='));
-            Console.WriteLine("GrapeCity ComponentOne vs IronBarcode: Generation-Only Limitation");
+            Console.WriteLine("MESCIUS ComponentOne vs IronBarcode: Generation-Only Limitation");
             Console.WriteLine("=".PadRight(70, '='));
             Console.WriteLine();
 

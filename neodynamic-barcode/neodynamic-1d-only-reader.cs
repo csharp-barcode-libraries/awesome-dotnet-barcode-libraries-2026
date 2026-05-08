@@ -5,6 +5,10 @@
  * it ONLY supports 1D (linear) barcodes. QR codes, DataMatrix, PDF417, and other
  * 2D barcodes cannot be read.
  *
+ * The Reader SDK reached end-of-service-life on 31 December 2019 and its NuGet
+ * package (Neodynamic.SDK.BarcodeReader 1.0.2000) has not been updated since
+ * July 2012. It targets only .NET Framework 2.0/3.x/4.x.
+ *
  * Key takeaway: If your application needs to read QR codes or DataMatrix barcodes,
  * Neodynamic Barcode Reader SDK is not an option. IronBarcode reads all 50+ formats.
  *
@@ -23,7 +27,8 @@ using System.Linq;
 
 namespace NeodynamicReaderLimitation
 {
-    // Install: dotnet add package Neodynamic.SDK.BarcodeReader
+    // Install: dotnet add package Neodynamic.SDK.BarcodeReader (1.0.2000, last
+    // updated July 2012; .NET Framework only). Product is end-of-service-life.
     using Neodynamic.SDK.BarcodeReader;
 
     /// <summary>
@@ -132,7 +137,8 @@ namespace NeodynamicReaderLimitation
             Console.WriteLine("Attempting to read Code 128 barcode...");
 
             using var bitmap = new Bitmap(imagePath);
-            var results = BarcodeReader.Read(bitmap);
+            var reader = new BarcodeReader();
+            var results = reader.Read(bitmap);
 
             if (results != null && results.Any())
             {
@@ -154,7 +160,8 @@ namespace NeodynamicReaderLimitation
             Console.WriteLine();
 
             using var bitmap = new Bitmap(imagePath);
-            var results = BarcodeReader.Read(bitmap);
+            var reader = new BarcodeReader();
+            var results = reader.Read(bitmap);
 
             if (results == null || !results.Any())
             {
@@ -184,7 +191,8 @@ namespace NeodynamicReaderLimitation
             Console.WriteLine();
 
             using var bitmap = new Bitmap(imagePath);
-            var results = BarcodeReader.Read(bitmap);
+            var reader = new BarcodeReader();
+            var results = reader.Read(bitmap);
 
             if (results == null || !results.Any())
             {
@@ -209,7 +217,8 @@ namespace NeodynamicReaderLimitation
             Console.WriteLine();
 
             using var bitmap = new Bitmap(imagePath);
-            var results = BarcodeReader.Read(bitmap);
+            var reader = new BarcodeReader();
+            var results = reader.Read(bitmap);
 
             if (results == null || !results.Any())
             {
@@ -308,15 +317,15 @@ namespace NeodynamicReaderLimitation
 
             Console.WriteLine("Option 1: Add IronBarcode for reading only");
             Console.WriteLine("  Keep: Neodynamic for generation");
-            Console.WriteLine("  Add:  IronBarcode Lite ($749) for reading");
-            Console.WriteLine("  Total: ~$245 + $749 = ~$994");
+            Console.WriteLine("  Add:  IronBarcode Lite ($799) for reading");
+            Console.WriteLine("  Total: ~$352 + $799 = ~$1,151");
             Console.WriteLine("  Result: Works, but two libraries to maintain");
             Console.WriteLine();
 
             Console.WriteLine("Option 2: Add ZXing.Net for reading");
             Console.WriteLine("  Keep: Neodynamic for generation");
             Console.WriteLine("  Add:  ZXing.Net (free, open source)");
-            Console.WriteLine("  Total: ~$245 + $0 = ~$245");
+            Console.WriteLine("  Total: ~$352 + $0 = ~$352");
             Console.WriteLine("  Caveats:");
             Console.WriteLine("    - No automatic format detection");
             Console.WriteLine("    - No ML error correction");
@@ -326,8 +335,8 @@ namespace NeodynamicReaderLimitation
 
             Console.WriteLine("Option 3: Replace Neodynamic entirely");
             Console.WriteLine("  Remove: Neodynamic SDKs");
-            Console.WriteLine("  Add:    IronBarcode ($749)");
-            Console.WriteLine("  Total: $749");
+            Console.WriteLine("  Add:    IronBarcode ($799 Lite)");
+            Console.WriteLine("  Total: $799");
             Console.WriteLine("  Result:");
             Console.WriteLine("    - Single unified library");
             Console.WriteLine("    - Generation AND reading");
@@ -351,7 +360,7 @@ namespace NeodynamicReaderLimitation
 
 namespace IronBarcodeAllFormats
 {
-    // Install: dotnet add package IronBarcode
+    // Install: dotnet add package BarCode
     using IronBarCode;
 
     /// <summary>
@@ -368,7 +377,7 @@ namespace IronBarcodeAllFormats
             // - All 1D barcodes (Code 128, EAN, UPC, etc.)
             // - All 2D barcodes (QR, DataMatrix, PDF417, etc.)
             var results = BarcodeReader.Read(imagePath);
-            return results.FirstOrDefault()?.Text;
+            return results.FirstOrDefault()?.Value;
         }
 
         /// <summary>
@@ -383,9 +392,9 @@ namespace IronBarcodeAllFormats
 
             if (qrResult != null)
             {
-                Console.WriteLine($"SUCCESS: {qrResult.Text}");
+                Console.WriteLine($"SUCCESS: {qrResult.Value}");
                 Console.WriteLine($"Format detected: {qrResult.BarcodeType}");
-                return qrResult.Text;
+                return qrResult.Value;
             }
 
             Console.WriteLine("No barcode found");
@@ -404,9 +413,9 @@ namespace IronBarcodeAllFormats
 
             if (dmResult != null)
             {
-                Console.WriteLine($"SUCCESS: {dmResult.Text}");
+                Console.WriteLine($"SUCCESS: {dmResult.Value}");
                 Console.WriteLine($"Format detected: {dmResult.BarcodeType}");
-                return dmResult.Text;
+                return dmResult.Value;
             }
 
             Console.WriteLine("No barcode found");
@@ -425,9 +434,9 @@ namespace IronBarcodeAllFormats
 
             if (pdfResult != null)
             {
-                Console.WriteLine($"SUCCESS: {pdfResult.Text}");
+                Console.WriteLine($"SUCCESS: {pdfResult.Value}");
                 Console.WriteLine($"Format detected: {pdfResult.BarcodeType}");
-                return pdfResult.Text;
+                return pdfResult.Value;
             }
 
             Console.WriteLine("No barcode found");

@@ -2,7 +2,7 @@
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-Telerik RadBarcode is a UI component for barcode generation and limited reading within the Progress DevCraft UI bundle. While the component provides solid generation across WinForms, WPF, ASP.NET, and Blazor platforms, its reading capabilities are restricted to desktop platforms (WPF and WinForms) and limited to 1D barcodes only. This guide examines RadBarcode's platform-specific limitations, suite bundling context, and how [IronBarcode](https://ironsoftware.com/csharp/barcode/) provides consistent cross-platform barcode processing.
+Telerik RadBarcode is a family of UI components for barcode generation and limited reading distributed inside Progress Telerik UI suites and DevCraft bundles. Generation is broadly available across WinForms, WPF, ASP.NET AJAX/Core, and Blazor; reading is restricted to two desktop platforms — `RadBarcodeReader` in WPF (which decodes a fixed set of 1D symbologies plus QR, PDF417, and DataMatrix) and `RadBarcodeReader` in WinForms (1D symbologies only). No reading component exists for Blazor, ASP.NET Core, or ASP.NET AJAX. This guide examines RadBarcode's platform-specific limitations, the private-feed distribution model, suite bundling context, and how [IronBarcode](https://ironsoftware.com/csharp/barcode/) provides consistent cross-platform barcode processing.
 
 ## Table of Contents
 
@@ -11,7 +11,7 @@ Telerik RadBarcode is a UI component for barcode generation and limited reading 
 3. [Platform Capabilities Matrix](#platform-capabilities-matrix)
 4. [Installation and Setup](#installation-and-setup)
 5. [Code Comparison: Platform Limitations](#code-comparison-platform-limitations)
-6. [Code Comparison: 1D-Only Reading](#code-comparison-1d-only-reading)
+6. [Code Comparison: Limited Reader Symbology](#code-comparison-limited-reader-symbology)
 7. [Pricing Analysis](#pricing-analysis)
 8. [When to Use Each Option](#when-to-use-each-option)
 9. [Migration Guide: RadBarcode to IronBarcode](#migration-guide-radbarcode-to-ironbarcode)
@@ -34,14 +34,14 @@ RadBarcode provides barcode functionality across multiple Telerik UI product lin
 - Telerik UI for ASP.NET Core - TagHelper and HtmlHelper
 
 **Reading Support (Desktop Only):**
-- Telerik UI for WPF - RadBarcodeReader
-- Telerik UI for WinForms - BarCodeReader
+- Telerik UI for WPF - `RadBarcodeReader` (namespace `Telerik.Windows.Controls.Barcode`)
+- Telerik UI for WinForms - `RadBarcodeReader` (namespace `Telerik.WinControls.UI.Barcode`)
 
-The critical distinction: while you can generate barcodes on any platform, you can only read barcodes on desktop applications (WPF and WinForms). Web applications using ASP.NET, Blazor, or ASP.NET Core have no barcode reading capability from Telerik.
+The critical distinction: while you can generate barcodes on any platform, you can only read barcodes on desktop applications (WPF and WinForms). Web applications using ASP.NET AJAX, Blazor, or ASP.NET Core have no barcode reading capability from Telerik.
 
 ### Symbology Support
 
-RadBarcode supports approximately 20+ barcode symbologies for generation:
+RadBarcode generation covers roughly 20 symbologies across the platforms:
 
 **1D Barcodes:**
 - Code 128, Code 39, Code 93
@@ -54,7 +54,12 @@ RadBarcode supports approximately 20+ barcode symbologies for generation:
 - Data Matrix
 - PDF417
 
-However, the RadBarcodeReader (for reading/recognition) supports only 1D barcode formats. QR codes, Data Matrix, and PDF417 cannot be read, only generated.
+The reader picture is more nuanced and is the practical limitation most teams hit:
+
+- The **WPF `RadBarcodeReader`** decode list (`DecodeType` flags enum) covers 1D types — Code128, Code39 / Extended, Code93 / Extended, Code11, Code25Standard / Interleaved, EAN8, EAN13, EAN128, UPCA, UPCE, UPCSupplement2 / 5, Codabar, CodeMSI, Postnet, Planet, IntelligentMail — plus three 2D formats: `QR`, `PDF417`, and `DataMatrix`. Aztec, MaxiCode, MicroQR, and DotCode are not in the enum, so they cannot be decoded.
+- The **WinForms `RadBarcodeReader`** decodes 1D symbologies only. Telerik's WinForms documentation states: "Currently, all of the 1D barcodes, offered by Telerik, are supported." There is no QR, DataMatrix, or PDF417 decode path on this platform.
+
+So the reader story is platform-inconsistent on two axes at once: reading is unavailable on web/Blazor at all, and on the two desktop platforms where it does exist, the WPF reader handles three 2D formats while the WinForms reader handles none.
 
 ---
 
@@ -64,16 +69,16 @@ However, the RadBarcodeReader (for reading/recognition) supports only 1D barcode
 
 RadBarcode is not available as a standalone purchase. You must buy one of the Telerik UI bundles:
 
-| Product | Price (2026) | What You Get |
-|---------|-------------|--------------|
-| UI for WinForms | ~$1,149/year | WinForms controls including RadBarcode |
-| UI for WPF | ~$1,149/year | WPF controls including RadBarcode |
-| UI for Blazor | ~$1,099/year | Blazor components including TelerikBarcode |
-| UI for ASP.NET AJAX | ~$1,099/year | ASP.NET AJAX controls including RadBarcode |
-| DevCraft UI | ~$1,469/year | All UI platforms combined |
-| DevCraft Ultimate | ~$1,999/year | All UI + reporting, testing tools |
+| Product | Price (2026, per dev/year) | What You Get |
+|---------|----------------------------|--------------|
+| UI for WinForms | from $749 (subscription) / $1,049 (perpetual) at the Lite tier; up to $1,249 / $1,549 at Ultimate | WinForms controls including RadBarcode |
+| UI for WPF | from $749 (subscription) / $1,049 (perpetual) at Lite; up to $1,249 / $1,549 at Ultimate | WPF controls including RadBarcode |
+| UI for Blazor | from $749 (subscription) / $1,049 (perpetual) at Lite; up to $1,249 / $1,549 at Ultimate | Blazor components including TelerikBarcode |
+| DevCraft UI | $1,149 (subscription) / $1,549 (perpetual) | All UI platforms combined |
+| DevCraft Complete | $1,299 (subscription) / $1,799 (perpetual) | DevCraft UI + Reporting, Test Studio, JustMock |
+| DevCraft Ultimate | $1,649 (subscription) / $2,299 (perpetual) | DevCraft Complete + premium support tier |
 
-*Pricing as of January 2026. Visit Telerik pricing page for current rates.*
+*Pricing as quoted on the [Telerik DevCraft purchase page](https://www.telerik.com/purchase/devcraft) in 2026. Per-platform pricing varies by support tier (Lite / Priority / Ultimate). Visit the Telerik pricing page for current rates.*
 
 ### The Suite Lock-In Problem
 
@@ -93,7 +98,7 @@ Your project now depends on the entire Telerik ecosystem for one feature. Update
 
 ### What You're Actually Buying
 
-When purchasing DevCraft UI at ~$1,469/year for barcode functionality:
+When purchasing DevCraft UI at $1,149/year (subscription) for barcode functionality:
 
 ```
 DevCraft UI Suite Contents:
@@ -120,7 +125,7 @@ This is where Telerik's platform inconsistency becomes apparent:
 
 | Platform | Generation | Reading | 2D Reading | PDF Support |
 |----------|------------|---------|------------|-------------|
-| WPF | Yes | Yes (1D only) | No | No |
+| WPF | Yes | Yes (1D + QR, PDF417, DataMatrix) | Partial (3 formats) | No |
 | WinForms | Yes | Yes (1D only) | No | No |
 | Blazor | Yes | No | No | No |
 | ASP.NET AJAX | Yes | No | No | No |
@@ -140,7 +145,7 @@ Compared to IronBarcode:
 | Docker | Yes | Yes | Yes | Yes |
 | Azure Functions | Yes | Yes | Yes | Yes |
 
-The difference is stark: IronBarcode provides consistent capabilities everywhere, while Telerik's barcode reading works only on desktop platforms with 1D formats.
+The difference is stark: IronBarcode provides consistent capabilities everywhere, while Telerik's barcode reading works only on two desktop platforms — and the WPF and WinForms readers do not even decode the same set of formats.
 
 ---
 
@@ -148,17 +153,30 @@ The difference is stark: IronBarcode provides consistent capabilities everywhere
 
 ### Telerik RadBarcode Installation
 
-**Step 1: NuGet Package (one per platform)**
+**Step 1: Configure the Telerik private NuGet feed**
 
-For WPF:
+Telerik UI packages are not on public nuget.org — they are distributed through the licensed feed at `https://nuget.telerik.com/v3/index.json`, which requires an API key generated from your Telerik account. A typical configuration step looks like:
+
+```bash
+dotnet nuget add source https://nuget.telerik.com/v3/index.json `
+    --name "telerik.com" `
+    --username api-key `
+    --password "YOUR-TELERIK-API-KEY" `
+    --store-password-in-clear-text
+```
+
+Public nuget.org hosts a small number of trial-only Telerik packages, but the production binaries used in licensed projects come from this private feed.
+
+**Step 2: Install the platform package**
+
+For WPF (assemblies include `Telerik.Windows.Controls.DataVisualization.dll` for the barcode controls):
 ```bash
 dotnet add package Telerik.UI.for.Wpf.60.Xaml
 ```
 
 For WinForms:
 ```bash
-dotnet add package Telerik.UI.for.WinForms.Common
-dotnet add package Telerik.UI.for.WinForms.Barcode
+dotnet add package Telerik.UI.for.WinForms
 ```
 
 For Blazor:
@@ -166,30 +184,23 @@ For Blazor:
 dotnet add package Telerik.UI.for.Blazor
 ```
 
-**Step 2: License Configuration**
+**Step 3: License Configuration**
 
-Telerik requires license file deployment:
+Telerik 2024+ uses a license-key file (`telerik-license.txt`) deployed under the user profile or referenced via the `TELERIK_LICENSE` environment variable. Older releases used `Telerik.WinControls.TelerikLicenseManager.InstallLicense(...)` style calls; newer code typically does not call this directly.
 
-```csharp
-// WinForms startup
-Telerik.WinControls.TelerikLicenseManager.InstallLicense("your-license-key-here");
-
-// Or via app.config/web.config license file
-```
-
-**Step 3: XAML Namespace Registration (WPF)**
+**Step 4: XAML Namespace Registration (WPF)**
 
 ```xml
 <Window xmlns:telerik="http://schemas.telerik.com/2008/xaml/presentation">
-    <telerik:RadBarcode Value="12345678" Symbology="Code128" />
+    <telerik:RadBarcode Value="12345678" Symbology="{telerik:Code128}" />
 </Window>
 ```
 
 ### IronBarcode Installation
 
-**Step 1: Single NuGet Package**
+**Step 1: Single NuGet Package (public nuget.org)**
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 **Step 2: License Configuration (One Line)**
@@ -213,11 +224,12 @@ var result = BarcodeReader.Read("barcode.png");
 
 | Setup Step | Telerik | IronBarcode |
 |------------|---------|-------------|
-| NuGet packages | 1-3 per platform | 1 universal |
-| License deployment | File or key + config | Single key string |
+| Package source | Private feed (`nuget.telerik.com/v3/index.json`) with API key | Public nuget.org |
+| NuGet packages | 1-3 per platform | 1 universal (`BarCode`) |
+| License deployment | License-key file or environment variable | Single key string at startup |
 | XAML namespaces | Required for WPF | Not required |
 | Platform-specific code | Yes | No |
-| Reader availability | Check platform first | Always available |
+| Reader availability | Check platform first; symbology set differs WPF vs WinForms | Always available, identical API |
 
 ---
 
@@ -263,14 +275,14 @@ public class BarcodeService
     {
         // One-line reading with automatic format detection
         var result = BarcodeReader.Read(imagePath);
-        return result.FirstOrDefault()?.Text ?? "No barcode found";
+        return result.FirstOrDefault()?.Value ?? "No barcode found";
     }
 
     public string ReadBarcodeFromPdf(string pdfPath)
     {
         // Native PDF support - also not available in Telerik
         var results = BarcodeReader.Read(pdfPath);
-        return string.Join(", ", results.Select(r => r.Text));
+        return string.Join(", ", results.Select(r => r.Value));
     }
 }
 ```
@@ -279,61 +291,61 @@ For a detailed comparison of platform inconsistency, see: [Platform Inconsistenc
 
 ---
 
-## Code Comparison: 1D-Only Reading
+## Code Comparison: Limited Reader Symbology
 
-Even on platforms where RadBarcodeReader is available, it only supports 1D barcodes.
+Even on the two desktop platforms where `RadBarcodeReader` is available, the format coverage is limited and is not the same on both. The WPF reader's `DecodeType` flags enum includes `QR`, `PDF417`, and `DataMatrix` alongside its 1D types, but does not include Aztec, MaxiCode, MicroQR, or DotCode. The WinForms reader's `DecodeType` enum is 1D-only — no 2D entries at all.
 
-### Scenario: Reading QR Codes
+### Scenario: Reading QR, Aztec, and MaxiCode
 
 **Telerik RadBarcodeReader (WPF):**
 ```csharp
 using Telerik.Windows.Controls.Barcode;
 using System.Windows.Media.Imaging;
 
-public class TelerikBarcodeService
+public class TelerikWpfBarcodeService
 {
     public string ReadBarcode(string imagePath)
     {
-        // Load the image
-        var bitmap = new BitmapImage(new Uri(imagePath));
-
-        // Create reader with 1D formats only
+        var bitmap = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
         var reader = new RadBarcodeReader();
 
-        // Specify decode types - only 1D barcodes supported
-        reader.DecodeTypes = new DecodeType[]
-        {
-            DecodeType.Code128,
-            DecodeType.Code39,
-            DecodeType.EAN13,
-            DecodeType.EAN8,
-            DecodeType.UPCA,
-            DecodeType.UPCE,
-            DecodeType.Codabar,
-            DecodeType.Code11,
-            DecodeType.Code25,
-            DecodeType.ITF
-            // Note: No QR, DataMatrix, PDF417, Aztec
-        };
+        // The WPF DecodeType enum includes QR, PDF417, and DataMatrix
+        // but NOT Aztec, MaxiCode, MicroQR, or DotCode.
+        reader.DecodeTypes =
+              DecodeType.Code128
+            | DecodeType.EAN13
+            | DecodeType.QR
+            | DecodeType.PDF417
+            | DecodeType.DataMatrix;
 
-        // Attempt to read
         var result = reader.Decode(bitmap);
-
-        if (result != null)
-        {
-            return result.Text;
-        }
-
-        return "No 1D barcode found";
-        // If the image contains a QR code, this WILL FAIL
+        return result?.Text ?? "No supported barcode found";
     }
 
+    public string ReadAztec(string imagePath)
+    {
+        // NOT POSSIBLE — DecodeType.Aztec does not exist in the WPF enum
+        throw new NotSupportedException(
+            "RadBarcodeReader (WPF) does not include Aztec in DecodeType. " +
+            "Aztec, MaxiCode, MicroQR, and DotCode are not decodable.");
+    }
+}
+```
+
+**Telerik RadBarcodeReader (WinForms):**
+```csharp
+using Telerik.WinControls.UI.Barcode;
+using System.Drawing;
+
+public class TelerikWinFormsBarcodeService
+{
     public string ReadQrCode(string imagePath)
     {
-        // NOT POSSIBLE with RadBarcodeReader
-        // QR codes can be GENERATED but not READ
+        // NOT POSSIBLE — the WinForms DecodeType enum is 1D-only.
+        // From Telerik's docs: "Currently, all of the 1D barcodes,
+        // offered by Telerik, are supported."
         throw new NotSupportedException(
-            "RadBarcodeReader does not support 2D barcode reading");
+            "RadBarcodeReader (WinForms) cannot read QR, DataMatrix, or PDF417.");
     }
 }
 ```
@@ -352,36 +364,34 @@ public class IronBarcodeService
         foreach (var barcode in results)
         {
             Console.WriteLine($"Type: {barcode.BarcodeType}");
-            Console.WriteLine($"Value: {barcode.Text}");
+            Console.WriteLine($"Value: {barcode.Value}");
         }
 
-        return results.FirstOrDefault()?.Text ?? "No barcode found";
+        return results.FirstOrDefault()?.Value ?? "No barcode found";
     }
 
-    public string ReadQrCode(string imagePath)
+    public string ReadAztec(string imagePath)
     {
-        // QR codes read automatically with same API
+        // Aztec, MaxiCode, MicroQR, DotCode all read with the same call
         var results = BarcodeReader.Read(imagePath);
 
-        var qrCodes = results.Where(r =>
-            r.BarcodeType == BarcodeEncoding.QRCode);
-
-        return qrCodes.FirstOrDefault()?.Text ?? "No QR code found";
+        return results
+            .Where(r => r.BarcodeType == BarcodeEncoding.Aztec)
+            .FirstOrDefault()?.Value ?? "No Aztec found";
     }
 
     public string ReadDataMatrix(string imagePath)
     {
-        // DataMatrix also supported
         var results = BarcodeReader.Read(imagePath);
 
         return results
             .Where(r => r.BarcodeType == BarcodeEncoding.DataMatrix)
-            .FirstOrDefault()?.Text ?? "No DataMatrix found";
+            .FirstOrDefault()?.Value ?? "No DataMatrix found";
     }
 }
 ```
 
-For detailed 1D-only limitation examples, see: [1D-Only Reading Code Example](telerik-1d-only-reading.cs)
+For detailed reader-symbology examples, see: [Reader Symbology Code Example](telerik-1d-only-reading.cs)
 
 ---
 
@@ -389,57 +399,56 @@ For detailed 1D-only limitation examples, see: [1D-Only Reading Code Example](te
 
 ### Direct Cost Comparison
 
-| Scenario | Telerik (Annual) | IronBarcode |
-|----------|------------------|-------------|
-| Single developer, single platform | $1,149/year | $749 one-time |
-| Single developer, all platforms | $1,469/year | $749 one-time |
-| 10 developers, all platforms | $14,690/year | $2,999 one-time |
-| 5-year TCO (10 developers) | $73,450 | $2,999 |
+| Scenario | Telerik (Annual) | IronBarcode (Perpetual) |
+|----------|------------------|-------------------------|
+| Single developer, single platform | $749/year (Lite) to $1,249/year (Ultimate) | $799 (Lite) one-time |
+| Single developer, all platforms | $1,149/year (DevCraft UI) | $799 one-time |
+| 10 developers, all platforms | $11,490/year (DevCraft UI) | $1,199 (Plus) one-time |
+| 5-year TCO (10 developers) | $57,450 | $1,199 |
 
-*Note: Telerik renewal rates may differ from new license pricing.*
+*Pricing reflects Telerik DevCraft 2026 list prices and IronBarcode 2026 license tiers ($799 Lite / $1,199 Plus / $2,399 Pro / $4,799 Unlimited). Telerik renewal rates may differ from new-license pricing.*
 
 ### 5-Year Total Cost Analysis
 
 For a team needing barcode functionality across web and desktop:
 
 ```
-Telerik DevCraft UI (10 developers):
-  Year 1: $14,690 ($1,469 × 10)
-  Year 2: $14,690
-  Year 3: $14,690
-  Year 4: $14,690
-  Year 5: $14,690
+Telerik DevCraft UI (10 developers, subscription):
+  Year 1: $11,490 ($1,149 × 10)
+  Year 2: $11,490
+  Year 3: $11,490
+  Year 4: $11,490
+  Year 5: $11,490
   ─────────────────
-  Total: $73,450
+  Total: $57,450
 
-  Note: Still no web-based barcode reading!
+  Note: Still no web-based barcode reading.
 
-IronBarcode Professional:
-  Year 1: $2,999 (one-time, 10 developers)
+IronBarcode Plus (10 developers, perpetual):
+  Year 1: $1,199 (one-time, covers up to 10 developers)
   Year 2: $0
   Year 3: $0
   Year 4: $0
   Year 5: $0
   ─────────────────
-  Total: $2,999
+  Total: $1,199
 
   Includes: Full reading on ALL platforms
 
-Savings with IronBarcode: $70,451
+Indicative savings with IronBarcode: $56,251 over five years
 ```
 
 ### Value Analysis
 
 Even ignoring price, consider what you're getting:
 
-| Feature | Telerik DevCraft ($1,469/yr) | IronBarcode ($749 one-time) |
-|---------|------------------------------|----------------------------|
+| Feature | Telerik DevCraft UI ($1,149/yr) | IronBarcode Lite ($799 one-time) |
+|---------|--------------------------------|----------------------------------|
 | Barcode generation | Yes (all platforms) | Yes (all platforms) |
-| 1D reading | Desktop only | All platforms |
-| 2D reading | No | Yes (all platforms) |
-| PDF barcode reading | No | Yes |
-| ML error correction | No | Yes |
-| Automatic detection | No | Yes |
+| 1D reading | Desktop only (WPF + WinForms) | All platforms |
+| 2D reading | WPF only — QR, PDF417, DataMatrix (no Aztec, MaxiCode, MicroQR, DotCode) | All platforms, broader format set |
+| PDF barcode reading | No (requires separate PDF library) | Yes (native) |
+| Automatic detection | No (`DecodeType` flags must be set) | Yes |
 | Server-side processing | Generation only | Full read/write |
 
 ---
@@ -452,7 +461,7 @@ Even ignoring price, consider what you're getting:
 
 2. **You only need barcode generation** - If reading/recognition is not required, RadBarcode generates barcodes adequately on all platforms.
 
-3. **Your reading needs are desktop-only and 1D-only** - If you specifically need Code 128 or EAN scanning in a WPF or WinForms application and never need QR codes.
+3. **Your reading needs are desktop-only and inside the Telerik supported set** - If you specifically need Code 128 or EAN scanning in a WPF or WinForms application (with QR / PDF417 / DataMatrix on WPF only), and never need Aztec, MaxiCode, MicroQR, DotCode, or web-side reading.
 
 4. **Enterprise standardization** - If your organization has standardized on Telerik UI and adding another library requires approval processes.
 
@@ -460,7 +469,7 @@ Even ignoring price, consider what you're getting:
 
 1. **You need barcode reading on web or server** - RadBarcodeReader doesn't work on ASP.NET, Blazor, or server-side scenarios. IronBarcode works everywhere.
 
-2. **You need to read QR codes or 2D barcodes** - RadBarcodeReader only handles 1D formats. IronBarcode reads QR, DataMatrix, PDF417, and 50+ formats.
+2. **You need to read 2D barcodes that Telerik does not cover** - RadBarcodeReader (WinForms) handles only 1D formats; the WPF reader covers only QR, PDF417, and DataMatrix. IronBarcode reads QR, DataMatrix, PDF417, Aztec, MaxiCode, MicroQR, DotCode, and more.
 
 3. **You need PDF barcode processing** - IronBarcode reads barcodes directly from PDF documents. Telerik has no PDF barcode capability.
 
@@ -486,13 +495,13 @@ Even ignoring price, consider what you're getting:
 
 **Add IronBarcode:**
 ```xml
-<PackageReference Include="IronBarcode" Version="2024.*" />
+<PackageReference Include="BarCode" Version="2026.*" />
 ```
 
 Or via CLI:
 ```bash
-dotnet remove package Telerik.UI.for.WinForms.Barcode
-dotnet add package IronBarcode
+dotnet remove package Telerik.UI.for.WinForms
+dotnet add package BarCode
 ```
 
 ### License Configuration Migration
@@ -527,7 +536,7 @@ IronBarCode.License.LicenseKey = "YOUR-KEY-HERE";
 | `RadBarcodeReader` | `BarcodeReader.Read()` | Static method |
 | `reader.DecodeTypes = ...` | Automatic | No format specification needed |
 | `reader.Decode(bitmap)` | `BarcodeReader.Read(path)` | Direct file input |
-| Only 1D formats | All 50+ formats | Full 2D support |
+| WPF: 1D + QR + PDF417 + DataMatrix; WinForms: 1D only | Full 1D + 2D coverage including Aztec, MaxiCode, MicroQR, DotCode | Broader format set |
 | WPF/WinForms only | All platforms | Universal |
 
 ### Code Migration Examples
@@ -555,7 +564,7 @@ For detailed customization options including colors, sizes, and styling, see our
 **Before (Telerik - WPF only):**
 ```csharp
 var reader = new RadBarcodeReader();
-reader.DecodeTypes = new[] { DecodeType.Code128, DecodeType.EAN13 };
+reader.DecodeTypes = DecodeType.Code128 | DecodeType.EAN13;
 var result = reader.Decode(bitmapImage);
 var text = result?.Text;
 ```
@@ -563,22 +572,23 @@ var text = result?.Text;
 **After (IronBarcode - Any Platform):**
 ```csharp
 var results = BarcodeReader.Read("image.png");
-var text = results.FirstOrDefault()?.Text;
+var value = results.FirstOrDefault()?.Value;
 ```
 
-#### Example 3: Enabling QR Code Reading (Not Possible in Telerik)
+#### Example 3: Enabling Aztec / MaxiCode Reading (Not in Telerik's Reader)
 
 **Before (Telerik):**
 ```csharp
-// NOT POSSIBLE - RadBarcodeReader doesn't support QR codes
-// You would need a different library
+// NOT POSSIBLE - DecodeType has no Aztec, MaxiCode, MicroQR, or DotCode entry
+// (WPF reader covers QR, PDF417, DataMatrix; WinForms reader is 1D-only)
+// You would need a different library for these symbologies
 ```
 
 **After (IronBarcode):**
 ```csharp
-// QR codes read automatically
-var results = BarcodeReader.Read("qrcode.png");
-var qrValue = results.First().Text;
+// Aztec, MaxiCode, MicroQR, DotCode all read automatically
+var results = BarcodeReader.Read("aztec.png");
+var aztecValue = results.First().Value;
 ```
 
 ### Migration Checklist
@@ -619,7 +629,7 @@ var qrValue = results.First().Text;
 Working code demonstrating the concepts in this article:
 
 - [Platform Inconsistency Comparison](telerik-platform-inconsistency.cs) - Shows reading limitations across platforms
-- [1D-Only Reading Limitation](telerik-1d-only-reading.cs) - Demonstrates QR code reading gap
+- [Reader Symbology Limitation](telerik-1d-only-reading.cs) - Demonstrates the WinForms 1D-only reader and the WPF reader's missing 2D formats (Aztec, MaxiCode, MicroQR, DotCode)
 
 ### Related Comparisons
 

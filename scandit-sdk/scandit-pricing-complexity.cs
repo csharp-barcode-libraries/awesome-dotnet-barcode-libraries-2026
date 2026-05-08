@@ -132,23 +132,23 @@ namespace ScanditPricingAnalysis
         /*
          * IronBarcode Published Pricing (2026):
          *
-         * Lite License: $749 one-time
-         * - 1 developer
-         * - 1 project
+         * Lite License: $799 one-time
+         * - 1 developer, 1 project
          * - Unlimited barcodes
          *
-         * Professional License: $1,499 one-time
-         * - 10 developers
-         * - 10 projects
+         * Plus License: $1,199 one-time
+         * - 3 developers, 3 projects
          * - Unlimited barcodes
          *
-         * Unlimited License: $2,999 one-time
-         * - Unlimited developers
-         * - Unlimited projects
+         * Professional License: $2,399 one-time
+         * - 10 developers, 10 projects
+         * - Unlimited barcodes
+         *
+         * Unlimited License: $4,799 one-time
+         * - Unlimited developers, projects
          * - Unlimited barcodes
          *
          * Optional Annual Renewal:
-         * - 50% of original price
          * - Includes updates and support
          * - Not required to continue using
          */
@@ -175,9 +175,10 @@ namespace ScanditPricingAnalysis
         {
             var licenses = new[]
             {
-                ("Lite", 749m, "1 developer, 1 project"),
-                ("Professional", 1499m, "10 developers, 10 projects"),
-                ("Unlimited", 2999m, "Unlimited developers, unlimited projects")
+                ("Lite", 799m, "1 developer, 1 project"),
+                ("Plus", 1199m, "3 developers, 3 projects"),
+                ("Professional", 2399m, "10 developers, 10 projects"),
+                ("Unlimited", 4799m, "Unlimited developers, projects")
             };
 
             Console.WriteLine("| License       | Price (one-time) | Coverage                    |");
@@ -227,7 +228,7 @@ namespace ScanditPricingAnalysis
             Console.WriteLine();
             Console.WriteLine("If use case is DOCUMENT PROCESSING:");
             Console.WriteLine("  Scandit: Over-engineered, expensive");
-            Console.WriteLine("  IronBarcode: $1,499 one-time (Professional)");
+            Console.WriteLine("  IronBarcode: $2,399 one-time (Professional)");
         }
 
         public void MidSizeCompanyScenario()
@@ -242,7 +243,7 @@ namespace ScanditPricingAnalysis
             Console.WriteLine("  - Estimated: $XX,000+/year (requires quote)");
             Console.WriteLine();
             Console.WriteLine("IronBarcode (document processing):");
-            Console.WriteLine("  - Unlimited License: $2,999 one-time");
+            Console.WriteLine("  - Unlimited License: $4,799 one-time");
             Console.WriteLine("  - Process unlimited barcodes");
             Console.WriteLine("  - No volume fees");
         }
@@ -259,9 +260,9 @@ namespace ScanditPricingAnalysis
             Console.WriteLine("  - Estimated: $XXX,000+/year (requires negotiation)");
             Console.WriteLine();
             Console.WriteLine("IronBarcode:");
-            Console.WriteLine("  - Unlimited License: $2,999 one-time");
+            Console.WriteLine("  - Unlimited License: $4,799 one-time");
             Console.WriteLine("  - Same price regardless of scale");
-            Console.WriteLine("  - Optional renewal: $1,500/year");
+            Console.WriteLine("  - Optional annual renewal for updates and support");
         }
 
         public void FiveYearTcoComparison()
@@ -270,8 +271,8 @@ namespace ScanditPricingAnalysis
             Console.WriteLine();
 
             // IronBarcode calculation
-            decimal ironBarcodeLicense = 2999m;
-            decimal ironBarcodeRenewal = 1500m; // Optional
+            decimal ironBarcodeLicense = 4799m;
+            decimal ironBarcodeRenewal = 1599m; // Optional approx. annual support+updates
             decimal ironBarcode5YearWithRenewal = ironBarcodeLicense + (ironBarcodeRenewal * 4);
             decimal ironBarcode5YearNoRenewal = ironBarcodeLicense;
 
@@ -342,7 +343,7 @@ namespace ScanditPricingAnalysis
             Console.WriteLine();
 
             Console.WriteLine("With IronBarcode:");
-            Console.WriteLine("  Budget: $2,999 (Unlimited License)");
+            Console.WriteLine("  Budget: $4,799 (Unlimited License)");
             Console.WriteLine("  Risk: None - price is fixed");
             Console.WriteLine("  Timeline: Purchase immediately");
         }

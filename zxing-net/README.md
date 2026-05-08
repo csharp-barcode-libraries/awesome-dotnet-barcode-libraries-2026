@@ -25,14 +25,16 @@ However, the ZXing.Net ecosystem is fragmented. Multiple packages exist with con
 
 When developers search for "ZXing C#" or "ZXing .NET," they encounter multiple packages that can cause significant confusion:
 
-| Package | NuGet Downloads | Last Updated | Target | Maintainer |
-|---------|----------------|--------------|--------|------------|
-| **ZXing.Net** | ~12M | 2024 | Core library | Michael Jahn (Community) |
-| **ZXing.Net.Bindings.Windows** | ~1.5M | 2024 | Windows Forms/WPF | Community |
-| **ZXing.Net.Bindings.ImageSharp** | ~800K | 2024 | Cross-platform imaging | Community |
-| **ZXing.Net.Mobile** | ~3M | 2022 (Sporadic) | Xamarin mobile | Jonathan Dick (Community) |
-| **ZXing.Net.Maui** | ~500K | 2024 | .NET MAUI | Community |
-| **IronBarcode** | ~2.1M | Active | All platforms | Iron Software (Commercial) |
+| Package | Last Updated | Target | Maintainer |
+|---------|--------------|--------|------------|
+| **ZXing.Net** (`ZXing.Net` 0.16.11) | October 2025 | Core library (no image binding) | Michael Jahn (`micjahn`) |
+| **ZXing.Net.Bindings.Windows.Compatibility** | 2024–2025 | `System.Drawing.Common` integration | `micjahn` |
+| **ZXing.Net.Bindings.ImageSharp** / `.ImageSharp.V2` / `.ImageSharp.V3` | 2024–2025 | Cross-platform imaging (ImageSharp 1.x / 2.x / 3.x) | `micjahn` |
+| **ZXing.Net.Bindings.SkiaSharp** | 2024 | Cross-platform imaging (SkiaSharp) | `micjahn` |
+| **ZXing.Net.Bindings.Magick** | 2024 | Magick.NET integration | `micjahn` |
+| **ZXing.Net.Mobile** | Archived 2021 (Xamarin) | Xamarin mobile | Redth (archived) |
+| **ZXing.Net.Maui** | Active | .NET MAUI | Redth |
+| **IronBarcode** (`BarCode`) | Active | All platforms | Iron Software (Commercial) |
 
 ### The Core ZXing.Net Package
 
@@ -151,12 +153,12 @@ using ZXing.Common;
 
 **Use when:** Building your own image pipeline, using with existing imaging library
 
-### ZXing.Net.Bindings.Windows
+### ZXing.Net.Bindings.Windows.Compatibility
 
 ```csharp
-// NuGet: Install-Package ZXing.Net.Bindings.Windows
-// Provides: System.Drawing integration, Bitmap support
-// Limitation: Windows-only due to System.Drawing.Common
+// NuGet: Install-Package ZXing.Net.Bindings.Windows.Compatibility
+// Provides: System.Drawing.Common integration, Bitmap support
+// Limitation: Windows-friendly; requires libgdiplus on Linux
 
 using ZXing;
 using ZXing.Windows.Compatibility;
@@ -169,16 +171,19 @@ var result = reader.Decode(bitmap);
 **Use when:** Windows desktop applications, WinForms, WPF
 **Avoid when:** Cross-platform deployment, Docker on Linux, Azure App Service
 
-### ZXing.Net.Bindings.ImageSharp
+### ZXing.Net.Bindings.ImageSharp (V1 / V2 / V3)
 
 ```csharp
-// NuGet: Install-Package ZXing.Net.Bindings.ImageSharp
-// Provides: SixLabors.ImageSharp integration
+// NuGet: Install-Package ZXing.Net.Bindings.ImageSharp        (ImageSharp 1.x)
+//        Install-Package ZXing.Net.Bindings.ImageSharp.V2     (ImageSharp 2.x)
+//        Install-Package ZXing.Net.Bindings.ImageSharp.V3     (ImageSharp 3.x)
+// Provides: SixLabors.ImageSharp integration via BarcodeReaderGeneric<Image<TPixel>>
 // Advantage: True cross-platform, no System.Drawing dependency
 
 using ZXing;
 using ZXing.ImageSharp;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 var reader = new BarcodeReader<Rgba32>();
 using var image = Image.Load<Rgba32>(imagePath);
@@ -188,18 +193,18 @@ var result = reader.Decode(image);
 **Use when:** Linux deployment, Docker containers, cross-platform apps
 **Trade-off:** Additional ImageSharp dependency, slightly different API
 
-### ZXing.Net.Mobile (Xamarin - Legacy)
+### ZXing.Net.Mobile (Xamarin - Archived)
 
 ```csharp
 // NuGet: Install-Package ZXing.Net.Mobile
-// Status: Maintenance mode - Xamarin is deprecated
+// Status: Archived in 2021 — Xamarin itself is end-of-life
 // Provides: Mobile camera scanning
 
-// Not recommended for new projects - use MAUI instead
+// Not recommended for new projects - use ZXing.Net.Maui instead
 ```
 
 **Use when:** Maintaining existing Xamarin apps
-**Avoid when:** New projects (Xamarin is deprecated)
+**Avoid when:** New projects (Xamarin is end-of-life as of May 2024)
 
 ### ZXing.Net.Maui
 
@@ -229,11 +234,11 @@ dotnet add package ZXing.Net
 
 # Step 2: Choose a binding package based on your needs
 
-# For Windows desktop applications:
-dotnet add package ZXing.Net.Bindings.Windows
+# For Windows / System.Drawing.Common workflows:
+dotnet add package ZXing.Net.Bindings.Windows.Compatibility
 
-# For cross-platform (recommended for new projects):
-dotnet add package ZXing.Net.Bindings.ImageSharp
+# For cross-platform (recommended for new projects, ImageSharp 3.x):
+dotnet add package ZXing.Net.Bindings.ImageSharp.V3
 dotnet add package SixLabors.ImageSharp
 ```
 
@@ -260,7 +265,7 @@ For Linux deployment, you must avoid System.Drawing. Use ImageSharp binding:
 
 ```bash
 dotnet add package ZXing.Net
-dotnet add package ZXing.Net.Bindings.ImageSharp
+dotnet add package ZXing.Net.Bindings.ImageSharp.V3
 dotnet add package SixLabors.ImageSharp
 ```
 
@@ -296,7 +301,7 @@ ENTRYPOINT ["dotnet", "YourApp.dll"]
 
 ```bash
 # Single package, all platforms, no additional dependencies
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ```dockerfile
@@ -347,7 +352,7 @@ using IronBarCode;
 string ReadBarcode(string imagePath)
 {
     var result = BarcodeReader.Read(imagePath);
-    return result.FirstOrDefault()?.Text ?? "";
+    return result.FirstOrDefault()?.Value ?? "";
 }
 ```
 
@@ -591,7 +596,7 @@ Dictionary<string, string> ProcessBatch(string[] imagePaths)
         var barcode = BarcodeReader.Read(path).FirstOrDefault();
         if (barcode != null)
         {
-            results[path] = barcode.Text;
+            results[path] = barcode.Value;
         }
     });
 
@@ -678,7 +683,7 @@ var results = BarcodeReader.Read(imagePath);
 // Automatically finds all barcodes regardless of format
 foreach (var barcode in results)
 {
-    Console.WriteLine($"Found {barcode.BarcodeType}: {barcode.Text}");
+    Console.WriteLine($"Found {barcode.BarcodeType}: {barcode.Value}");
 }
 ```
 
@@ -860,7 +865,7 @@ Before investing time in migration, ensure it's the right decision for your proj
 ```xml
 <!-- Remove from .csproj -->
 <PackageReference Include="ZXing.Net" Version="*" />
-<PackageReference Include="ZXing.Net.Bindings.Windows" Version="*" />
+<PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" Version="*" />
 <PackageReference Include="ZXing.Net.Bindings.ImageSharp" Version="*" />
 
 <!-- Also remove PDF libraries used for ZXing workarounds -->
@@ -872,7 +877,7 @@ Before investing time in migration, ensure it's the right decision for your proj
 
 ```xml
 <!-- Add to .csproj -->
-<PackageReference Include="IronBarcode" Version="2024.*" />
+<PackageReference Include="BarCode" Version="*" />
 ```
 
 #### NuGet Commands
@@ -880,11 +885,11 @@ Before investing time in migration, ensure it's the right decision for your proj
 ```powershell
 # Remove old packages
 Uninstall-Package ZXing.Net
-Uninstall-Package ZXing.Net.Bindings.Windows
+Uninstall-Package ZXing.Net.Bindings.Windows.Compatibility
 Uninstall-Package PdfiumViewer
 
-# Add IronBarcode
-Install-Package IronBarcode
+# Add IronBarcode (NuGet package id is BarCode)
+Install-Package BarCode
 ```
 
 ### API Mapping Reference
@@ -906,7 +911,7 @@ Install-Package IronBarcode
 | `reader.DecodeMultiple(bitmap)` | `BarcodeReader.Read(path)` | Always returns collection |
 | `reader.Options.PossibleFormats = [...]` | Not needed | Automatic detection |
 | `reader.Options.TryHarder = true` | Default behavior | Always tries hard |
-| `result.Text` | `result.Text` | Same property name |
+| `result.Text` | `result.Value` | Property renamed |
 | `result.BarcodeFormat` | `result.BarcodeType` | Renamed property |
 
 #### Writing Operations
@@ -964,7 +969,7 @@ public class IronBarcodeService
     public string ReadBarcode(string imagePath)
     {
         var result = BarcodeReader.Read(imagePath).FirstOrDefault();
-        return result?.Text ?? "";
+        return result?.Value ?? "";
     }
 }
 ```
@@ -1015,7 +1020,7 @@ using IronBarCode;
 public List<string> ReadAllBarcodes(string imagePath)
 {
     var results = BarcodeReader.Read(imagePath);
-    return results.Select(r => r.Text).ToList();
+    return results.Select(r => r.Value).ToList();
 }
 ```
 
@@ -1081,7 +1086,7 @@ using IronBarCode;
 public List<string> ReadBarcodesFromPdf(string pdfPath)
 {
     var results = BarcodeReader.Read(pdfPath);
-    return results.Select(r => r.Text).ToList();
+    return results.Select(r => r.Value).ToList();
 }
 ```
 
@@ -1187,7 +1192,7 @@ public Dictionary<string, string> ProcessBatch(string[] files)
         var result = BarcodeReader.Read(file).FirstOrDefault();
         if (result != null)
         {
-            results[file] = result.Text;
+            results[file] = result.Value;
         }
     });
 

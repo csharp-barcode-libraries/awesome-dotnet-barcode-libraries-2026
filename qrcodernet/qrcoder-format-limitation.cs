@@ -17,7 +17,7 @@ using System.IO;
 using QRCoder;
 
 // IronBarcode package
-// Install: dotnet add package IronBarcode
+// Install: dotnet add package BarCode
 using IronBarCode;
 
 namespace QRCoderComparison
@@ -239,7 +239,7 @@ var dataMatrix = qrGenerator.CreateDataMatrix(""PHARMA-LOT"");
 
             // Demonstrate reading
             var scanResult = BarcodeReader.Read("scenario-shipping.png");
-            Console.WriteLine($"  Scanned: {scanResult.FirstOrDefault()?.Text}\n");
+            Console.WriteLine($"  Scanned: {scanResult.FirstOrDefault()?.Value}\n");
 
             Console.WriteLine("Month 9: Pharma product line needs DataMatrix for FDA compliance");
             Console.WriteLine("  Problem: None of the current libraries support DataMatrix well");

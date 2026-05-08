@@ -14,8 +14,8 @@ using System.Collections.Generic;
 using System.IO;
 
 // IronBarcode - the .NET solution
-// Install: dotnet add package IronBarcode
-using IronBarcode;
+// Install: dotnet add package BarCode
+using IronBarCode;
 
 namespace MLKitMobileOnlyExample
 {
@@ -49,10 +49,10 @@ namespace MLKitMobileOnlyExample
             Console.WriteLine();
 
             Console.WriteLine("To use ML Kit from MAUI, you would need:");
-            Console.WriteLine("  1. Platform-specific native bindings");
+            Console.WriteLine("  1. A community Xamarin/MAUI binding (no first-party Google .NET package)");
             Console.WriteLine("  2. Separate iOS and Android implementations");
-            Console.WriteLine("  3. Firebase project configuration");
-            Console.WriteLine("  4. Platform-specific NuGet packages");
+            Console.WriteLine("  3. Maven/CocoaPods toolchain knowledge for the underlying SDK");
+            Console.WriteLine("  4. Tracking community-binding releases against upstream ML Kit");
             Console.WriteLine();
 
             Console.WriteLine("This is fundamentally different from a native .NET library.");
@@ -156,7 +156,9 @@ barcodeScanner.process(image) { barcodes, error in
         public void ActualIronBarcodeUsage(string imagePath)
         {
             // This is real, working C# code using IronBarcode
-            // No platform bindings, no native code, no Firebase
+            // No platform bindings, no native code, no community wrapper
+
+            IronBarCode.License.LicenseKey = "YOUR-LICENSE-KEY";
 
             // Read barcodes from an image
             var results = BarcodeReader.Read(imagePath);
@@ -165,7 +167,6 @@ barcodeScanner.process(image) { barcodes, error in
             {
                 Console.WriteLine($"Barcode Type: {barcode.BarcodeType}");
                 Console.WriteLine($"Barcode Value: {barcode.Value}");
-                Console.WriteLine($"Confidence: {barcode.Confidence}");
             }
 
             // Generate a barcode
@@ -193,8 +194,8 @@ barcodeScanner.process(image) { barcodes, error in
                 ("---", "---", "---"),
                 ("iOS Native (Swift)", "Yes", "N/A"),
                 ("Android Native (Kotlin)", "Yes", "N/A"),
-                (".NET MAUI iOS", "Via bindings", "Yes"),
-                (".NET MAUI Android", "Via bindings", "Yes"),
+                (".NET MAUI iOS", "Via community binding", "Yes"),
+                (".NET MAUI Android", "Via community binding", "Yes"),
                 (".NET MAUI Windows", "No", "Yes"),
                 (".NET MAUI macOS", "No", "Yes"),
                 ("WPF", "No", "Yes"),
@@ -242,7 +243,7 @@ barcodeScanner.process(image) { barcodes, error in
                      "Perfect fit - CLI tool processing"),
 
                 ["MAUI app with live camera scanning"] =
-                    ("Possible via native bindings (complex)",
+                    ("Possible via community binding (Android/iOS only)",
                      "Works for processing captured images"),
 
                 ["MAUI app processing PDF documents"] =

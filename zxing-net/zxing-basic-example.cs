@@ -11,8 +11,9 @@
  * - IronBarcode works cross-platform without additional packages
  *
  * NuGet Packages Required:
- * - ZXing.Net: ZXing.Net version 0.16.x+, ZXing.Net.Bindings.Windows
- * - IronBarcode: IronBarcode version 2024.x+
+ * - ZXing.Net: ZXing.Net 0.16.11+, ZXing.Net.Bindings.Windows.Compatibility
+ *   (For ImageSharp users: ZXing.Net.Bindings.ImageSharp / .V2 / .V3 instead)
+ * - IronBarcode: BarCode (namespace IronBarCode)
  */
 
 using System;
@@ -20,6 +21,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 
 // ============================================================================
 // ZXING.NET APPROACH
@@ -33,7 +35,7 @@ namespace ZXingExamples
 
     /// <summary>
     /// Basic barcode reading using ZXing.Net.
-    /// Requires ZXing.Net and ZXing.Net.Bindings.Windows packages.
+    /// Requires ZXing.Net and ZXing.Net.Bindings.Windows.Compatibility packages.
     /// </summary>
     public class BasicZXingReading
     {
@@ -296,7 +298,7 @@ namespace IronBarcodeExamples
         {
             // One line - automatic format detection
             var result = BarcodeReader.Read(imagePath).FirstOrDefault();
-            return result?.Text;
+            return result?.Value;
         }
 
         /// <summary>
@@ -308,11 +310,10 @@ namespace IronBarcodeExamples
 
             foreach (var result in results)
             {
-                Console.WriteLine($"Text: {result.Text}");
-                Console.WriteLine($"Format: {result.BarcodeType}");
+                Console.WriteLine($"Value: {result.Value}");
+                Console.WriteLine($"Type: {result.BarcodeType}");
                 Console.WriteLine($"Position: ({result.X}, {result.Y})");
                 Console.WriteLine($"Size: {result.Width}x{result.Height}");
-                Console.WriteLine($"Confidence: {result.Confidence}");
             }
         }
 
@@ -324,7 +325,7 @@ namespace IronBarcodeExamples
         {
             // Automatically detects all formats, finds all barcodes
             var results = BarcodeReader.Read(imagePath);
-            return results.Select(r => r.Text).ToList();
+            return results.Select(r => r.Value).ToList();
         }
     }
 
@@ -377,7 +378,7 @@ namespace IronBarcodeExamples
         public static string ReadFromBytes(byte[] imageData)
         {
             var result = BarcodeReader.Read(imageData).FirstOrDefault();
-            return result?.Text;
+            return result?.Value;
         }
 
         /// <summary>
@@ -425,7 +426,7 @@ namespace ComparisonExamples
 
             // IronBarcode approach (1 line of meaningful code)
             {
-                string text = IronBarCode.BarcodeReader.Read(imagePath).FirstOrDefault()?.Text ?? "";
+                string text = IronBarCode.BarcodeReader.Read(imagePath).FirstOrDefault()?.Value ?? "";
             }
         }
 

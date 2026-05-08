@@ -17,8 +17,8 @@ using System.IO;
 using System.Linq;
 
 // IronBarcode - modern, actively maintained library
-// Install: dotnet add package IronBarcode
-using IronBarcode;
+// Install: dotnet add package BarCode
+using IronBarCode;
 
 namespace MessagingToolkitMigrationExample
 {
@@ -114,7 +114,7 @@ public string ReadBarcode(string imagePath)
 
             var code = @"
 // IronBarcode - all .NET platforms
-using IronBarcode;
+using IronBarCode;
 
 public string ReadBarcode(string imagePath)
 {
@@ -171,7 +171,7 @@ public void CreateBarcode(string data, string outputPath)
 
             var code = @"
 // IronBarcode - all platforms
-using IronBarcode;
+using IronBarCode;
 
 public void CreateBarcode(string data, string outputPath)
 {
@@ -391,6 +391,10 @@ var description = barcode.BarcodeType switch
         {
             Console.WriteLine("\n=== LIVE EXAMPLE ===\n");
 
+            // Set the license key once at startup (replace with your real key
+            // in production; without one the library runs in trial mode).
+            // IronBarCode.License.LicenseKey = "YOUR-LICENSE-KEY";
+
             // Generate a barcode
             var qrCode = BarcodeWriter.CreateBarcode(
                 "Migrated from MessagingToolkit to IronBarcode",
@@ -424,12 +428,12 @@ var description = barcode.BarcodeType switch
             Console.WriteLine("========================================\n");
 
             Console.WriteLine("Step 1: Install IronBarcode");
-            Console.WriteLine("  dotnet add package IronBarcode");
+            Console.WriteLine("  dotnet add package BarCode");
             Console.WriteLine();
 
             Console.WriteLine("Step 2: Update using statements");
             Console.WriteLine("  Remove: using MessagingToolkit.Barcode;");
-            Console.WriteLine("  Add:    using IronBarcode;");
+            Console.WriteLine("  Add:    using IronBarCode;  // capital C");
             Console.WriteLine();
 
             Console.WriteLine("Step 3: Replace decoder code");

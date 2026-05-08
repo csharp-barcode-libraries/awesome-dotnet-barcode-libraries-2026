@@ -1,14 +1,16 @@
 /*
- * OnBarcode Historical DLL Distribution vs IronBarcode Modern Distribution
+ * OnBarcode Manual DLL vs NuGet Distribution, and IronBarcode's NuGet-First Model
  *
- * This example demonstrates the evolution of OnBarcode's distribution model
- * from manual DLL downloads to NuGet packages, and compares it to
- * IronBarcode's always-modern NuGet-first approach.
+ * OnBarcode offers two distribution paths in parallel: a traditional download
+ * (purchase, receive ZIP of DLLs, add manual references) and NuGet packages
+ * (OnBarcode.Barcode.Generator, OnBarcode.Barcode.Reader, plus framework and
+ * SkiaSharp variants). This example contrasts the manual DLL workflow with
+ * IronBarcode's NuGet-only distribution under the package id "BarCode".
  *
  * Key differences demonstrated:
- * 1. Historical manual DLL management
- * 2. Recent NuGet adoption
- * 3. Always-modern vs transitional distribution
+ * 1. Manual DLL management (still offered by OnBarcode)
+ * 2. OnBarcode NuGet packages
+ * 3. IronBarcode NuGet-only distribution
  * 4. Developer experience implications
  *
  * Author: Jacob Mellor, CTO of Iron Software
@@ -30,15 +32,17 @@ namespace BarcodeComparison
         /// </summary>
         public void DemonstrateHistoricalSetup()
         {
-            Console.WriteLine("=== OnBarcode Historical Distribution (Pre-2025) ===\n");
+            Console.WriteLine("=== OnBarcode Manual DLL Distribution (Still Offered) ===\n");
 
-            Console.WriteLine("Before NuGet packages were available, OnBarcode required manual setup:\n");
+            Console.WriteLine("OnBarcode continues to offer a manual DLL distribution alongside its NuGet packages.\n");
+            Console.WriteLine("Customers who select this path follow these steps:\n");
 
             Console.WriteLine("Step 1: Purchase and Download");
             Console.WriteLine(@"
     1. Visit OnBarcode.com
-    2. Contact sales for pricing
-    3. Purchase license
+    2. Choose product tier (Linear or Linear+2D Generator;
+       Reader sold separately) and license size
+    3. Purchase license (perpetual, 30-day money-back)
     4. Receive download link via email
     5. Download ZIP archive containing:
        - OnBarcode.Barcode.dll
@@ -168,15 +172,19 @@ namespace BarcodeComparison
         /// </summary>
         public void DemonstrateNuGetTransition()
         {
-            Console.WriteLine("=== OnBarcode NuGet Packages (Recent Addition 2025-2026) ===\n");
+            Console.WriteLine("=== OnBarcode NuGet Packages ===\n");
 
-            Console.WriteLine("OnBarcode has recently added NuGet distribution:\n");
+            Console.WriteLine("OnBarcode publishes its libraries on nuget.org under the OnBarcode profile.\n");
 
-            Console.WriteLine("Available Packages:");
+            Console.WriteLine("Available Packages (current versions: Generator 10.5.x, Reader 10.3.x):");
             Console.WriteLine(@"
-    OnBarcode.Barcode.Generator   <- Barcode generation
-    OnBarcode.QRCode              <- QR code specific
-    OnBarcode.Barcode.Reader      <- Separate reading (separate purchase!)
+    OnBarcode.Barcode.Generator                    <- Generation (cross-platform)
+    OnBarcode.Barcode.Generator.SkiaSharp          <- SkiaSharp variant
+    OnBarcode.Barcode.Generator.AspNet.Framework   <- ASP.NET Framework variant
+    OnBarcode.Barcode.Generator.WinForms.Framework <- WinForms variant
+    OnBarcode.Barcode.Reader                       <- Reading (separate purchase!)
+    OnBarcode.Barcode.Reader.Framework             <- .NET Framework reader
+    OnBarcode.Barcode.Reader.Document.PDF          <- PDF reading add-on
 ");
 
             Console.WriteLine("Installation (Modern Approach):");
@@ -191,10 +199,9 @@ namespace BarcodeComparison
             Console.WriteLine("- No DLLs in source control\n");
 
             Console.WriteLine("Remaining Challenges:");
-            Console.WriteLine("- Newer packages may have fewer downloads");
-            Console.WriteLine("- Documentation may reference old manual approach");
-            Console.WriteLine("- Reader still requires separate purchase");
-            Console.WriteLine("- Transition period confusion\n");
+            Console.WriteLine("- Multiple package variants to choose from (Framework, SkiaSharp, AspNet)");
+            Console.WriteLine("- Reader still requires separate purchase and separate package");
+            Console.WriteLine("- PDF reading requires the Reader.Document.PDF add-on package\n");
         }
 
         /// <summary>
@@ -202,16 +209,17 @@ namespace BarcodeComparison
         /// </summary>
         public void DemonstrateIronBarcodeModern()
         {
-            Console.WriteLine("=== IronBarcode Distribution (NuGet-First Since Launch) ===\n");
+            Console.WriteLine("=== IronBarcode Distribution (NuGet-Only) ===\n");
 
-            Console.WriteLine("IronBarcode has been NuGet-first from the beginning:\n");
+            Console.WriteLine("IronBarcode is distributed exclusively through NuGet under the package id \"BarCode\":\n");
 
             Console.WriteLine("Installation:");
             Console.WriteLine(@"
-    # Single command
-    dotnet add package IronBarcode
+    # Single command. Note: NuGet package id is ""BarCode"";
+    # the C# namespace is ""IronBarCode"" (capital C).
+    dotnet add package BarCode
 
-    # That's it. No manual steps.
+    # That's it. No manual steps. No separate Reader package.
 ");
 
             Console.WriteLine("What happens automatically:");
@@ -226,10 +234,10 @@ namespace BarcodeComparison
             Console.WriteLine("Version Management:");
             Console.WriteLine(@"
     # Upgrade to latest
-    dotnet add package IronBarcode
+    dotnet add package BarCode
 
     # Or specify version
-    dotnet add package IronBarcode --version 2024.1.0
+    dotnet add package BarCode --version 2025.1.0
 
     # Check for updates
     dotnet list package --outdated
@@ -238,7 +246,7 @@ namespace BarcodeComparison
             Console.WriteLine("Team Synchronization:");
             Console.WriteLine(@"
     # In .csproj - version tracked as text
-    <PackageReference Include=""IronBarcode"" Version=""2024.1.0"" />
+    <PackageReference Include=""BarCode"" Version=""2025.1.0"" />
 
     # Any team member runs:
     dotnet restore
@@ -246,11 +254,10 @@ namespace BarcodeComparison
     # Everyone has same version
 ");
 
-            Console.WriteLine("\nBenefits of NuGet-first:");
-            Console.WriteLine("- 2.1M+ downloads validates reliability");
-            Console.WriteLine("- Mature package, extensive testing");
+            Console.WriteLine("\nBenefits of NuGet-only distribution:");
+            Console.WriteLine("- Single package covers generation and reading");
             Console.WriteLine("- Documentation assumes NuGet workflow");
-            Console.WriteLine("- No legacy manual process baggage\n");
+            Console.WriteLine("- No manual DLL handoff to maintain\n");
         }
 
         /// <summary>
@@ -260,7 +267,7 @@ namespace BarcodeComparison
         {
             Console.WriteLine("=== CI/CD Pipeline Comparison ===\n");
 
-            Console.WriteLine("OnBarcode (Historical Manual Approach):\n");
+            Console.WriteLine("OnBarcode (Manual DLL Approach):\n");
             Console.WriteLine(@"
     # azure-pipelines.yml or similar
 
@@ -290,7 +297,7 @@ namespace BarcodeComparison
     # - No caching benefits
 ");
 
-            Console.WriteLine("\nOnBarcode (New NuGet Approach):\n");
+            Console.WriteLine("\nOnBarcode (NuGet Approach):\n");
             Console.WriteLine(@"
     # azure-pipelines.yml
 
@@ -305,12 +312,10 @@ namespace BarcodeComparison
       inputs:
         command: build
 
-    # Better, but:
-    # - Package is newer, less battle-tested in CI
-    # - May have compatibility issues in transition
+    # Two restores still produce two packages and two licenses to manage
 ");
 
-            Console.WriteLine("\nIronBarcode (NuGet-First):\n");
+            Console.WriteLine("\nIronBarcode (NuGet, Single Package):\n");
             Console.WriteLine(@"
     # azure-pipelines.yml
 
@@ -330,7 +335,7 @@ namespace BarcodeComparison
     # - NuGet cache works
     # - Version lock files
     # - Reproducible builds
-    # - Millions of successful restores
+    # - Single package covers generation and reading
 ");
         }
 
@@ -432,23 +437,20 @@ namespace BarcodeComparison
             Console.WriteLine("Package download counts indicate adoption and trust:\n");
 
             Console.WriteLine("IronBarcode:");
-            Console.WriteLine("  - Package: IronBarcode");
-            Console.WriteLine("  - Downloads: 2.1M+ total");
-            Console.WriteLine("  - Years on NuGet: Many");
-            Console.WriteLine("  - Conclusion: Battle-tested, widely adopted\n");
+            Console.WriteLine("  - Package: BarCode (NuGet)");
+            Console.WriteLine("  - Distribution: NuGet only");
+            Console.WriteLine("  - Conclusion: Single package covers generation and reading\n");
 
             Console.WriteLine("OnBarcode:");
-            Console.WriteLine("  - Package: OnBarcode.Barcode.Generator");
-            Console.WriteLine("  - Downloads: Lower (newer packages)");
-            Console.WriteLine("  - NuGet presence: Recent (2025-2026)");
-            Console.WriteLine("  - Conclusion: Transitioning, less proven via NuGet\n");
+            Console.WriteLine("  - Package: OnBarcode.Barcode.Generator (10.5.x)");
+            Console.WriteLine("  - Plus: OnBarcode.Barcode.Reader, framework variants, PDF add-on");
+            Console.WriteLine("  - Distribution: NuGet and direct DLL download both supported");
+            Console.WriteLine("  - Conclusion: Multiple packages and tiers to choose from\n");
 
             Console.WriteLine("What download counts indicate:");
             Console.WriteLine("- More downloads = more real-world testing");
             Console.WriteLine("- Edge cases discovered and fixed");
-            Console.WriteLine("- Community familiarity");
-            Console.WriteLine("- Stack Overflow answers available");
-            Console.WriteLine("- Tutorial availability\n");
+            Console.WriteLine("- Community familiarity\n");
         }
 
         /// <summary>
@@ -458,22 +460,21 @@ namespace BarcodeComparison
         {
             Console.WriteLine("=== Summary: Distribution Model Comparison ===\n");
 
-            Console.WriteLine("| Aspect                  | OnBarcode (Historical) | OnBarcode (New)    | IronBarcode        |");
-            Console.WriteLine("|-------------------------|------------------------|--------------------|--------------------|");
-            Console.WriteLine("| Distribution            | Manual DLL             | NuGet              | NuGet              |");
-            Console.WriteLine("| Available since         | Legacy                 | 2025-2026          | Years              |");
-            Console.WriteLine("| Version management      | Manual                 | Automatic          | Automatic          |");
-            Console.WriteLine("| CI/CD support           | Complex                | Standard           | Standard           |");
-            Console.WriteLine("| Docker friendly         | Manual                 | Standard           | Standard           |");
-            Console.WriteLine("| NuGet downloads         | N/A                    | Lower (newer)      | 2.1M+              |");
-            Console.WriteLine("| Documentation focus     | Manual setup           | Transitioning      | NuGet workflow     |");
+            Console.WriteLine("| Aspect                  | OnBarcode (Manual DLL) | OnBarcode (NuGet)        | IronBarcode (BarCode) |");
+            Console.WriteLine("|-------------------------|------------------------|--------------------------|-----------------------|");
+            Console.WriteLine("| Distribution            | DLL ZIP from website   | nuget.org                | nuget.org             |");
+            Console.WriteLine("| Version management      | Manual                 | Automatic                | Automatic             |");
+            Console.WriteLine("| CI/CD support           | Complex                | Standard                 | Standard              |");
+            Console.WriteLine("| Docker friendly         | Manual                 | Standard                 | Standard              |");
+            Console.WriteLine("| Packages required       | 1+ DLLs                | 2+ (Generator + Reader)  | 1                     |");
+            Console.WriteLine("| Documentation focus     | Manual setup           | NuGet + manual paths     | NuGet only            |");
             Console.WriteLine();
 
             Console.WriteLine("Recommendation:");
-            Console.WriteLine("- OnBarcode's NuGet packages are welcome but newer");
-            Console.WriteLine("- Historical manual approach still in documentation");
-            Console.WriteLine("- IronBarcode's NuGet-first approach is more proven");
-            Console.WriteLine("- Choose IronBarcode for modern deployment workflows\n");
+            Console.WriteLine("- OnBarcode's NuGet packages remove most manual-setup pain");
+            Console.WriteLine("- Reader is still a separate package and separate purchase");
+            Console.WriteLine("- IronBarcode consolidates generation + reading into one package");
+            Console.WriteLine("- Choose IronBarcode when both capabilities are needed\n");
         }
     }
 
@@ -500,12 +501,13 @@ namespace BarcodeComparison
     # Step 2: Install generator
     dotnet add package OnBarcode.Barcode.Generator
 
-    # Step 3: Install reader (separate package!)
+    # Step 3: Install reader (separate package and separate purchase!)
     dotnet add package OnBarcode.Barcode.Reader
 
     # Step 4: Configure TWO licenses
-    OnBarcode.Barcode.License.SetLicense(""GENERATOR-KEY"");
-    OnBarcode.Barcode.Reader.License.SetLicense(""READER-KEY"");
+    using OnBarcode.Barcode;
+    License.RegisterLicense(""GENERATOR-KEY"");
+    License.RegisterLicense(""READER-KEY"");
 
     # Step 5: Write code (two different APIs)
     # ... see separate-reader example
@@ -521,8 +523,8 @@ namespace BarcodeComparison
     dotnet new console -n MyBarcodeApp
     cd MyBarcodeApp
 
-    # Step 2: Install IronBarcode
-    dotnet add package IronBarcode
+    # Step 2: Install IronBarcode (NuGet package id is ""BarCode"")
+    dotnet add package BarCode
 
     # Step 3: Configure license
     IronBarCode.License.LicenseKey = ""YOUR-KEY"";

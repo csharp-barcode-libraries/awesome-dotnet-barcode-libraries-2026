@@ -4,7 +4,7 @@ This guide covers the complete migration path from OnBarcode to [IronBarcode](ht
 
 ## Why Migrate from OnBarcode
 
-**Opaque Pricing Model:** OnBarcode does not publish prices for the Generator SDK or the Reader SDK. Each requires a separate sales conversation to obtain a quote. An organization that needs both capabilities must complete two independent procurement processes before it knows the total cost. Budget spreadsheets cannot be filled in, purchase orders cannot be raised, and timelines cannot be set until both conversations are finished.
+**Two-SKU Procurement Overhead:** OnBarcode publishes per-product pricing, but generation and reading are sold as separate products with separate license keys. The Generator Suite is further split into Linear (1D-only) and Linear + 2D tiers — Single Developer prices are $990 (Linear) and $1,690 (Linear + 2D), with five-developer and unlimited tiers escalating accordingly. The Reader SDK is priced separately starting from $990. An organization that needs full 2D generation plus reading must complete two purchases against two SKUs and reconcile two licenses at runtime; a single comparable IronBarcode tier covers both capabilities under one purchase.
 
 **Split Product Overhead:** Generation and reading are separate products with separate NuGet packages, separate license namespaces, separate license keys, and separate version schedules. A project using both products must configure two license keys at startup, track two package versions across upgrades, and maintain awareness of two independent release cycles. When the reading requirement is added to a project that was originally generation-only, the entire procurement and integration process must be repeated for the second product.
 
@@ -17,12 +17,11 @@ This guide covers the complete migration path from OnBarcode to [IronBarcode](ht
 The dual-license configuration is the most immediate friction point for any project that needs both generation and reading. OnBarcode requires two separate calls to two separate license namespaces at startup:
 
 ```csharp
-// OnBarcode: two products, two keys, two calls
-using OnBarcode.Barcode;
-using OnBarcode.Barcode.Reader;
+// OnBarcode: two products, two keys, two registrations
+using OnBarcode.Barcode; // shared namespace, but two distinct NuGet packages
 
-OnBarcode.Barcode.License.SetLicense("GENERATOR-LICENSE-KEY");
-OnBarcode.Barcode.Reader.License.SetLicense("READER-LICENSE-KEY");
+License.RegisterLicense("GENERATOR-LICENSE-KEY");
+License.RegisterLicense("READER-LICENSE-KEY");
 ```
 
 IronBarcode reduces this to a single property assignment that covers all capabilities — generation, reading, PDF support, and batch operations — under one key:
@@ -43,14 +42,13 @@ Every barcode operation in the application — regardless of whether it generate
 | Barcode generation | Yes | Yes |
 | Barcode reading | Separate product, separate purchase | Included |
 | PDF barcode reading | Not supported natively | Native — no external library required |
-| Format auto-detection on reading | No — explicit `BarcodeType[]` required | Yes |
-| Result metadata (format, position, page) | Not available — raw `string[]` only | Yes — `BarcodeResults` with full metadata |
+| Format auto-detection on reading | No — explicit `BarcodeType` argument required on `BarcodeScanner.Scan` | Yes |
+| Result metadata (format, position, page) | Raw `string[]` from `BarcodeScanner.Scan` | Yes — `BarcodeResults` with full metadata |
 | QR Code with logo overlay | Manual GDI+ code required | Built-in |
-| Published pricing | No — contact sales for each product | Yes — perpetual tiers on website |
+| Published pricing | Yes — but split across multiple SKUs (Linear vs Linear+2D, Generator vs Reader) | Yes — single SKU covers all capabilities |
 | Single license key for all capabilities | No — separate keys per product | Yes |
-| NuGet distribution | Added 2025–2026 | Available since launch |
-| Source code access | Unlimited tier only | Not available |
-| .NET 8 / 9 support | Yes | Yes |
+| NuGet distribution | `OnBarcode.Barcode.Generator`, `OnBarcode.Barcode.Reader`, plus framework variants | Single `BarCode` package |
+| .NET target frameworks | .NET Standard 2.0, .NET 5/6/7/8, Core 3.x, .NET Framework 4.x | .NET Standard 2.0+ across modern .NET |
 | Docker / cloud license configuration | Manual | Environment variable support |
 
 ## Quick Start: OnBarcode to IronBarcode Migration
@@ -80,10 +78,10 @@ Delete the DLL files from the `lib/` directory or wherever they are stored. Leav
 
 ### Step 2: Add IronBarcode
 
-One package covers generation, reading, and PDF support:
+One package covers generation, reading, and PDF support. The NuGet package id is `BarCode`:
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 No second package is required for reading. No second package is required for PDF support.
@@ -95,18 +93,17 @@ Replace both OnBarcode using directives with the single IronBarcode import:
 ```csharp
 // Remove
 using OnBarcode.Barcode;
-using OnBarcode.Barcode.Reader;
 
 // Add
 using IronBarCode;
 ```
 
-Replace the two `SetLicense` calls with a single key assignment. Place this once, early in application startup, before any barcode operation runs:
+Replace the two `License.RegisterLicense` calls with a single key assignment. Place this once, early in application startup, before any barcode operation runs:
 
 ```csharp
 // Remove
-OnBarcode.Barcode.License.SetLicense("GENERATOR-LICENSE-KEY");
-OnBarcode.Barcode.Reader.License.SetLicense("READER-LICENSE-KEY");
+License.RegisterLicense("GENERATOR-LICENSE-KEY");
+License.RegisterLicense("READER-LICENSE-KEY");
 
 // Add
 IronBarCode.License.LicenseKey = "YOUR-IRONBARCODE-KEY";
@@ -123,12 +120,12 @@ The basic Code 128 case illustrates the property-assignment pattern versus the s
 ```csharp
 using OnBarcode.Barcode;
 
-Barcode barcode = new Barcode();
-barcode.Symbology = Symbology.Code128Auto;
+Linear barcode = new Linear();
+barcode.Type = BarcodeType.CODE128;
 barcode.Data = "SHIP-2024-001";
 barcode.Resolution = 96;
-barcode.BarWidth = 1;
-barcode.BarHeight = 80;
+barcode.X = 1;             // module width
+barcode.BarcodeHeight = 80;
 barcode.ShowText = true;
 barcode.drawBarcode("shipping-label.png");
 ```
@@ -154,8 +151,7 @@ Logo-branded QR codes require OnBarcode to fall back to `System.Drawing` for the
 using OnBarcode.Barcode;
 using System.Drawing;
 
-Barcode qr = new Barcode();
-qr.Symbology = Symbology.QRCode;
+QRCode qr = new QRCode();
 qr.Data = "https://example.com/product/4891";
 qr.QRCodeDataMode = QRCodeDataMode.Auto;
 qr.QRCodeECL = QRCodeECL.H; // H-level error correction required for logo overlay
@@ -192,16 +188,17 @@ Reading from an image file illustrates the product consolidation most clearly. W
 **OnBarcode Approach:**
 
 ```csharp
-using OnBarcode.Barcode.Reader;
+using OnBarcode.Barcode;
 
 // Separate license call required — distinct from the generator license
-OnBarcode.Barcode.Reader.License.SetLicense("READER-LICENSE-KEY");
+License.RegisterLicense("READER-LICENSE-KEY");
 
-BarcodeReader reader = new BarcodeReader();
-reader.BarcodeTypes = new BarcodeType[] { BarcodeType.Code128, BarcodeType.QRCode };
-string[] results = reader.Scan("received-label.png");
+// Static API; format must be specified up front. To scan multiple symbologies,
+// call BarcodeScanner.Scan once per BarcodeType and combine the results.
+string[] code128Results = BarcodeScanner.Scan("received-label.png", BarcodeType.CODE128);
+string[] qrResults = BarcodeScanner.Scan("received-label.png", BarcodeType.QRCode);
 
-foreach (string value in results)
+foreach (string value in code128Results.Concat(qrResults))
     Console.WriteLine(value);
 ```
 
@@ -224,17 +221,16 @@ This migration example applies to teams that were rendering PDF pages to images 
 **OnBarcode Approach:**
 
 ```csharp
-// OnBarcode has no native PDF support.
-// A separate PDF rendering library was required — for example PdfiumViewer or Aspose.PDF.
+// OnBarcode ships an optional PDF reader add-on (OnBarcode.Barcode.Reader.Document.PDF).
+// Without it, projects must render PDF pages to images first using a separate library
+// (PdfiumViewer, Aspose.PDF, etc.) and then call BarcodeScanner.Scan per page.
 var pageImages = RenderPdfPagesToImages("invoices.pdf"); // external library call
 
-using OnBarcode.Barcode.Reader;
-BarcodeReader reader = new BarcodeReader();
-reader.BarcodeTypes = new BarcodeType[] { BarcodeType.Code128, BarcodeType.QRCode };
+using OnBarcode.Barcode;
 
 foreach (var pageImage in pageImages)
 {
-    string[] results = reader.Scan(pageImage);
+    string[] results = BarcodeScanner.Scan(pageImage, BarcodeType.CODE128);
     foreach (string value in results)
         Console.WriteLine(value);
 }
@@ -263,12 +259,12 @@ using OnBarcode.Barcode;
 
 foreach (var item in inventoryItems)
 {
-    Barcode barcode = new Barcode();
-    barcode.Symbology = Symbology.Code128Auto;
+    Linear barcode = new Linear();
+    barcode.Type = BarcodeType.CODE128;
     barcode.Data = item.Sku;
     barcode.Resolution = 96;
-    barcode.BarWidth = 1;
-    barcode.BarHeight = 80;
+    barcode.X = 1;
+    barcode.BarcodeHeight = 80;
     barcode.ShowText = true;
     barcode.drawBarcode($"labels/{item.Id}.png");
 }
@@ -290,26 +286,28 @@ foreach (var item in inventoryItems)
 
 | OnBarcode | IronBarcode | Notes |
 |---|---|---|
-| `OnBarcode.Barcode.License.SetLicense("key")` | `IronBarCode.License.LicenseKey = "key"` | Property assignment; called once at startup |
-| `OnBarcode.Barcode.Reader.License.SetLicense("key")` | (merged into single key above) | No separate reader license |
-| `new Barcode()` | `BarcodeWriter.CreateBarcode(data, encoding)` | Static factory; no object instance |
-| `barcode.Symbology = Symbology.Code128Auto` | `BarcodeEncoding.Code128` as parameter | Passed as second argument to `CreateBarcode` |
+| `License.RegisterLicense("key")` | `IronBarCode.License.LicenseKey = "key"` | Property assignment; called once at startup |
+| Second `License.RegisterLicense` for Reader | (merged into single key above) | No separate reader license |
+| `new Linear()` (1D) | `BarcodeWriter.CreateBarcode(data, encoding)` | Static factory; no per-symbology classes |
+| `new QRCode()`, `new DataMatrix()`, `new PDF417()` (2D) | `BarcodeWriter.CreateBarcode(data, encoding)` | Single factory parameterized by encoding |
+| `barcode.Type = BarcodeType.CODE128` | `BarcodeEncoding.Code128` as parameter | Passed as second argument to `CreateBarcode` |
 | `barcode.Data = "..."` | First parameter of `CreateBarcode` | Data is the first argument |
 | `barcode.drawBarcode("file.png")` | `.SaveAsPng("file.png")` | Format-named method |
 | `barcode.drawBarcode("file.jpg")` | `.SaveAsJpeg("file.jpg")` | Format-named method |
 | `barcode.drawBarcode("file.pdf")` | `.SaveAsPdf("file.pdf")` | Native PDF output |
-| `Symbology.QRCode` | `BarcodeEncoding.QRCode` | Direct mapping |
-| `Symbology.EAN13` | `BarcodeEncoding.EAN13` | Direct mapping |
-| `Symbology.DataMatrix` | `BarcodeEncoding.DataMatrix` | Direct mapping |
-| `Symbology.PDF417` | `BarcodeEncoding.PDF417` | Direct mapping |
-| `new BarcodeReader() { BarcodeTypes = [...] }` | `BarcodeReader.Read(path)` — static | No instance, no format specification |
-| `reader.Scan("file.png")` → `string[]` | `BarcodeReader.Read("file.png")` → `BarcodeResults` | Richer return type |
+| `BarcodeType.CODE128` | `BarcodeEncoding.Code128` | Direct mapping |
+| `BarcodeType.EAN13` | `BarcodeEncoding.EAN13` | Direct mapping |
+| `QRCode` class | `BarcodeEncoding.QRCode` | Direct mapping |
+| `DataMatrix` class | `BarcodeEncoding.DataMatrix` | Direct mapping |
+| `PDF417` class | `BarcodeEncoding.PDF417` | Direct mapping |
+| `BarcodeScanner.Scan(path, BarcodeType.X)` | `BarcodeReader.Read(path)` — static | No format argument; auto-detection |
+| `BarcodeScanner.Scan(...)` → `string[]` | `BarcodeReader.Read(...)` → `BarcodeResults` | Richer return type |
 | `results[0]` (raw string) | `result.Value` | Decoded string value |
-| N/A | `result.BarcodeType` | Detected format — not available in OnBarcode |
+| N/A | `result.BarcodeType` | Detected format — not available from `BarcodeScanner.Scan` |
 | N/A | `result.PageNumber` | Page source for PDF reads |
-| N/A | `BarcodeReader.Read("document.pdf")` | Native PDF reading; no OnBarcode equivalent |
+| `OnBarcode.Barcode.Reader.Document.PDF` add-on | `BarcodeReader.Read("document.pdf")` | Built-in PDF reading vs add-on package |
 | Manual GDI+ overlay for QR logo | `QRCodeWriter.CreateQrCodeWithLogo()` | Built-in logo support |
-| `BarcodeType[]` configuration | Not required | Auto-detection is the default |
+| One scan call per `BarcodeType` | Not required | Auto-detection is the default |
 
 ## Common Migration Issues and Solutions
 
@@ -327,20 +325,20 @@ grep -r "OnBarcode" --include="*.props" .
 
 ### Issue 2: Namespace Conflicts on BarcodeReader
 
-**OnBarcode:** The reader namespace exports a class named `BarcodeReader`. IronBarcode also has a static class named `BarcodeReader`. If any file imports both namespaces simultaneously during a phased migration, the compiler cannot resolve the name without a fully qualified reference.
+**OnBarcode:** The reader product exports a static class named `BarcodeScanner`. IronBarcode has a static class named `BarcodeReader`. The names differ, so direct collision is rare — but if any file imports `OnBarcode.Barcode` and `IronBarCode` simultaneously during a phased migration, both namespaces define overlapping enum and helper names (e.g., `BarcodeType`) and the compiler cannot resolve them without a fully qualified reference.
 
-**Solution:** Complete the migration of each file atomically — remove the `using OnBarcode.Barcode.Reader` directive and add `using IronBarCode` in the same edit. Do not leave both using directives present in any file. If a phased approach is required, use fully qualified names temporarily:
+**Solution:** Complete the migration of each file atomically — remove the `using OnBarcode.Barcode` directive and add `using IronBarCode` in the same edit. Do not leave both using directives present in any file. If a phased approach is required, use fully qualified names temporarily:
 
 ```csharp
 // Temporary disambiguation during phased migration
 var results = IronBarCode.BarcodeReader.Read("file.png");
 ```
 
-### Issue 3: BarcodeType Array Removal
+### Issue 3: BarcodeType Argument Removal
 
-**OnBarcode:** The reader requires `reader.BarcodeTypes = new BarcodeType[] { ... }` to function. Developers migrating the reader code sometimes carry the habit of specifying formats explicitly and look for an equivalent configuration in IronBarcode.
+**OnBarcode:** `BarcodeScanner.Scan(path, BarcodeType.X)` requires the format to be passed up front. To scan multiple symbologies in one image, code typically calls `BarcodeScanner.Scan` once per format and concatenates the results.
 
-**Solution:** Remove the format specification entirely. `BarcodeReader.Read` performs automatic detection across all supported formats. No configuration is needed, and no equivalent of `BarcodeType[]` exists in IronBarcode because it is not required.
+**Solution:** Remove the format specification entirely. `BarcodeReader.Read` performs automatic detection across all supported formats in a single call. No configuration is needed, and no per-format scan loop is required in IronBarcode.
 
 ```csharp
 // No format configuration required
@@ -358,13 +356,13 @@ Audit the codebase to locate all OnBarcode usage before making changes:
 grep -rn "using OnBarcode" --include="*.cs" .
 
 # Find all license configuration calls
-grep -rn "SetLicense" --include="*.cs" .
+grep -rn "RegisterLicense\|SetLicense" --include="*.cs" .
 
 # Find all generator usage
-grep -rn "new Barcode()\|drawBarcode\|Symbology\." --include="*.cs" .
+grep -rn "new Linear(\|new QRCode(\|new DataMatrix(\|new PDF417(\|drawBarcode\|BarcodeType\." --include="*.cs" .
 
 # Find all reader usage
-grep -rn "BarcodeReader\|\.Scan(\|BarcodeType\[\]" --include="*.cs" .
+grep -rn "BarcodeScanner\|\.Scan(" --include="*.cs" .
 
 # Find DLL references in project files
 grep -rn "OnBarcode" --include="*.csproj" .
@@ -379,18 +377,16 @@ Document which files use generation only, which use reading, and which use both.
 2. Remove `OnBarcode.Barcode.Reader` NuGet package
 3. Remove any manual `<Reference>` DLL entries from `.csproj` files
 4. Delete OnBarcode DLL files from the repository
-5. Run `dotnet add package IronBarcode`
+5. Run `dotnet add package BarCode`
 6. Replace `using OnBarcode.Barcode` with `using IronBarCode` in each file
-7. Replace `using OnBarcode.Barcode.Reader` with `using IronBarCode` in each file
-8. Remove both `OnBarcode.Barcode.License.SetLicense(...)` calls
-9. Remove both `OnBarcode.Barcode.Reader.License.SetLicense(...)` calls
-10. Add `IronBarCode.License.LicenseKey = "YOUR-KEY"` once at application startup
-11. Convert each `new Barcode()` + property-assignment block to `BarcodeWriter.CreateBarcode(data, encoding)`
-12. Replace `barcode.drawBarcode("file.png")` with `.SaveAsPng("file.png")` (or appropriate format method)
-13. Replace `new BarcodeReader() { BarcodeTypes = [...] }` + `.Scan(path)` with `BarcodeReader.Read(path)`
-14. Update result handling from `string[]` indexing to `result.Value` and `result.BarcodeType` on `BarcodeResults`
-15. Remove any PDF-to-image rendering code used to work around OnBarcode's PDF limitation
-16. Replace multi-step PDF rendering + scanning loops with a single `BarcodeReader.Read("file.pdf")` call
+7. Remove both `License.RegisterLicense(...)` calls (Generator and Reader)
+8. Add `IronBarCode.License.LicenseKey = "YOUR-KEY"` once at application startup
+9. Convert each `new Linear()` / `new QRCode()` / `new DataMatrix()` / `new PDF417()` + property-assignment block to `BarcodeWriter.CreateBarcode(data, encoding)`
+10. Replace `barcode.drawBarcode("file.png")` with `.SaveAsPng("file.png")` (or appropriate format method)
+11. Replace `BarcodeScanner.Scan(path, BarcodeType.X)` with `BarcodeReader.Read(path)`
+12. Update result handling from `string[]` indexing to `result.Value` and `result.BarcodeType` on `BarcodeResults`
+13. Remove any PDF-to-image rendering code, or remove the `OnBarcode.Barcode.Reader.Document.PDF` add-on, used to work around OnBarcode's PDF model
+14. Replace multi-step PDF rendering + scanning loops with a single `BarcodeReader.Read("file.pdf")` call
 
 ### Post-Migration Testing
 

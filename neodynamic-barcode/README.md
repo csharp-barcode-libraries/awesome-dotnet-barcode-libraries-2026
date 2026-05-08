@@ -2,7 +2,7 @@
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-Neodynamic offers focused barcode toolkits for .NET developers, with separate products for barcode generation and barcode reading. Their Barcode Professional SDK handles generation while the Barcode Reader SDK handles recognition. This guide examines Neodynamic's split product approach, the reader's 1D-only limitation, and how a unified SDK like [IronBarcode](https://ironsoftware.com/csharp/barcode/) compares for production deployments.
+Neodynamic offers focused barcode toolkits for .NET developers, with separate products for barcode generation and barcode reading. Their Barcode Professional SDK handles generation and is actively maintained, while the Barcode Reader SDK is an older companion product that Neodynamic marked as end-of-service-life on December 31, 2019 and whose NuGet package (`Neodynamic.SDK.BarcodeReader` 1.0.2000) has not been updated since July 2012. This guide examines Neodynamic's split product approach, the reader's 1D-only limitation, and how a unified SDK like [IronBarcode](https://ironsoftware.com/csharp/barcode/) compares for production deployments.
 
 ## Table of Contents
 
@@ -25,24 +25,21 @@ Neodynamic has built its reputation on focused barcode and label printing tools 
 
 Neodynamic's barcode-related products include:
 
-| Product | Purpose | Price Range |
-|---------|---------|-------------|
-| Barcode Professional SDK | Barcode generation | ~$245+ |
-| Barcode Reader SDK | Barcode recognition | Separate purchase |
+| Product | Purpose | Status / Price Range |
+|---------|---------|----------------------|
+| Barcode Professional SDK for .NET Standard | Barcode generation (1D + 2D) | Active; Basic from ~$352, Ultimate from ~$705 (developer license, ComponentSource) |
+| Barcode Reader SDK for .NET | Barcode recognition (1D only) | End-of-service-life 31 Dec 2019; NuGet last updated July 2012 |
 | ThermalLabel SDK | Label printing | Separate purchase |
-| ThermalLabel Web API | Cloud label printing | Subscription |
+| ZPLPrinter / EPLPrinter Emulator SDKs | Render ZPL/EPL to image/PDF | Separate purchase |
 
 ### Platform Coverage
 
-Neodynamic SDKs support various .NET platforms:
+Neodynamic ships Barcode Professional in several editions, each targeting a specific runtime:
 
-- .NET Standard 2.0
-- .NET Framework 4.0+
-- ASP.NET (WebForms, MVC)
-- Xamarin (iOS, Android)
-- Mono
-- Windows Forms
-- WPF
+- Barcode Professional SDK for .NET Standard — .NET Standard 2.0 (.NET Core, .NET 5/6/7/8, Xamarin, Mono, UWP); SkiaSharp-based, no `System.Drawing` dependency
+- Barcode Professional SDK for .NET Windows — Windows-only .NET Framework 4.x (System.Drawing-based)
+- Barcode Professional for Windows Forms / WPF / Blazor / ASP.NET / SSRS — UI- or framework-specific component editions
+- Barcode Reader SDK for .NET — .NET Framework 2.0 / 3.x / 4.x only (no .NET Core, .NET 5+, Linux, or Docker support)
 
 The multi-platform approach positions Neodynamic for diverse deployment scenarios, though each platform may require separate licensing consideration.
 
@@ -69,15 +66,15 @@ The most significant distinction between Neodynamic and unified alternatives is 
 ### How the Split Works
 
 **For Barcode Generation:**
-1. Purchase Barcode Professional SDK (~$245+)
-2. Install `Neodynamic.SDK.Barcode` NuGet package
+1. Purchase Barcode Professional SDK (Basic ~$352, Ultimate ~$705 per developer)
+2. Install `Neodynamic.SDK.Barcode` NuGet package (current 10.0.25.525, May 2025)
 3. Use generation APIs
 
 **For Barcode Reading:**
-1. Purchase Barcode Reader SDK (separate purchase)
-2. Install `Neodynamic.SDK.BarcodeReader` NuGet package
+1. Purchase Barcode Reader SDK for .NET (separate purchase)
+2. Install `Neodynamic.SDK.BarcodeReader` NuGet package (1.0.2000, last updated July 2012)
 3. Use reader APIs
-4. Note: 1D barcodes only
+4. Note: 1D barcodes only; product reached end-of-service-life on 31 Dec 2019
 
 **For Both Capabilities:**
 - Two separate purchases required
@@ -194,25 +191,25 @@ dotnet add package Neodynamic.SDK.BarcodeReader
 ```csharp
 using Neodynamic.SDK.Barcode;
 
-// Configure generation license
-Neodynamic.SDK.Barcode.BarcodeInfo.LicenseOwner = "Your Company";
-Neodynamic.SDK.Barcode.BarcodeInfo.LicenseKey = "GENERATION-LICENSE-KEY";
+// Configure generation license (static properties on BarcodeProfessional)
+BarcodeProfessional.LicenseOwner = "Your Company";
+BarcodeProfessional.LicenseKey = "GENERATION-LICENSE-KEY";
 ```
 
 **License Configuration (Reader SDK):**
 ```csharp
 using Neodynamic.SDK.BarcodeReader;
 
-// Configure reader license (separate key)
-Neodynamic.SDK.BarcodeReader.BarcodeReader.LicenseOwner = "Your Company";
-Neodynamic.SDK.BarcodeReader.BarcodeReader.LicenseKey = "READER-LICENSE-KEY";
+// Configure reader license (separate key, separate static type)
+BarcodeReader.LicenseOwner = "Your Company";
+BarcodeReader.LicenseKey = "READER-LICENSE-KEY";
 ```
 
 ### IronBarcode Installation
 
 **Single Package for Everything:**
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 **Single License for Everything:**
@@ -249,17 +246,17 @@ using Neodynamic.SDK.Barcode;
 public void GenerateBarcode(string data, string outputPath)
 {
     // Configure license
-    BarcodeInfo.LicenseOwner = "Your Company";
-    BarcodeInfo.LicenseKey = "YOUR-KEY";
+    BarcodeProfessional.LicenseOwner = "Your Company";
+    BarcodeProfessional.LicenseKey = "YOUR-KEY";
 
     // Create barcode
-    var barcode = new BarcodeInfo();
-    barcode.Value = data;
+    var barcode = new BarcodeProfessional();
+    barcode.Code = data;
     barcode.Symbology = Symbology.Code128;
-    barcode.TextAlign = BarcodeTextAlignment.BelowCenter;
+    barcode.BarcodeUnit = BarcodeUnit.Pixel;
 
     // Generate image
-    System.Drawing.Image image = barcode.GetImage();
+    System.Drawing.Image image = barcode.GetBarcodeImage();
     image.Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
 }
 ```
@@ -275,7 +272,7 @@ public void GenerateBarcode(string data, string outputPath)
 }
 ```
 
-**Line Count:** Neodynamic requires 11 lines; IronBarcode achieves the same in 2 lines.
+**Line Count:** Neodynamic requires roughly 11 lines; IronBarcode achieves the same in 2 lines.
 
 ### Scenario 2: Basic Barcode Reading (1D only for Neodynamic)
 
@@ -294,7 +291,8 @@ public string[] ReadBarcodes(string imagePath)
     using var bitmap = new Bitmap(imagePath);
 
     // Read barcodes (1D only - no QR, DataMatrix, PDF417)
-    var results = BarcodeReader.Read(bitmap);
+    var reader = new BarcodeReader();
+    BarcodeSymbol[] results = reader.Read(bitmap);
 
     return results.Select(r => r.Value).ToArray();
 }
@@ -308,7 +306,7 @@ public string[] ReadBarcodes(string imagePath)
 {
     // Auto-detects format, reads 1D and 2D
     var results = BarcodeReader.Read(imagePath);
-    return results.Select(r => r.Text).ToArray();
+    return results.Select(r => r.Value).ToArray();
 }
 ```
 
@@ -341,7 +339,7 @@ public string ReadQrCode(string imagePath)
 {
     // QR codes work like any other format
     var result = BarcodeReader.Read(imagePath).FirstOrDefault();
-    return result?.Text;
+    return result?.Value;
 }
 ```
 
@@ -365,8 +363,8 @@ public class HybridBarcodeService
     public HybridBarcodeService()
     {
         // Neodynamic for generation
-        BarcodeInfo.LicenseOwner = "Your Company";
-        BarcodeInfo.LicenseKey = "GENERATION-KEY";
+        BarcodeProfessional.LicenseOwner = "Your Company";
+        BarcodeProfessional.LicenseKey = "GENERATION-KEY";
 
         // Another library for 2D reading
         // ... additional configuration ...
@@ -375,10 +373,10 @@ public class HybridBarcodeService
     public void GenerateQrCode(string data, string outputPath)
     {
         // Neodynamic CAN generate QR codes
-        var barcode = new BarcodeInfo();
-        barcode.Value = data;
+        var barcode = new BarcodeProfessional();
+        barcode.Code = data;
         barcode.Symbology = Symbology.QRCode;
-        barcode.GetImage().Save(outputPath);
+        barcode.GetBarcodeImage().Save(outputPath);
     }
 
     public string ReadQrCode(string imagePath)
@@ -410,7 +408,7 @@ public class UnifiedBarcodeService
     public string ReadQrCode(string imagePath)
     {
         var result = BarcodeReader.Read(imagePath).FirstOrDefault();
-        return result?.Text;
+        return result?.Value;
     }
 }
 ```
@@ -425,19 +423,23 @@ Understanding the total cost requires considering what capabilities you actually
 
 ### Neodynamic Pricing Structure
 
-| Product | Price | Notes |
-|---------|-------|-------|
-| Barcode Professional SDK (Developer) | ~$245 | Generation only |
-| Barcode Professional SDK (Team) | ~$490 | Up to 5 developers |
-| Barcode Reader SDK | Separate quote | 1D barcodes only |
-| Combined (if both needed) | ~$500+ | Two licenses |
+Pricing varies by edition and is generally distributed via ComponentSource. Recent reference points (developer licenses, USD):
+
+| Product | Approximate Price | Notes |
+|---------|------------------|-------|
+| Barcode Professional for .NET Standard, Basic Edition | from ~$352 | Generation only, 1 developer |
+| Barcode Professional for .NET Standard, Ultimate Edition | from ~$705 | Generation only, 1 developer |
+| Barcode Reader SDK for .NET | Quote / legacy pricing | EOL since Dec 2019; 1D only |
+| Combined (Professional + Reader) | Two separate purchases | Two licenses to track |
 
 ### IronBarcode Pricing Structure
 
-| License | Price | Notes |
-|---------|-------|-------|
-| Lite | $749 | 1 developer, all features |
-| Professional | $2,999 | 10 developers, all features |
+| License | Price (perpetual) | Notes |
+|---------|-------------------|-------|
+| Lite | $799 | 1 developer, all features |
+| Plus | $1,199 | 3 developers |
+| Professional | $2,399 | 10 developers |
+| Unlimited | $4,799 | Unlimited developers |
 
 ### Cost Scenarios
 
@@ -445,73 +447,74 @@ Understanding the total cost requires considering what capabilities you actually
 
 ```
 Neodynamic:
-  Barcode Professional SDK: ~$245
-  Total: ~$245
+  Barcode Professional for .NET Standard, Basic: from ~$352
+  Total: from ~$352
 
 IronBarcode Lite:
-  License: $749
-  Total: $749
+  License: $799
+  Total: $799
 
-Winner: Neodynamic ($504 cheaper for generation-only)
+Winner: Neodynamic for generation-only at the Basic tier.
 ```
 
 **Scenario 2: Generation + 1D Reading (1 developer)**
 
 ```
 Neodynamic:
-  Barcode Professional SDK: ~$245
-  Barcode Reader SDK: ~$300+ (estimated)
-  Total: ~$545+
+  Barcode Professional, Basic: from ~$352
+  Barcode Reader SDK: separate quote (legacy product, EOL 2019)
+  Total: ~$352 + Reader SDK fee
 
 IronBarcode Lite:
-  License: $749
-  Total: $749
+  License: $799
+  Total: $799
 
-Winner: Neodynamic (marginally cheaper, but 1D reading only)
+Trade-off: Neodynamic may cost less, but the reader is unmaintained
+and 1D-only.
 ```
 
 **Scenario 3: Generation + 2D Reading (1 developer)**
 
 ```
 Neodynamic:
-  Barcode Professional SDK: ~$245
-  Barcode Reader SDK: ~$300+ (but can't read 2D)
-  Additional 2D reader: ~$400+ (another library)
-  Total: ~$945+ (three products!)
+  Barcode Professional, Basic: from ~$352
+  Barcode Reader SDK: cannot read 2D (and is EOL)
+  Additional 2D reader: another paid or open-source library
+  Total: at least Professional fee + a third dependency
 
 IronBarcode Lite:
-  License: $749
-  Total: $749
+  License: $799
+  Total: $799
 
-Winner: IronBarcode ($196+ cheaper, and unified)
+Winner: IronBarcode — single SDK, full 2D coverage, single license.
 ```
 
-**Scenario 4: Team (5 developers) Needing Full Capability**
+**Scenario 4: Team (10 developers) Needing Full Capability**
 
 ```
 Neodynamic:
-  Barcode Professional SDK (Team): ~$490
-  Barcode Reader SDK (Team): ~$600+ (estimated)
+  Barcode Professional (per-developer, ~$352-$705 each)
+  Barcode Reader SDK (per-developer, separate purchase)
   Note: Still can't read 2D barcodes
-  Total: ~$1,090+ (without 2D reading!)
+  Total: scales linearly with team size, plus reader cost
 
 IronBarcode Professional (10 devs):
-  License: $2,999
-  Total: $2,999 (with full 2D support)
+  License: $2,399 (perpetual, all features, 1D + 2D, generation + reading)
+  Total: $2,399
 
-Analysis: Neodynamic looks cheaper but lacks 2D reading.
-If you need 2D reading, Neodynamic is not an option.
+Analysis: Neodynamic's per-developer model can be cheaper at small scale,
+but does not solve 2D reading at any price within the product family.
 ```
 
 ### Cost-Capability Matrix
 
 | Need | Neodynamic Solution | Cost | IronBarcode | Cost |
 |------|--------------------|----- |-------------|------|
-| Generate only | Professional SDK | ~$245 | Lite | $749 |
-| Read 1D only | Reader SDK | ~$300 | Lite | $749 |
-| Read 2D | Not available | N/A | Lite | $749 |
-| Generate + Read 1D | Both SDKs | ~$545 | Lite | $749 |
-| Generate + Read 2D | Not possible | N/A | Lite | $749 |
+| Generate only | Professional, Basic | from ~$352 | Lite | $799 |
+| Read 1D only | Reader SDK (EOL) | quote | Lite | $799 |
+| Read 2D | Not available | N/A | Lite | $799 |
+| Generate + Read 1D | Both SDKs | ~$352 + Reader fee | Lite | $799 |
+| Generate + Read 2D | Not possible (no Neodynamic 2D reader) | N/A | Lite | $799 |
 
 ---
 
@@ -527,7 +530,7 @@ If you need 2D reading, Neodynamic is not an option.
 
 4. **Windows Forms is your primary platform** - Neodynamic has strong WinForms heritage and integrations.
 
-5. **Budget is extremely tight for generation-only needs** - At ~$245 vs $749, Neodynamic generation is cheaper if you truly never need reading.
+5. **Budget is extremely tight for generation-only needs** - At ~$352 (Basic) vs $799, Neodynamic generation is cheaper if you truly never need reading.
 
 ### Choose IronBarcode When:
 
@@ -571,14 +574,14 @@ Common migration motivations:
 **Add IronBarcode:**
 ```xml
 <!-- Add to .csproj -->
-<PackageReference Include="IronBarcode" Version="2024.x.x" />
+<PackageReference Include="BarCode" Version="*" />
 ```
 
 Or via CLI:
 ```bash
 dotnet remove package Neodynamic.SDK.Barcode
 dotnet remove package Neodynamic.SDK.BarcodeReader
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### API Mapping Reference
@@ -587,17 +590,17 @@ dotnet add package IronBarcode
 
 | Neodynamic | IronBarcode | Notes |
 |-----------|-------------|-------|
-| `BarcodeInfo.Value` | Constructor parameter | Simpler |
-| `BarcodeInfo.Symbology` | `BarcodeEncoding.*` | Enum |
-| `BarcodeInfo.GetImage()` | `barcode.ToBitmap()` | Direct |
-| `image.Save(path)` | `barcode.SaveAsPng(path)` | Fluent |
+| `new BarcodeProfessional()` + `.Code = data` | `BarcodeWriter.CreateBarcode(data, encoding)` | Static factory |
+| `barcode.Symbology = Symbology.Code128` | `BarcodeEncoding.Code128` | Different enum, similar idea |
+| `barcode.GetBarcodeImage()` | `barcode.ToBitmap()` | Direct |
+| `image.Save(path, ImageFormat.Png)` | `barcode.SaveAsPng(path)` | Fluent, no ImageFormat enum |
 
 **Reading:**
 
 | Neodynamic | IronBarcode | Notes |
 |-----------|-------------|-------|
-| `BarcodeReader.Read(bitmap)` | `BarcodeReader.Read(path)` | Simpler input |
-| `result.Value` | `result.Text` | Property name |
+| `new BarcodeReader().Read(bitmap)` | `BarcodeReader.Read(path)` | Static, file path accepted |
+| `result.Value` | `result.Value` | Same property name |
 | N/A (1D only) | Automatic 2D | Gained capability |
 | N/A | `result.BarcodeType` | Format detection |
 
@@ -613,8 +616,8 @@ public class BarcodeService
     public BarcodeService()
     {
         // Two separate license configurations
-        BarcodeInfo.LicenseOwner = "Company";
-        BarcodeInfo.LicenseKey = "GEN-KEY";
+        BarcodeProfessional.LicenseOwner = "Company";
+        BarcodeProfessional.LicenseKey = "GEN-KEY";
 
         // Second license for reader
         Neodynamic.SDK.BarcodeReader.BarcodeReader.LicenseOwner = "Company";
@@ -623,17 +626,18 @@ public class BarcodeService
 
     public void GenerateCode128(string data, string outputPath)
     {
-        var barcode = new BarcodeInfo();
-        barcode.Value = data;
+        var barcode = new BarcodeProfessional();
+        barcode.Code = data;
         barcode.Symbology = Symbology.Code128;
-        barcode.GetImage().Save(outputPath);
+        barcode.GetBarcodeImage().Save(outputPath);
     }
 
     public string ReadBarcode(string imagePath)
     {
         // Only works for 1D barcodes
         using var bitmap = new System.Drawing.Bitmap(imagePath);
-        var results = Neodynamic.SDK.BarcodeReader.BarcodeReader.Read(bitmap);
+        var reader = new Neodynamic.SDK.BarcodeReader.BarcodeReader();
+        var results = reader.Read(bitmap);
         return results.FirstOrDefault()?.Value;
     }
 
@@ -667,14 +671,14 @@ public class BarcodeService
     {
         // Works for ALL barcode formats
         var result = BarcodeReader.Read(imagePath).FirstOrDefault();
-        return result?.Text;
+        return result?.Value;
     }
 
     public string ReadQrCode(string imagePath)
     {
         // Now possible - same API, automatic detection
         var result = BarcodeReader.Read(imagePath).FirstOrDefault();
-        return result?.Text;
+        return result?.Value;
     }
 }
 ```
@@ -719,7 +723,8 @@ public class BarcodeService
 
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/docs/) - Official guides
 - [IronBarcode on NuGet](https://www.nuget.org/packages/BarCode) - Package download
-- [Neodynamic Barcode Professional](https://www.neodynamic.com/products/barcode/) - Official site
+- [Neodynamic Barcode Professional](https://www.neodynamic.com/products/barcode/sdk-vb-net-csharp/) - Official site
+- [Neodynamic Barcode Reader SDK (legacy)](https://www.neodynamic.com/products/barcode/reader/) - End-of-service-life since 31 Dec 2019
 
 ### Code Example Files
 

@@ -2,7 +2,7 @@
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-QRCoder is the most popular open-source QR code generator for .NET, with over 8 million NuGet downloads. The library excels at its singular focus: generating QR codes with zero dependencies. It includes useful payload generators for WiFi credentials, contact cards, URLs, and more. However, QRCoder is QR-only—it cannot generate Code128, EAN, DataMatrix, or any other barcode format. Additionally, like other open-source generators, QRCoder cannot read QR codes, only create them. This guide examines QRCoder's strengths in its niche, its fundamental limitations, and how it compares to [IronBarcode](https://ironsoftware.com/csharp/barcode/) for developers who need flexibility beyond QR codes.
+QRCoder is the most popular open-source QR code generator for .NET, with tens of millions of NuGet downloads (60M+ as of early 2026). The library excels at its singular focus: generating QR codes with zero dependencies. It includes useful payload generators for WiFi credentials, contact cards, URLs, and more. However, QRCoder is QR-only—it cannot generate Code128, EAN, DataMatrix, or any other barcode format. Additionally, like other open-source generators, QRCoder cannot read QR codes, only create them. This guide examines QRCoder's strengths in its niche, its fundamental limitations, and how it compares to [IronBarcode](https://ironsoftware.com/csharp/barcode/) for developers who need flexibility beyond QR codes.
 
 ## Table of Contents
 
@@ -19,18 +19,18 @@ QRCoder is the most popular open-source QR code generator for .NET, with over 8 
 
 ## What is QRCoder?
 
-QRCoder is a pure C# QR code generation library with no external dependencies. Originally created by Raffael Herrmann in 2013, the project is now maintained by Shane32 (as of 2021+). The library has become the de facto standard for QR-only generation in the .NET ecosystem.
+QRCoder is a pure C# QR code generation library with no external dependencies. Originally created by Raffael Herrmann in 2013, the project is now maintained by Shane32 (since 2025). The library has become the de facto standard for QR-only generation in the .NET ecosystem.
 
 ### Core Characteristics
 
 | Attribute | Details |
 |-----------|---------|
 | **GitHub Repository** | [Shane32/QRCoder](https://github.com/Shane32/QRCoder) |
-| **NuGet Package** | QRCoder 1.7.0+ |
+| **NuGet Package** | QRCoder 1.8.x |
 | **License** | MIT (Free for commercial use) |
 | **Primary Function** | QR code generation only |
 | **Dependencies** | None (pure managed code) |
-| **Downloads** | 8M+ on NuGet |
+| **Downloads** | 60M+ on NuGet |
 
 ### Why QRCoder is Popular
 
@@ -48,7 +48,7 @@ QRCoder's popularity stems from several factors:
 
 ### Maintainer Transition
 
-QRCoder's original creator Raffael Herrmann stepped back from active maintenance around 2020. Shane32 forked the project and has maintained it since 2021, ensuring continued .NET compatibility and bug fixes. The Shane32/QRCoder fork is now the primary active version.
+QRCoder's original creator Raffael Herrmann (codebude) maintained the project actively for over a decade. Shane32 took over stewardship of the project in 2025 (with the canonical repository moving to github.com/Shane32/QRCoder), ensuring continued .NET compatibility and bug fixes. The Shane32/QRCoder repository is now the primary active version.
 
 ---
 
@@ -344,7 +344,7 @@ public string ReadQRCode(string imagePath)
     {
         if (result.BarcodeType == BarcodeEncoding.QRCode)
         {
-            return result.Text;
+            return result.Value;
         }
     }
 
@@ -420,7 +420,7 @@ For format limitation examples, see [QRCoder Format Limitation Example](qrcoder-
 
 | Cost | QRCoder | IronBarcode |
 |------|---------|-------------|
-| License | $0 | $749 one-time |
+| License | $0 | From $799 (Lite) perpetual |
 | Dependencies | None | Self-contained |
 | Commercial restrictions | None | None |
 
@@ -435,7 +435,7 @@ The cost calculation changes when requirements expand:
 **Scenario A: QR-Only Forever**
 ```
 QRCoder: $0
-IronBarcode: $749
+IronBarcode: $799 (Lite, perpetual)
 
 Winner: QRCoder (if genuinely QR-only)
 ```
@@ -449,9 +449,9 @@ QRCoder path:
   Total:                  $1,400
 
 IronBarcode path:
-  License:                $749
+  License:                $799 (Lite, perpetual)
   Additional work:        0
-  Total:                  $749
+  Total:                  $799
 
 Winner: IronBarcode
 ```
@@ -467,10 +467,10 @@ QRCoder path:
   Total:                  $3,600
 
 IronBarcode path:
-  License:                $749
-  Total:                  $749
+  License:                $799 (Lite, perpetual)
+  Total:                  $799
 
-Winner: IronBarcode by $2,851
+Winner: IronBarcode by $2,801
 ```
 
 ### Decision Matrix
@@ -542,7 +542,7 @@ dotnet remove package QRCoder
 **Add IronBarcode:**
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### API Mapping Reference
@@ -620,7 +620,7 @@ public class QRService
     public string ReadQR(string imagePath)
     {
         var results = BarcodeReader.Read(imagePath);
-        return results.FirstOrDefault()?.Text;
+        return results.FirstOrDefault()?.Value;
     }
 
     // NEW: Generate other formats

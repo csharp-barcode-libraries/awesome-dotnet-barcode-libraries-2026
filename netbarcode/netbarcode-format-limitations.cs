@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using NetBarcode;
 
 // IronBarcode package
-// Install: dotnet add package IronBarcode
+// Install: dotnet add package BarCode  (NuGet id is "BarCode"; namespace is IronBarCode with capital C)
 using IronBarCode;
 
 namespace NetBarcodeComparison
@@ -43,15 +43,14 @@ namespace NetBarcodeComparison
                 { "Type.Code128B", "Code 128B (mixed case)" },
                 { "Type.Code128C", "Code 128C (numeric pairs)" },
                 { "Type.Code39", "Code 39 (alphanumeric)" },
-                { "Type.Code39Extended", "Code 39 Extended (full ASCII)" },
+                { "Type.Code39E", "Code 39 Extended (full ASCII)" },
                 { "Type.Code93", "Code 93" },
+                { "Type.Code11", "Code 11" },
                 { "Type.EAN8", "EAN-8 (8-digit European)" },
                 { "Type.EAN13", "EAN-13 (13-digit European)" },
-                { "Type.UPCA", "UPC-A (12-digit American)" },
-                { "Type.UPCE", "UPC-E (6-digit compressed)" },
-                { "Type.Codabar", "Codabar (numeric with symbols)" },
-                { "Type.ITF", "ITF/Interleaved 2 of 5" },
-                { "Type.MSI", "MSI (Mod 10 checksum)" }
+                { "Type.Codabar", "Codabar (numeric with symbols)" }
+                // NOTE: Type.UPCA, Type.UPCE, Type.ITF, and Type.MSI do NOT exist in NetBarcode.
+                // The Type enum has exactly 11 entries, all listed above.
             };
 
             foreach (var kvp in netBarcodeTypes)
@@ -59,8 +58,8 @@ namespace NetBarcodeComparison
                 Console.WriteLine($"  {kvp.Key,-20} - {kvp.Value}");
             }
 
-            Console.WriteLine($"\nTotal: {netBarcodeTypes.Count} formats");
-            Console.WriteLine("Category: 1D linear barcodes ONLY\n");
+            Console.WriteLine($"\nTotal: {netBarcodeTypes.Count} Type enum values across 8 symbology families");
+            Console.WriteLine("Category: 1D linear barcodes ONLY (no UPC, no ITF, no MSI, no 2D)\n");
         }
 
         /// <summary>
@@ -79,6 +78,12 @@ namespace NetBarcodeComparison
             Console.WriteLine("  - Micro QR (small form factor)");
             Console.WriteLine("  - Han Xin (Chinese national standard)");
 
+            Console.WriteLine("\nMainstream 1D Barcodes Also Missing:");
+            Console.WriteLine("  - UPC-A (12-digit American retail standard)");
+            Console.WriteLine("  - UPC-E (compressed UPC variant)");
+            Console.WriteLine("  - ITF / ITF-14 / Interleaved 2 of 5 (cartons, GTIN-14)");
+            Console.WriteLine("  - MSI / Plessey (warehouse / library)");
+
             Console.WriteLine("\nSpecialized 1D Barcodes:");
             Console.WriteLine("  - GS1-128 (supply chain)");
             Console.WriteLine("  - GS1 DataBar (variable measure items)");
@@ -86,7 +91,6 @@ namespace NetBarcodeComparison
             Console.WriteLine("  - Royal Mail 4-State");
             Console.WriteLine("  - Australia Post");
             Console.WriteLine("  - Pharmacode (pharmaceutical)");
-            Console.WriteLine("  - Plessey (libraries)");
             Console.WriteLine("  - Telepen (UK retail)");
 
             Console.WriteLine("\nImpact: Need additional library for ANY of these formats.\n");
@@ -289,7 +293,9 @@ namespace NetBarcodeComparison
 
             Console.WriteLine("Category              | NetBarcode | IronBarcode");
             Console.WriteLine("----------------------|------------|------------");
-            Console.WriteLine("Linear 1D (basic)     | 14 formats | 30+ formats");
+            Console.WriteLine("Linear 1D (enum vals) | 11 values  | 30+ formats");
+            Console.WriteLine("UPC-A / UPC-E         | No         | Yes");
+            Console.WriteLine("ITF, MSI              | No         | Yes");
             Console.WriteLine("GS1 family            | No         | Yes");
             Console.WriteLine("Postal codes          | No         | Yes");
             Console.WriteLine("QR Code               | No         | Yes");
@@ -298,7 +304,7 @@ namespace NetBarcodeComparison
             Console.WriteLine("Aztec                 | No         | Yes");
             Console.WriteLine("MaxiCode              | No         | Yes");
             Console.WriteLine("----------------------|------------|------------");
-            Console.WriteLine("Total Symbologies     | ~14        | 50+");
+            Console.WriteLine("Total Symbologies     | 11         | 50+");
             Console.WriteLine("Can Read Barcodes     | No         | Yes");
             Console.WriteLine("Single Library        | No*        | Yes");
 

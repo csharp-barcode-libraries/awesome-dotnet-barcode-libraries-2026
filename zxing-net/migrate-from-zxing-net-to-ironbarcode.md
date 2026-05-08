@@ -75,7 +75,7 @@ Remove all ZXing.Net and related packages from the project:
 
 ```bash
 dotnet remove package ZXing.Net
-dotnet remove package ZXing.Net.Bindings.Windows
+dotnet remove package ZXing.Net.Bindings.Windows.Compatibility
 dotnet remove package ZXing.Net.Bindings.ImageSharp
 dotnet remove package PdfiumViewer
 ```
@@ -91,7 +91,7 @@ If the Dockerfile contains `apt-get install -y libgdiplus` — added to support 
 ### Step 2: Install IronBarcode
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 No additional binding packages or platform-specific dependencies are required. The same NuGet package runs on Windows, Linux, macOS, and in Docker containers. For deployment details, the [IronBarcode Docker and Linux setup guide](https://ironsoftware.com/csharp/barcode/get-started/docker-linux/) covers the exact Dockerfile pattern.
@@ -387,7 +387,7 @@ If binary output is needed instead of saving to a file, `ToPngBinaryData()` and 
 | `reader.Decode(bitmap)` | `BarcodeReader.Read(imagePath).FirstOrDefault()` | Pass file path — no `Bitmap` construction needed |
 | `reader.DecodeMultiple(bitmap)` | `BarcodeReader.Read(imagePath)` | Always returns a collection; never null |
 | `result.Text` | `result.Value` | Property renamed |
-| `result.BarcodeFormat` | `result.Format` | Property renamed |
+| `result.BarcodeFormat` | `result.BarcodeType` | Property renamed |
 | `BarcodeFormat.QR_CODE` | `BarcodeEncoding.QRCode` | Enum naming convention change |
 | `BarcodeFormat.CODE_128` | `BarcodeEncoding.Code128` | Enum naming convention change |
 | `BarcodeFormat.EAN_13` | `BarcodeEncoding.EAN13` | Enum naming convention change |
@@ -422,7 +422,7 @@ Search the codebase for `new BarcodeReader()` to find every instance. Each one i
 
 ### Issue 3: Binding Package Cleanup
 
-**ZXing.Net:** Projects using `ZXing.Net.Bindings.Windows` have code referencing `System.Drawing.Bitmap` as the input type. Projects using `ZXing.Net.Bindings.ImageSharp` reference `SixLabors.ImageSharp.Image<Rgba32>`. Both patterns break after the binding packages are removed.
+**ZXing.Net:** Projects using `ZXing.Net.Bindings.Windows.Compatibility` have code referencing `System.Drawing.Bitmap` as the input type. Projects using `ZXing.Net.Bindings.ImageSharp` (or `.ImageSharp.V2`/`.V3`) reference `SixLabors.ImageSharp.Image<Rgba32>`. Both patterns break after the binding packages are removed.
 
 **Solution:** Remove both binding packages and replace all image-loading code. IronBarcode's `BarcodeReader.Read` accepts a file path string, a `byte[]`, a `Stream`, or a `Uri` — no `Bitmap` or `Image<T>` construction is needed. Remaining `using System.Drawing;` imports that existed solely for `Bitmap` loading can also be removed.
 
@@ -430,7 +430,7 @@ Search the codebase for `new BarcodeReader()` to find every instance. Each one i
 
 **ZXing.Net:** The decoded barcode value is accessed via `result.Text`. The barcode format is accessed via `result.BarcodeFormat`.
 
-**Solution:** Replace `result.Text` with `result.Value` and `result.BarcodeFormat` with `result.Format` throughout the codebase. Both changes are simple property renames with no behavioural difference.
+**Solution:** Replace `result.Text` with `result.Value` and `result.BarcodeFormat` with `result.BarcodeType` throughout the codebase. Both changes are simple property renames with no behavioural difference.
 
 ## ZXing.Net Migration Checklist
 
@@ -454,8 +454,8 @@ Document which files reference ZXing binding packages (Windows vs ImageSharp) an
 
 ### Code Update Tasks
 
-1. Remove `ZXing.Net`, `ZXing.Net.Bindings.Windows`, `ZXing.Net.Bindings.ImageSharp`, and `PdfiumViewer` NuGet packages
-2. Install the `IronBarcode` NuGet package
+1. Remove `ZXing.Net`, `ZXing.Net.Bindings.Windows.Compatibility`, `ZXing.Net.Bindings.ImageSharp` (or `.V2`/`.V3`), and `PdfiumViewer` NuGet packages
+2. Install the `BarCode` NuGet package (IronBarcode)
 3. Add `IronBarCode.License.LicenseKey = "YOUR-LICENSE-KEY";` to application startup
 4. Replace all `using ZXing*` and `using SixLabors.ImageSharp*` imports with `using IronBarCode;`
 5. Remove every `new BarcodeReader()` instantiation
@@ -463,7 +463,7 @@ Document which files reference ZXing binding packages (Windows vs ImageSharp) an
 7. Replace `reader.Decode(bitmap)` with `BarcodeReader.Read(imagePath).FirstOrDefault()`
 8. Replace `reader.DecodeMultiple(bitmap)` with `BarcodeReader.Read(imagePath)`
 9. Replace `result.Text` with `result.Value`
-10. Replace `result.BarcodeFormat` with `result.Format`
+10. Replace `result.BarcodeFormat` with `result.BarcodeType`
 11. Update `BarcodeFormat.X` enum references to `BarcodeEncoding.X` equivalents
 12. Replace `new BarcodeWriter { Format = ..., Options = new EncodingOptions { ... } }` with `BarcodeWriter.CreateBarcode(data, encoding).ResizeTo(w, h)`
 13. Replace `writer.Write(data)` + `bitmap.Save(...)` with `.SaveAsPng(path)` or `.ToPngBinaryData()`

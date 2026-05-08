@@ -70,7 +70,7 @@ var results = BarcodeReader.Read("incoming.png");
 | SVG Output | Yes | Yes |
 | PayloadGenerator Helpers | Yes | No — manual string construction |
 | Zero External Dependencies | Yes | Self-contained |
-| Licence | MIT — unrestricted | Commercial ($749 single developer) |
+| Licence | MIT — unrestricted | Commercial (from $799 Lite, perpetual) |
 
 ## Quick Start: QRCoder to IronBarcode Migration
 
@@ -82,10 +82,10 @@ Remove QRCoder from the project:
 dotnet remove package QRCoder
 ```
 
-Install IronBarcode:
+Install IronBarcode (NuGet package id is `BarCode`):
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 If the project was using ZXing.Net alongside QRCoder for barcode reading, that package can also be removed at this stage:
@@ -429,7 +429,7 @@ grep -r "using ZXing" --include="*.cs" .
 
 1. Run `dotnet remove package QRCoder`
 2. Run `dotnet remove package ZXing.Net` if it was used only for reading alongside QRCoder
-3. Run `dotnet add package IronBarcode`
+3. Run `dotnet add package BarCode`
 4. Add `IronBarCode.License.LicenseKey = "YOUR-KEY";` to application startup
 5. Replace all `using QRCoder;` imports with `using IronBarCode;`
 6. Remove all `new QRCodeGenerator()` instance declarations — `BarcodeWriter` is static

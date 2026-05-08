@@ -33,7 +33,7 @@ Scandit is an enterprise mobile barcode scanning SDK that has built its reputati
 **Technical Architecture:**
 - Native SDKs for iOS (Swift/Objective-C) and Android (Kotlin/Java)
 - React Native, Flutter, Cordova, and Capacitor wrappers
-- Limited .NET support via Scandit.BarcodePicker NuGet package
+- .NET support via `Scandit.DataCapture.Core.Maui` and `Scandit.DataCapture.Barcode.Maui` NuGet packages (mobile MAUI/Xamarin only)
 - Camera-first design with optimized frame processing
 - Cloud-connected features for analytics and device management
 
@@ -49,13 +49,14 @@ These industries share a common characteristic: mobile workers scanning barcodes
 
 ### .NET Integration
 
-Scandit offers .NET support through:
+Scandit offers .NET support through MAUI extension packages:
 
 ```bash
-dotnet add package Scandit.BarcodePicker
+dotnet add package Scandit.DataCapture.Core.Maui
+dotnet add package Scandit.DataCapture.Barcode.Maui
 ```
 
-However, the .NET package is designed for mobile MAUI applications requiring camera integration, not for server-side document processing. The API assumes a camera-based workflow with preview views, scan callbacks, and device permission handling.
+However, the .NET packages target MAUI applications running on iOS and Android with camera integration, not server-side document processing. The API assumes a camera-based workflow with preview views, scan callbacks (`IBarcodeCaptureListener` / `BarcodeScanned` event), and device permission handling. There is no Scandit .NET SDK for Windows desktop, Linux, or server-side runtimes.
 
 ---
 
@@ -136,7 +137,7 @@ According to G2 and DiscoverSDK reviews, users consistently note:
 
 **No Public Pricing:**
 
-Scandit does not publish pricing on their website. All pricing requires a sales conversation, quote process, and contract negotiation. This lack of transparency makes budget planning difficult.
+Scandit does not publish specific dollar figures on their website. The [pricing page](https://www.scandit.com/pricing/) describes Core, Standard, and Advanced editions and offers a free trial and a free Community Edition for educational use, but every paid tier requires a tailored quote based on edition, device count, scan volume, and contract length. This makes budget planning difficult without entering a sales cycle.
 
 ### IronBarcode Pricing Transparency
 
@@ -144,9 +145,10 @@ IronBarcode uses straightforward perpetual licensing:
 
 | License | Price | Includes |
 |---------|-------|----------|
-| Lite | $749 (one-time) | 1 developer, 1 project |
-| Professional | $1,499 (one-time) | 10 developers, 10 projects |
-| Unlimited | $2,999 (one-time) | Unlimited developers, projects |
+| Lite | $799 (one-time) | 1 developer, 1 project |
+| Plus | $1,199 (one-time) | 3 developers, 3 projects |
+| Professional | $2,399 (one-time) | 10 developers, 10 projects |
+| Unlimited | $4,799 (one-time) | Unlimited developers, projects |
 
 **No volume fees.** Process 1 million barcodes or 1 billion - same price.
 
@@ -166,9 +168,9 @@ Scandit (estimated based on industry patterns):
 - Estimated: $X0,000+ annually (requires quote)
 
 IronBarcode:
-- Professional License: $1,499 (one-time)
+- Professional License: $2,399 (one-time)
 - Process unlimited barcodes
-- 5-year cost: $1,499 total
+- 5-year cost: $2,399 total
 
 The difference: Predictable budgeting vs ongoing negotiations
 ```
@@ -325,12 +327,13 @@ public class ScanditCameraScanner
 
         // Configure barcode scanning settings
         var settings = BarcodeCaptureSettings.Create();
-        settings.EnableSymbologies(
+        settings.EnableSymbologies(new HashSet<Symbology>
+        {
             Symbology.Ean13Upca,
             Symbology.Ean8,
             Symbology.Code128,
             Symbology.QrCode
-        );
+        });
 
         // Create barcode capture mode
         barcodeCapture = BarcodeCapture.Create(dataCaptureContext, settings);
@@ -379,8 +382,8 @@ public class DocumentBarcodeProcessor
 
         foreach (var barcode in results)
         {
-            Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
-            RoutePackage(barcode.Text);
+            Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
+            RoutePackage(barcode.Value);
         }
     }
 
@@ -392,7 +395,7 @@ public class DocumentBarcodeProcessor
             var result = BarcodeReader.Read(path);
             if (result.Any())
             {
-                Console.WriteLine($"{path}: {result.First().Text}");
+                Console.WriteLine($"{path}: {result.First().Value}");
             }
         }
     }
@@ -485,13 +488,14 @@ If you were using Scandit for file processing (an atypical use):
 **Remove Scandit:**
 
 ```bash
-dotnet remove package Scandit.BarcodePicker
+dotnet remove package Scandit.DataCapture.Barcode.Maui
+dotnet remove package Scandit.DataCapture.Core.Maui
 ```
 
 **Add IronBarcode:**
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 **API Transformation:**
@@ -508,7 +512,7 @@ IronBarCode.License.LicenseKey = "YOUR-KEY";
 var results = BarcodeReader.Read("barcode-image.png");
 foreach (var barcode in results)
 {
-    Console.WriteLine($"Type: {barcode.BarcodeType}, Value: {barcode.Text}");
+    Console.WriteLine($"Type: {barcode.BarcodeType}, Value: {barcode.Value}");
 }
 ```
 
@@ -533,9 +537,9 @@ Current Scandit Cost (annual, estimated):
 - Total: Requires quote
 
 IronBarcode Migration (if use case fits):
-- Professional License: $1,499 one-time
-- Annual renewal (optional): $749/year
-- 5-year cost: $1,499 - $4,495
+- Professional License: $2,399 one-time
+- Annual renewal (optional)
+- 5-year cost: starts at $2,399
 
 Decision: If your use case is primarily document processing,
 migration saves significant budget. If your use case is

@@ -1,14 +1,14 @@
 # Migrating from MessagingToolkit.Barcode to IronBarcode
 
-MessagingToolkit.Barcode published its final release — version 1.7.0.2 — in 2014 and has received no updates since. This guide covers the complete migration path to IronBarcode: why the migration is necessary, what changes in the code, and how to verify the migration is complete. The guide addresses both teams migrating barcode functionality in isolation and teams undertaking a broader .NET framework upgrade for which MessagingToolkit.Barcode is a blocking dependency.
+MessagingToolkit.Barcode published its final release — version 1.7.0.2 — in April 2013 and has received no updates since. This guide covers the complete migration path to IronBarcode: why the migration is necessary, what changes in the code, and how to verify the migration is complete. The guide addresses both teams migrating barcode functionality in isolation and teams undertaking a broader .NET framework upgrade for which MessagingToolkit.Barcode is a blocking dependency.
 
 ## Why Migrate from MessagingToolkit.Barcode
 
 **Framework Compatibility Blocker:** MessagingToolkit.Barcode targets .NET Framework 3.5, 4.0, and 4.5. It has no .NET Standard target and no .NET Core target. When any project file that references this package is set to a modern .NET target framework — .NET 6, .NET 7, .NET 8, or .NET 9 — the NuGet restore operation fails with a framework compatibility error. The build does not proceed. This is not a warning or a runtime degradation; it is a compile-time failure that prevents the project from building at all. Removing MessagingToolkit.Barcode is a prerequisite for any .NET framework upgrade, not an optional cleanup step.
 
-**Security Exposure:** Twelve years have elapsed since the last code change. Any vulnerability discovered after 2014 in the library's image parsing logic, its ZXing-derived decode implementation, or its transitive dependencies has no patch, no advisory, and no maintainer to contact. Security scanning tools flag the package as abandoned. Compliance frameworks — PCI DSS, HIPAA, SOC 2, ISO 27001 — require active patch management of third-party software. An abandoned package fails these audits on process grounds regardless of whether a specific CVE has been identified.
+**Security Exposure:** More than a decade has elapsed since the last code change (final release April 2013). Any vulnerability discovered after 2014 in the library's image parsing logic, its ZXing-derived decode implementation, or its transitive dependencies has no patch, no advisory, and no maintainer to contact. Security scanning tools flag the package as abandoned. Compliance frameworks — PCI DSS, HIPAA, SOC 2, ISO 27001 — require active patch management of third-party software. An abandoned package fails these audits on process grounds regardless of whether a specific CVE has been identified.
 
-**Discontinued Platform Targets:** The NuGet package metadata lists Silverlight 3, 4, and 5 as target platforms; all three were discontinued in 2021. Windows Phone 7.0, 7.5, 7.8, and 8.0 are listed; end of support for these platforms occurred between 2014 and 2017. The library was never updated to target any platform that succeeded these discontinued environments.
+**Discontinued Platform Targets:** The NuGet package metadata lists Silverlight 3, 4, and 5 as target platforms; all three are discontinued (browser plugin support ended in 2021). Windows Phone 7.0, 7.5, 7.8, and 8.0 are also listed; end of support for these platforms occurred between 2014 and 2017. The library was never updated to target any platform that succeeded these discontinued environments — there is no .NET Standard, .NET Core, or .NET 5+ target.
 
 **Capability Gaps:** MessagingToolkit.Barcode accepted only `System.Drawing.Bitmap` inputs, which is Windows-only in .NET 6 and later. It returned a single result per decode call, with no support for multi-barcode images. It had no PDF reading capability — applications that needed to read barcodes from PDF documents required a separate extraction step before calling the library. Output generation returned a `Bitmap`, requiring a `System.Drawing.Imaging` import and preventing cross-platform deployment.
 
@@ -88,10 +88,10 @@ If the project references `MessagingToolkit.Barcode.dll` directly through a `<Hi
 Install IronBarcode:
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
-IronBarcode supports .NET Framework 4.6.2 through .NET 9. It installs as a single package with all dependencies bundled — no separate graphics library or ZXing reference is required alongside it.
+IronBarcode supports .NET Framework 4.6.2 through .NET 9. It installs as a single package (NuGet id: `BarCode`) with all dependencies bundled — no separate graphics library or ZXing reference is required alongside it.
 
 ### Step 2: Update Namespaces
 
@@ -154,7 +154,7 @@ The IronBarcode version removes the `Bitmap` construction and the null-condition
 
 ### Accessing Format Information from Results
 
-MessagingToolkit.Barcode exposed the detected format through `result.BarcodeFormat`. IronBarcode exposes it through `result.Format`. Both are enum values on the result object, with different enum type names.
+MessagingToolkit.Barcode exposed the detected format through `result.BarcodeFormat`. IronBarcode exposes it through `result.BarcodeType`. Both are enum values on the result object, with different enum type names.
 
 **MessagingToolkit.Barcode Approach:**
 ```csharp
@@ -182,11 +182,11 @@ var first = results.FirstOrDefault();
 if (first != null)
 {
     Console.WriteLine($"Value: {first.Value}");
-    Console.WriteLine($"Format: {first.Format}");
+    Console.WriteLine($"Format: {first.BarcodeType}");
 }
 ```
 
-The property name changes from `.Text` to `.Value` and from `.BarcodeFormat` to `.Format`. The enum type changes from `BarcodeFormat` (MessagingToolkit) to `BarcodeEncoding` (IronBarcode), though `.Format.ToString()` produces a comparable human-readable string for display or logging purposes.
+The property name changes from `.Text` to `.Value` and from `.BarcodeFormat` to `.BarcodeType`. The enum type changes from `BarcodeFormat` (MessagingToolkit) to `BarcodeEncoding` (IronBarcode), though `.BarcodeType.ToString()` produces a comparable human-readable string for display or logging purposes.
 
 ### Generating Barcodes
 
@@ -266,7 +266,7 @@ using IronBarCode;
 var results = BarcodeReader.Read("invoice.pdf");
 foreach (var barcode in results)
 {
-    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value} ({barcode.Format})");
+    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value} ({barcode.BarcodeType})");
 }
 ```
 
@@ -279,7 +279,7 @@ Applications that process scanned documents, shipping manifests, or multi-page i
 | `new BarcodeDecoder()` | Static — `BarcodeReader.Read()` | No instance required |
 | `barcodeReader.Decode(bitmap)` | `BarcodeReader.Read(path)` | Accepts path, stream, byte array, or PDF |
 | `result.Text` | `result.Value` | Property renamed |
-| `result.BarcodeFormat` | `result.Format` | Property renamed; enum type is `BarcodeEncoding` |
+| `result.BarcodeFormat` | `result.BarcodeType` | Property renamed; enum type is `BarcodeEncoding` |
 | `new BarcodeEncoder()` | Static — `BarcodeWriter.CreateBarcode()` | No instance required |
 | `barcodeWriter.Format = BarcodeFormat.QrCode` | `BarcodeEncoding.QRCode` (parameter) | Format passed as parameter, not property |
 | `barcodeWriter.Encode("data")` returns `Bitmap` | `BarcodeWriter.CreateBarcode("data", BarcodeEncoding.QRCode)` | Returns fluent result, not Bitmap |
@@ -362,13 +362,13 @@ Document all files that require changes. Note any locations where `System.Drawin
 ### Code Update Tasks
 
 1. Run `dotnet remove package MessagingToolkit.Barcode` to remove the package
-2. Run `dotnet add package IronBarcode` to install IronBarcode
+2. Run `dotnet add package BarCode` to install IronBarcode
 3. Add `IronBarCode.License.LicenseKey = "YOUR-KEY";` at application startup
 4. Replace all `using MessagingToolkit.Barcode;` statements with `using IronBarCode;`
 5. Replace all `new BarcodeDecoder()` patterns with `BarcodeReader.Read()` static calls
 6. Replace all `new BarcodeEncoder()` patterns with `BarcodeWriter.CreateBarcode()` static calls
 7. Update all `result.Text` references to `result.Value`
-8. Update all `result.BarcodeFormat` references to `result.Format`
+8. Update all `result.BarcodeFormat` references to `result.BarcodeType`
 9. Update all `barcodeWriter.Format = BarcodeFormat.X` patterns to pass encoding as parameter
 10. Replace `bitmap.Save()` with `.SaveAsPng()` or the appropriate output method on the IronBarcode result
 11. Remove `using System.Drawing;` imports where they were used only for Bitmap input to MessagingToolkit

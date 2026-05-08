@@ -1,6 +1,6 @@
 # MessagingToolkit.Barcode Migration to IronBarcode: C# Barcode Guide 2026
 
-If you're maintaining a .NET application that uses MessagingToolkit.Barcode, this guide will help you migrate to a modern, actively maintained barcode library. MessagingToolkit.Barcode was abandoned in 2014 and has not received any updates for modern .NET platforms. This migration guide provides a clear path to IronBarcode, ensuring your barcode functionality works with current .NET versions.
+If you're maintaining a .NET application that uses MessagingToolkit.Barcode, this guide will help you migrate to a modern, actively maintained barcode library. MessagingToolkit.Barcode published its final NuGet release in April 2013 and has received no updates since. This migration guide provides a clear path to IronBarcode, ensuring your barcode functionality works with current .NET versions.
 
 **This article focuses on migration, not competitive comparison.** MessagingToolkit.Barcode is no longer an active choice for new projects - it's a legacy dependency that needs replacing.
 
@@ -20,13 +20,13 @@ This guide addresses all these scenarios with a practical migration approach.
 MessagingToolkit.Barcode was an open-source .NET library created as a port of the Java ZXing barcode library with additional messaging integrations.
 
 **Key Facts:**
-- **GitHub:** https://github.com/mengwangk/messagingtoolkit-barcode
+- **Original Project Page:** http://platform.twit88.com/projects/mt-barcode (the maintainer's site; the project page is no longer actively maintained)
 - **NuGet Package:** MessagingToolkit.Barcode 1.7.0.2
-- **License:** Apache 2.0 (Free)
-- **Last Update:** 2014 (abandoned)
-- **Platforms Supported:** .NET Framework 3.5, 4.0, 4.5, Silverlight 3-5, Windows Phone 7.x/8.0
+- **License:** Refer to the package's project page; the library is a port derived from ZXing (Apache 2.0 family). The NuGet listing does not specify a SPDX license — verify before redistributing.
+- **Last Update:** April 27, 2013 (final NuGet release; no updates since)
+- **Platforms Supported:** .NET Framework 3.5, 4.0, 4.5, 4.8, Silverlight 3-5, Windows Phone 7.x/8.0, Windows 8 Store
 
-**Current Status:** The library has received no updates since 2014. The repository shows no recent activity, pull requests, or issue responses. This is an abandoned project.
+**Current Status:** The library has received no updates since April 2013. No active GitHub repository or maintainer is publicly visible. This is an abandoned project.
 
 ## Why Migration is Urgent
 
@@ -64,7 +64,7 @@ If your application targets these platforms, you have bigger modernization chall
 
 Abandoned libraries present security risks:
 
-1. **No security patches** - Vulnerabilities discovered since 2014 remain unpatched
+1. **No security patches** - Vulnerabilities discovered since 2013 remain unpatched
 2. **Outdated dependencies** - The library's dependencies may have known CVEs
 3. **Audit failures** - Security scans flag abandoned packages as high risk
 4. **Compliance issues** - PCI DSS, HIPAA, and other frameworks require actively maintained software
@@ -102,7 +102,7 @@ The ongoing cost of maintaining abandoned libraries extends beyond technical deb
 
 | Aspect | MessagingToolkit.Barcode | IronBarcode |
 |--------|-------------------------|-------------|
-| **Last Updated** | 2014 | 2026 (active) |
+| **Last Updated** | April 2013 | 2026 (active) |
 | **.NET 6/7/8/9 Support** | No | Yes |
 | **.NET Core Support** | No | Yes |
 | **.NET Framework Support** | Yes | Yes |
@@ -138,8 +138,8 @@ if (result != null)
 **IronBarcode:**
 ```csharp
 // New approach - IronBarcode
-// Install: dotnet add package IronBarcode
-using IronBarcode;
+// Install: dotnet add package BarCode
+using IronBarCode;
 
 var results = BarcodeReader.Read("barcode.png");
 foreach (var barcode in results)
@@ -165,7 +165,7 @@ bitmap.Save("output.png");
 **IronBarcode:**
 ```csharp
 // New approach - IronBarcode
-using IronBarcode;
+using IronBarCode;
 
 var barcode = BarcodeWriter.CreateBarcode("Hello World", BarcodeEncoding.QRCode);
 barcode.SaveAsPng("output.png");
@@ -200,15 +200,15 @@ Document each file and the barcode operations performed.
 
 ### Step 2: Install IronBarcode
 
-Add IronBarcode to your project:
+Add IronBarcode to your project (the NuGet package id is `BarCode`):
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 Or via Package Manager Console:
 ```powershell
-Install-Package IronBarcode
+Install-Package BarCode
 ```
 
 IronBarcode supports .NET Framework 4.6.2+, so you can install it alongside MessagingToolkit.Barcode during the transition. This dual-installation approach enables gradual migration, testing new code against old behavior before removing the legacy dependency.
@@ -224,7 +224,7 @@ Replace namespace imports:
 using MessagingToolkit.Barcode;
 
 // Add
-using IronBarcode;
+using IronBarCode;
 ```
 
 ### Step 4: Migrate Barcode Reading Code
@@ -283,6 +283,12 @@ Once all code is migrated and tested:
 
 ```bash
 dotnet remove package MessagingToolkit.Barcode
+```
+
+Optionally add a license key at application startup once you have one:
+
+```csharp
+IronBarCode.License.LicenseKey = "YOUR-LICENSE-KEY";
 ```
 
 Delete any manual DLL references if present.
@@ -480,7 +486,7 @@ var allValues = results.Select(r => r.Value).ToList();
 
 ## Conclusion
 
-MessagingToolkit.Barcode served its purpose as a .NET barcode solution in the early 2010s, but its abandonment in 2014 makes continued use untenable. The library cannot support modern .NET platforms, receives no security updates, and accumulates technical debt.
+MessagingToolkit.Barcode served its purpose as a .NET barcode solution in the early 2010s, but its abandonment after April 2013 makes continued use untenable. The library cannot support modern .NET platforms, receives no security updates, and accumulates technical debt.
 
 Migrating to IronBarcode provides:
 - Modern .NET support across all current platforms
@@ -500,10 +506,10 @@ If you have MessagingToolkit.Barcode in production, prioritize this migration al
 
 ## References
 
-- <a href="https://github.com/mengwangk/messagingtoolkit-barcode" rel="nofollow">MessagingToolkit.Barcode GitHub (archived)</a>
-- <a href="https://www.nuget.org/packages/MessagingToolkit.Barcode" rel="nofollow">MessagingToolkit.Barcode NuGet</a>
+- <a href="https://www.nuget.org/packages/MessagingToolkit.Barcode" rel="nofollow">MessagingToolkit.Barcode on NuGet (final release: 1.7.0.2, April 2013)</a>
+- <a href="http://platform.twit88.com/projects/mt-barcode" rel="nofollow">Original MessagingToolkit project page</a>
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/)
-- [IronBarcode NuGet Package](https://www.nuget.org/packages/BarCode)
+- [IronBarcode NuGet Package (id: `BarCode`)](https://www.nuget.org/packages/BarCode)
 - [.NET Upgrade Assistant](https://learn.microsoft.com/en-us/dotnet/core/porting/upgrade-assistant-overview)
 
 ---

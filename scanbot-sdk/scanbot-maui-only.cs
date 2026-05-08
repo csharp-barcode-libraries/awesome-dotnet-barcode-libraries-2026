@@ -1,12 +1,13 @@
 /*
- * Scanbot SDK vs IronBarcode: MAUI-Only Limitation Analysis
+ * Scanbot SDK vs IronBarcode: Camera-Bound Platform Limitation Analysis
  *
- * This file demonstrates Scanbot SDK's platform restriction to
- * .NET MAUI mobile applications, contrasted with IronBarcode's
- * universal .NET compatibility.
+ * This file demonstrates Scanbot SDK's restriction to camera-bound
+ * .NET runtimes (MAUI iOS/Android and UWP/WinUI 3 with autofocus
+ * camera), contrasted with IronBarcode's universal .NET compatibility.
  *
- * Key Insight: Scanbot only works in MAUI mobile projects.
- * IronBarcode works in any .NET project type.
+ * Key Insight: Scanbot only works in camera-bound .NET runtimes
+ * (MAUI mobile + UWP/WinUI 3). IronBarcode works in every .NET
+ * project type, including headless server contexts.
  *
  * Author: Jacob Mellor, CTO of Iron Software
  * https://ironsoftware.com/csharp/barcode/
@@ -23,19 +24,27 @@ namespace ScanbotMauiOnlyAnalysis
     // ============================================================
 
     /// <summary>
-    /// Scanbot SDK requires .NET MAUI with iOS/Android targets.
-    /// It cannot be used in other .NET project types.
+    /// Scanbot SDK requires either .NET MAUI with iOS/Android targets
+    /// or a UWP/WinUI 3 desktop app with an autofocus camera.
+    /// It cannot be used in headless or server-side .NET project types.
     /// </summary>
     public class ScanbotPlatformRestrictions
     {
         /*
-         * Scanbot SDK Requirements:
+         * Scanbot SDK Requirements (any of):
          *
-         * 1. .NET MAUI Application project type
-         * 2. Target platforms: iOS and/or Android
-         * 3. Camera permissions in app manifests
-         * 4. Native platform dependencies
-         * 5. Device with camera hardware
+         * A. .NET MAUI Application targeting iOS and/or Android
+         *    - Package: ScanbotBarcodeSDK.MAUI 8.0.0 (Feb 2026)
+         *    - Targets: net9.0-android, net9.0-ios (also net10.0)
+         *    - Native iOS / Android bindings via ScanbotBarcodeSDK.NET
+         *
+         * B. UWP / WinUI 3 desktop app on Windows 10 1809+ (x64)
+         *    - Package: Scanbot.BarcodeSDK.Windows 7.0.0 (Mar 2025)
+         *    - Targets: net8.0-windows, net9.0-windows, UAP 10.0
+         *    - Requires autofocus camera attached to the device
+         *
+         * All paths require: camera hardware, camera permissions,
+         * and a UI shell that can host the camera view.
          *
          * Projects where Scanbot SDK CANNOT be used:
          * - Console Application
@@ -44,7 +53,7 @@ namespace ScanbotMauiOnlyAnalysis
          * - ASP.NET Core MVC
          * - Blazor Server
          * - Blazor WebAssembly
-         * - WPF Application
+         * - WPF Application (no Scanbot WPF binding)
          * - WinForms Application
          * - Worker Service
          * - Azure Functions
@@ -52,27 +61,26 @@ namespace ScanbotMauiOnlyAnalysis
          * - Docker containers (server)
          * - Linux server applications
          * - Windows Service
-         *
-         * Package: ScanbotBarcodeSDK.MAUI
-         * Version: 7.1.1 (2026)
+         * - .NET MAUI Windows / macOS targets
          */
 
         public void ExplainMauiOnlyRequirement()
         {
             Console.WriteLine("=== Scanbot SDK Platform Requirement ===");
             Console.WriteLine();
-            Console.WriteLine("Scanbot SDK for .NET is MAUI-only:");
+            Console.WriteLine("Scanbot SDK for .NET requires a camera-bound runtime:");
             Console.WriteLine();
-            Console.WriteLine("Required project structure:");
+            Console.WriteLine("MAUI mobile project structure:");
             Console.WriteLine("  <Project Sdk=\"Microsoft.NET.Sdk\">");
             Console.WriteLine("    <PropertyGroup>");
-            Console.WriteLine("      <TargetFrameworks>net8.0-android;net8.0-ios</TargetFrameworks>");
+            Console.WriteLine("      <TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>");
             Console.WriteLine("      <OutputType>Exe</OutputType>");
             Console.WriteLine("      <UseMaui>true</UseMaui>");
             Console.WriteLine("    </PropertyGroup>");
             Console.WriteLine("  </Project>");
             Console.WriteLine();
-            Console.WriteLine("Cannot be used in non-MAUI projects.");
+            Console.WriteLine("Or a UWP / WinUI 3 desktop app with an autofocus camera.");
+            Console.WriteLine("Cannot be used in headless / server / non-camera projects.");
         }
 
         public void ShowPlatformMatrix()
@@ -94,7 +102,9 @@ namespace ScanbotMauiOnlyAnalysis
                 ("Docker Container", false, true),
                 ("Windows Service", false, true),
                 ("Linux Server", false, true),
-                (".NET MAUI (iOS/Android)", true, true)
+                ("UWP / WinUI 3 (with camera)", true, true),
+                (".NET MAUI (iOS/Android)", true, true),
+                (".NET MAUI (Windows/macOS)", false, true)
             };
 
             Console.WriteLine("| Project Type             | Scanbot | IronBarcode |");
@@ -186,7 +196,7 @@ namespace ScanbotMauiOnlyAnalysis
         /*
          * IronBarcode works in ANY .NET project:
          *
-         * Install: dotnet add package IronBarcode
+         * Install: dotnet add package BarCode
          *
          * Same API everywhere:
          * - BarcodeReader.Read() for reading
@@ -204,7 +214,7 @@ namespace ScanbotMauiOnlyAnalysis
             var results = IronBarCode.BarcodeReader.Read("document.pdf");
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Found: {barcode.Text}");
+                Console.WriteLine($"Found: {barcode.Value}");
             }
         }
 
@@ -213,7 +223,7 @@ namespace ScanbotMauiOnlyAnalysis
         {
             // Works in ASP.NET Core endpoints
             var results = IronBarCode.BarcodeReader.Read(uploadedFile);
-            return results.Select(b => b.Text).ToArray();
+            return results.Select(b => b.Value).ToArray();
         }
 
         // WPF Desktop Example
@@ -230,7 +240,7 @@ namespace ScanbotMauiOnlyAnalysis
             // Works in Azure Functions
             using var stream = new MemoryStream(blobContent);
             var results = IronBarCode.BarcodeReader.Read(stream);
-            return results.Select(b => b.Text).ToArray();
+            return results.Select(b => b.Value).ToArray();
         }
 
         // Docker Container Example
@@ -241,7 +251,7 @@ namespace ScanbotMauiOnlyAnalysis
             var results = IronBarCode.BarcodeReader.Read("/data/invoice.pdf");
             foreach (var barcode in results)
             {
-                ProcessBarcode(barcode.Text);
+                ProcessBarcode(barcode.Value);
             }
         }
 
@@ -318,11 +328,14 @@ namespace ScanbotMauiOnlyAnalysis
             /*
              * Scanbot provides camera UI:
              *
-             * var config = new BarcodeScannerConfiguration
+             * using ScanbotSDK.MAUI;
+             * using ScanbotSDK.MAUI.Barcode;
+             *
+             * var config = new BarcodeScannerScreenConfiguration
              * {
-             *     AcceptedFormats = new[] { BarcodeFormat.QrCode }
+             *     UseCase = new SingleScanningMode()
              * };
-             * var result = await ScanbotBarcodeSDK.BarcodeScanner.Open(config);
+             * var result = await ScanbotSDKMain.Barcode.StartScannerAsync(config);
              *
              * This opens full-screen camera with viewfinder.
              * User points at barcode, SDK detects and returns.
@@ -386,8 +399,10 @@ namespace ScanbotMauiOnlyAnalysis
             Console.WriteLine("=== Summary ===");
             Console.WriteLine();
             Console.WriteLine("Scanbot SDK limitations:");
-            Console.WriteLine("  - Only works in .NET MAUI mobile projects");
+            Console.WriteLine("  - Only works in camera-bound runtimes:");
+            Console.WriteLine("    MAUI iOS/Android, or UWP/WinUI 3 with autofocus camera");
             Console.WriteLine("  - Cannot be used in 12+ common .NET project types");
+            Console.WriteLine("  - No headless server-side .NET SDK available");
             Console.WriteLine("  - Designed specifically for camera-based scanning");
             Console.WriteLine();
             Console.WriteLine("IronBarcode advantages:");

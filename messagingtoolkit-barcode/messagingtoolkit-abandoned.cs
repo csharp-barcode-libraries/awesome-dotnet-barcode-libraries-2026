@@ -1,11 +1,13 @@
 /**
  * MessagingToolkit.Barcode Abandonment Documentation
  *
- * IMPORTANT: MessagingToolkit.Barcode was abandoned in 2014.
+ * IMPORTANT: MessagingToolkit.Barcode published its final release (1.7.0.2) in
+ * April 2013 and has received no updates since.
  * This file documents the library's limitations and why migration is necessary.
  *
- * Last update: 2014
- * Target platforms: .NET Framework 3.5-4.5, Silverlight 3-5, Windows Phone 7.x/8.0
+ * Last update: April 27, 2013 (NuGet 1.7.0.2)
+ * Target platforms: .NET Framework 3.5-4.5/4.8, Silverlight 3-5, Windows Phone 7.x/8.0,
+ *                   Windows 8 Store
  * Modern .NET support: NONE
  */
 
@@ -101,11 +103,11 @@ namespace MessagingToolkitAbandonedExample
         {
             Console.WriteLine("\n=== Security Concerns ===\n");
 
-            Console.WriteLine("Abandoned since: 2014 (10+ years)");
+            Console.WriteLine("Abandoned since: April 2013 (12+ years)");
             Console.WriteLine();
 
             Console.WriteLine("Security implications:");
-            Console.WriteLine("  - No security patches since 2014");
+            Console.WriteLine("  - No security patches since April 2013");
             Console.WriteLine("  - Dependencies have known CVEs");
             Console.WriteLine("  - No response to vulnerability reports");
             Console.WriteLine("  - Fails security audit tools (Snyk, WhiteSource, etc.)");
@@ -228,10 +230,9 @@ namespace MessagingToolkitAbandonedExample
             {
                 ("2011", "Initial release", "Based on ZXing port"),
                 ("2012", "Active development", "Multiple releases"),
-                ("2013", "Slowing updates", "Fewer commits"),
-                ("2014", "Last update", "Version 1.7.0.2 released"),
-                ("2015-2025", "Abandoned", "No updates, no responses"),
-                ("2026", "Critical risk", "10+ years without maintenance"),
+                ("2013-04", "Last update", "Version 1.7.0.2 released on NuGet"),
+                ("2014-2025", "Abandoned", "No updates, no responses"),
+                ("2026", "Critical risk", "12+ years without maintenance"),
             };
 
             foreach (var (year, status, notes) in events)
@@ -253,9 +254,9 @@ namespace MessagingToolkitAbandonedExample
             Console.WriteLine("\n=== NuGet Package Analysis ===\n");
 
             Console.WriteLine("Package: MessagingToolkit.Barcode");
-            Console.WriteLine("Version: 1.7.0.2");
-            Console.WriteLine("Published: 2014");
-            Console.WriteLine("Downloads: Legacy installs only");
+            Console.WriteLine("Version: 1.7.0.2 (final)");
+            Console.WriteLine("Published: April 27, 2013");
+            Console.WriteLine("Downloads: Legacy installs only (~106K total)");
             Console.WriteLine();
 
             Console.WriteLine("Dependencies:");
@@ -264,7 +265,7 @@ namespace MessagingToolkitAbandonedExample
             Console.WriteLine();
 
             Console.WriteLine("Package health indicators:");
-            Console.WriteLine("  X  No recent updates (10+ years)");
+            Console.WriteLine("  X  No recent updates (12+ years)");
             Console.WriteLine("  X  No open issues addressed");
             Console.WriteLine("  X  No pull requests merged");
             Console.WriteLine("  X  Repository appears abandoned");

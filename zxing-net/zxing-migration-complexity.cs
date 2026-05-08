@@ -11,8 +11,8 @@
  * - Single instance can be used across all threads
  *
  * NuGet Packages Required:
- * - ZXing.Net: ZXing.Net version 0.16.x+, ZXing.Net.Bindings.Windows
- * - IronBarcode: IronBarcode version 2024.x+
+ * - ZXing.Net: ZXing.Net 0.16.11+, ZXing.Net.Bindings.Windows.Compatibility
+ * - IronBarcode: BarCode (namespace IronBarCode)
  */
 
 using System;
@@ -364,7 +364,7 @@ namespace IronBarcodeExamples
                 var barcode = BarcodeReader.Read(path).FirstOrDefault();
                 if (barcode != null)
                 {
-                    results[path] = barcode.Text;
+                    results[path] = barcode.Value;
                 }
             });
 
@@ -401,7 +401,7 @@ namespace IronBarcodeExamples
                             var barcode = BarcodeReader.Read(path).FirstOrDefault();
                             if (barcode != null)
                             {
-                                results[path] = barcode.Text;
+                                results[path] = barcode.Value;
                             }
                         }
                         catch
@@ -443,7 +443,7 @@ namespace IronBarcodeExamples
             Parallel.ForEach(imageFiles, file =>
             {
                 var barcodes = BarcodeReader.Read(file);
-                results[file] = barcodes.Select(b => b.Text).ToList();
+                results[file] = barcodes.Select(b => b.Value).ToList();
             });
 
             return results.ToDictionary(x => x.Key, x => x.Value);
@@ -467,7 +467,7 @@ namespace IronBarcodeExamples
                     var barcodes = BarcodeReader.Read(path);
                     foreach (var barcode in barcodes)
                     {
-                        Console.WriteLine($"{Path.GetFileName(path)}: {barcode.Text}");
+                        Console.WriteLine($"{Path.GetFileName(path)}: {barcode.Value}");
                     }
                 }
                 finally

@@ -11,14 +11,15 @@
  * - Handles scratched, faded, and partially obscured barcodes
  *
  * NuGet Packages Required:
- * - ZXing.Net: ZXing.Net version 0.16.x+, ZXing.Net.Bindings.Windows
- * - IronBarcode: IronBarcode version 2024.x+
+ * - ZXing.Net: ZXing.Net 0.16.11+, ZXing.Net.Bindings.Windows.Compatibility
+ * - IronBarcode: BarCode (namespace IronBarCode)
  */
 
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 
 // ============================================================================
 // THE PROBLEM: Real-World Barcode Quality
@@ -346,27 +347,21 @@ namespace IronBarcodeExamples
             // ML-powered error correction is automatic
             // No special configuration needed
             var result = BarcodeReader.Read(imagePath).FirstOrDefault();
-            return result?.Text;
+            return result?.Value;
         }
 
         /// <summary>
-        /// Read with confidence reporting.
+        /// Read decoded barcodes with type and position metadata.
         /// </summary>
-        public static void ReadWithConfidence(string imagePath)
+        public static void ReadWithMetadata(string imagePath)
         {
             var results = BarcodeReader.Read(imagePath);
 
             foreach (var result in results)
             {
-                Console.WriteLine($"Value: {result.Text}");
-                Console.WriteLine($"Confidence: {result.Confidence:P0}");
+                Console.WriteLine($"Value: {result.Value}");
                 Console.WriteLine($"Type: {result.BarcodeType}");
-
-                // Lower confidence may indicate the ML correction was applied
-                if (result.Confidence < 0.9)
-                {
-                    Console.WriteLine("  Note: Error correction may have been applied");
-                }
+                Console.WriteLine($"Position: ({result.X}, {result.Y})");
             }
         }
 
@@ -382,13 +377,13 @@ namespace IronBarcodeExamples
                 if (result != null)
                 {
                     Console.WriteLine($"SUCCESS: {Path.GetFileName(path)}");
-                    Console.WriteLine($"  Value: {result.Text}");
-                    Console.WriteLine($"  Confidence: {result.Confidence:P0}");
+                    Console.WriteLine($"  Value: {result.Value}");
+                    Console.WriteLine($"  Type: {result.BarcodeType}");
                 }
                 else
                 {
                     Console.WriteLine($"FAILED: {Path.GetFileName(path)}");
-                    Console.WriteLine("  Note: Damage too severe for ML correction");
+                    Console.WriteLine("  Note: Damage too severe to recover");
                 }
             }
         }

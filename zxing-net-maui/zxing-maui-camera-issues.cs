@@ -377,7 +377,7 @@ namespace ZXingMauiCameraIssuesExample
                     {
                         await DisplayAlert("Success",
                             $"Type: {results.First().BarcodeType}\n" +
-                            $"Value: {results.First().Text}",
+                            $"Value: {results.First().Value}",
                             "OK");
                     }
                     else
@@ -423,10 +423,10 @@ namespace ZXingMauiCameraIssuesExample
        - Requires version pinning workaround
        - Moving target as libraries update
 
-    4. Pre-Release Stability
-       - Version 0.5.0 indicates incomplete
-       - No guarantees on fixes or timeline
-       - Community-maintained with variable support
+    4. Pre-1.0 Stability
+       - Version 0.7.4 is stable on NuGet but still pre-1.0
+       - Minor-version API changes still possible before 1.0
+       - Community-maintained with variable support cadence
 
     IronBarcode Solution:
     - No camera view = no camera issues

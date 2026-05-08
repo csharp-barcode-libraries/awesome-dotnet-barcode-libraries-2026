@@ -52,12 +52,11 @@ namespace ScanbotCameraFocusAnalysis
             Console.WriteLine("=== Scanbot Camera Workflow ===");
             Console.WriteLine();
             Console.WriteLine("Step 1: Configure scanner");
-            Console.WriteLine("  var config = new BarcodeScannerConfiguration();");
-            Console.WriteLine("  config.AcceptedFormats = new[] { BarcodeFormat.QrCode };");
-            Console.WriteLine("  config.TopBarBackgroundColor = Colors.Blue;");
+            Console.WriteLine("  var config = new BarcodeScannerScreenConfiguration();");
+            Console.WriteLine("  config.UseCase = new SingleScanningMode();");
             Console.WriteLine();
             Console.WriteLine("Step 2: Open camera scanner");
-            Console.WriteLine("  var result = await ScanbotBarcodeSDK.BarcodeScanner.Open(config);");
+            Console.WriteLine("  var result = await ScanbotSDKMain.Barcode.StartScannerAsync(config);");
             Console.WriteLine();
             Console.WriteLine("Step 3: User scans with camera (UI takes over)");
             Console.WriteLine("  - Full-screen camera preview");
@@ -66,9 +65,9 @@ namespace ScanbotCameraFocusAnalysis
             Console.WriteLine("  - Visual/audio feedback on detection");
             Console.WriteLine();
             Console.WriteLine("Step 4: Get results after scanning");
-            Console.WriteLine("  if (result.Status == OperationResult.Ok)");
+            Console.WriteLine("  if (result.IsSuccess)");
             Console.WriteLine("  {");
-            Console.WriteLine("      var barcodes = result.Barcodes;");
+            Console.WriteLine("      var barcodes = result.Value.Items;");
             Console.WriteLine("  }");
         }
 
@@ -78,37 +77,30 @@ namespace ScanbotCameraFocusAnalysis
         public async Task ConceptualScanbotScanning()
         {
             /*
-             * // Requires MAUI project with ScanbotBarcodeSDK.MAUI package
+             * // Requires MAUI project with ScanbotBarcodeSDK.MAUI v8.0.0 package
              *
-             * using ScanbotBarcodeSDK.MAUI;
+             * using ScanbotSDK.MAUI;
+             * using ScanbotSDK.MAUI.Barcode;
              *
              * // Configure scanner appearance and behavior
-             * var configuration = new BarcodeScannerConfiguration
+             * var configuration = new BarcodeScannerScreenConfiguration
              * {
-             *     AcceptedFormats = new[]
-             *     {
-             *         BarcodeFormat.Code128,
-             *         BarcodeFormat.QrCode,
-             *         BarcodeFormat.Ean13,
-             *         BarcodeFormat.DataMatrix
-             *     },
-             *     FinderAspectRatio = new AspectRatio(1, 1),
-             *     TopBarBackgroundColor = Colors.DarkBlue,
-             *     FlashEnabled = false,
-             *     OrientationLockMode = OrientationLockMode.Portrait
+             *     UseCase = new SingleScanningMode()
+             *     // Symbology filters and finder UI are configured on
+             *     // the UseCase / camera screen — see Scanbot v8 docs
              * };
              *
              * // This opens full-screen camera scanner
              * // User interface takes over the entire screen
              * // User points camera at barcode
              * // SDK returns when barcode detected or user cancels
-             * var result = await ScanbotBarcodeSDK.BarcodeScanner.Open(configuration);
+             * var result = await ScanbotSDKMain.Barcode.StartScannerAsync(configuration);
              *
-             * if (result.Status == OperationResult.Ok)
+             * if (result.IsSuccess)
              * {
-             *     foreach (var barcode in result.Barcodes)
+             *     foreach (var item in result.Value.Items)
              *     {
-             *         Console.WriteLine($"{barcode.Format}: {barcode.Text}");
+             *         Console.WriteLine($"{item.Barcode.Format}: {item.Barcode.Text}");
              *     }
              * }
              */
@@ -146,7 +138,7 @@ namespace ScanbotCameraFocusAnalysis
         {
             Console.WriteLine("=== IronBarcode File Workflow ===");
             Console.WriteLine();
-            Console.WriteLine("// Install: dotnet add package IronBarcode");
+            Console.WriteLine("// Install: dotnet add package BarCode");
             Console.WriteLine("using IronBarCode;");
             Console.WriteLine();
             Console.WriteLine("// Single-line barcode reading from file");
@@ -155,7 +147,7 @@ namespace ScanbotCameraFocusAnalysis
             Console.WriteLine("// Process results programmatically");
             Console.WriteLine("foreach (var barcode in results)");
             Console.WriteLine("{");
-            Console.WriteLine("    Console.WriteLine($\"{barcode.BarcodeType}: {barcode.Text}\");");
+            Console.WriteLine("    Console.WriteLine($\"{barcode.BarcodeType}: {barcode.Value}\");");
             Console.WriteLine("}");
             Console.WriteLine();
             Console.WriteLine("No camera, no UI, no user interaction required.");
@@ -170,7 +162,7 @@ namespace ScanbotCameraFocusAnalysis
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Found {barcode.BarcodeType}: {barcode.Text}");
+                Console.WriteLine($"Found {barcode.BarcodeType}: {barcode.Value}");
             }
         }
 
@@ -181,7 +173,7 @@ namespace ScanbotCameraFocusAnalysis
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
             }
         }
 
@@ -199,7 +191,7 @@ namespace ScanbotCameraFocusAnalysis
         {
             // Process from stream (useful for uploads)
             var results = IronBarCode.BarcodeReader.Read(inputStream);
-            return results.Select(b => b.Text).ToArray();
+            return results.Select(b => b.Value).ToArray();
         }
     }
 
@@ -299,7 +291,7 @@ namespace ScanbotCameraFocusAnalysis
             Console.WriteLine("    var results = BarcodeReader.Read(path);");
             Console.WriteLine("    foreach (var barcode in results)");
             Console.WriteLine("    {");
-            Console.WriteLine("        Console.WriteLine($\"{barcode.BarcodeType}: {barcode.Text}\");");
+            Console.WriteLine("        Console.WriteLine($\"{barcode.BarcodeType}: {barcode.Value}\");");
             Console.WriteLine("    }");
             Console.WriteLine("}");
             Console.WriteLine();
@@ -373,7 +365,7 @@ namespace ScanbotCameraFocusAnalysis
              *
              *     foreach (var barcode in results)
              *     {
-             *         await DisplayAlert("Found", barcode.Text, "OK");
+             *         await DisplayAlert("Found", barcode.Value, "OK");
              *     }
              * }
              */
@@ -387,7 +379,7 @@ namespace ScanbotCameraFocusAnalysis
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
             }
         }
 

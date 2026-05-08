@@ -1,33 +1,39 @@
 // =============================================================================
-// GrapeCity ComponentOne Barcode: Suite Dependency Comparison
+// MESCIUS ComponentOne Barcode (formerly GrapeCity): Suite Dependency Comparison
 // =============================================================================
 // This example demonstrates the suite dependency differences between
-// ComponentOne (bundled with 100+ component UI suite) and IronBarcode
+// ComponentOne (bundled with the ComponentOne UI suite) and IronBarcode
 // (standalone barcode-focused package).
 //
+// Vendor note: GrapeCity rebranded its developer-tools division to MESCIUS
+// in 2023. The C1.* package prefix and C1BarCode class name did not change.
+//
 // Author: Jacob Mellor, CTO of Iron Software
-// Last verified: January 2026
+// Last verified: May 2026
 // =============================================================================
 
 /*
  * INSTALLATION COMPARISON
  *
- * ComponentOne (requires suite):
- * dotnet add package C1.Win.C1BarCode
+ * ComponentOne (requires suite licence):
+ * dotnet add package C1.Win.BarCode    // WinForms
+ * dotnet add package C1.WPF.BarCode    // WPF
+ * dotnet add package C1.WinUI.BarCode  // WinUI
+ * dotnet add package C1.Blazor.BarCode // Blazor
  *
- * This pulls in:
+ * This pulls in (per platform):
  * - C1.dll (core library)
- * - C1.Win.dll (Windows Forms core)
- * - C1.Win.C1BarCode.dll
- * - Various imaging dependencies
- * - License registration assemblies
+ * - C1.Win.dll / C1.WPF.dll (platform core)
+ * - C1.Win.Barcode.dll / C1.WPF.BarCode.dll (the barcode assembly)
+ * - Imaging and licence-validation dependencies
  *
  * IronBarcode (standalone):
- * dotnet add package IronBarcode
+ * dotnet add package BarCode
+ * (NuGet package id is "BarCode"; the namespace is "IronBarCode")
  *
  * This pulls in:
  * - IronBarcode.dll
- * - IronSoftware.Drawing dependencies (cross-platform imaging)
+ * - IronSoftware.Drawing (cross-platform imaging abstraction)
  * - Self-contained with minimal external dependencies
  */
 
@@ -49,11 +55,11 @@ namespace BarcodeComparison
 
         /// <summary>
         /// ComponentOne WinForms barcode package dependencies.
-        /// This is what gets installed when you add C1.Win.C1BarCode.
+        /// This is what gets installed when you add C1.Win.BarCode.
         /// </summary>
         public void AnalyzeComponentOneDependencies()
         {
-            Console.WriteLine("ComponentOne C1.Win.C1BarCode Dependencies:");
+            Console.WriteLine("ComponentOne C1.Win.BarCode Dependencies:");
             Console.WriteLine("-".PadRight(60, '-'));
 
             var dependencies = new[]
@@ -61,7 +67,7 @@ namespace BarcodeComparison
                 // Core dependencies
                 ("C1.dll", "Core ComponentOne library (required for all C1 products)"),
                 ("C1.Win.dll", "Windows Forms core UI library"),
-                ("C1.Win.C1BarCode.dll", "Barcode control assembly"),
+                ("C1.Win.Barcode.dll", "Barcode control assembly"),
 
                 // Imaging dependencies
                 ("System.Drawing", "GDI+ imaging (Windows-only)"),
@@ -104,8 +110,8 @@ namespace BarcodeComparison
                 ("IronSoftware.Drawing", "Cross-platform imaging abstraction"),
                 ("SixLabors.ImageSharp", "Cross-platform image processing"),
 
-                // PDF support (included)
-                ("IronPdf.Slim", "PDF barcode extraction support"),
+                // PDF support (included for reading from PDF)
+                ("PDF rendering support", "Used by BarcodeReader to read barcodes from PDF input"),
             };
 
             foreach (var (assembly, purpose) in dependencies)
@@ -146,9 +152,9 @@ namespace BarcodeComparison
 
   <ItemGroup>
     <!-- Barcode package - pulls in suite dependencies -->
-    <PackageReference Include=""C1.Win.C1BarCode"" Version=""8.x.x"" />
+    <PackageReference Include=""C1.Win.BarCode"" Version=""10.x.x"" />
 
-    <!-- These come transitively with C1.Win.C1BarCode: -->
+    <!-- These come transitively with C1.Win.BarCode: -->
     <!-- C1.dll, C1.Win.dll, System.Drawing.Common, etc. -->
   </ItemGroup>
 </Project>
@@ -171,7 +177,8 @@ NOTES:
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include=""IronBarcode"" Version=""2024.x.x"" />
+    <!-- NuGet package id is ""BarCode""; namespace is ""IronBarCode"" -->
+    <PackageReference Include=""BarCode"" Version=""x.x.x"" />
     <!-- That's it - single package, all functionality included -->
   </ItemGroup>
 </Project>
@@ -370,26 +377,29 @@ ENTRYPOINT [""dotnet"", ""YourApp.dll""]
             Console.WriteLine();
             Console.WriteLine("COST BREAKDOWN:");
             Console.WriteLine("-".PadRight(60, '-'));
-            Console.WriteLine($"  ComponentOne Studio Enterprise: ~$1,473/developer/year");
-            Console.WriteLine($"  Total components:               100+");
+            Console.WriteLine($"  ComponentOne Studio Enterprise: $1,299/developer/year");
+            Console.WriteLine($"  Single-platform editions:       $799/developer/year (WinForms or WPF)");
             Console.WriteLine($"  Components you need:            1 (barcode)");
-            Console.WriteLine($"  Percentage of suite used:       ~1%");
-            Console.WriteLine($"  Effective barcode cost:         $1,473 for 1% of value");
+            Console.WriteLine($"  Percentage of suite used:       low single digits if barcode-only");
+            Console.WriteLine($"  Effective barcode cost:         full suite price for 1 control");
             Console.WriteLine();
-            Console.WriteLine($"  IronBarcode Professional:       $1,499 ONE-TIME");
+            Console.WriteLine($"  IronBarcode Lite:               $799 ONE-TIME (1 dev)");
+            Console.WriteLine($"  IronBarcode Plus:               $1,199 ONE-TIME (3 devs)");
+            Console.WriteLine($"  IronBarcode Professional:       $2,399 ONE-TIME (10 devs)");
+            Console.WriteLine($"  IronBarcode Unlimited:          $4,799 ONE-TIME (unlimited)");
             Console.WriteLine($"  What you get:                   100% barcode functionality");
             Console.WriteLine($"  Plus reading capability:        Included (ComponentOne lacks this)");
             Console.WriteLine($"  Plus PDF support:               Included");
             Console.WriteLine();
             Console.WriteLine("5-YEAR COMPARISON (3 developers):");
             Console.WriteLine("-".PadRight(60, '-'));
-            Console.WriteLine($"  ComponentOne: $1,473 x 3 + renewals = ~$11,000+");
-            Console.WriteLine($"  IronBarcode:  $1,499 one-time       = $1,499");
-            Console.WriteLine($"  Savings:      $9,500+ over 5 years");
+            Console.WriteLine($"  ComponentOne: $1,299 x 3 x 5 yrs = $19,485 (subscription)");
+            Console.WriteLine($"  IronBarcode:  $1,199 one-time    = $1,199 (Plus, perpetual)");
+            Console.WriteLine($"  Savings:      ~$18,000 over 5 years");
             Console.WriteLine();
             Console.WriteLine("CONCLUSION:");
-            Console.WriteLine("  Suite bundling makes sense if you use 10+ components.");
-            Console.WriteLine("  For barcode-only needs, standalone IronBarcode is 7x better value.");
+            Console.WriteLine("  Suite bundling makes sense if you use many ComponentOne controls.");
+            Console.WriteLine("  For barcode-only needs, standalone IronBarcode is much better value.");
         }
 
         // =====================================================================
@@ -412,7 +422,8 @@ ENTRYPOINT [""dotnet"", ""YourApp.dll""]
             Console.WriteLine("ComponentOne approach:");
             Console.WriteLine("-".PadRight(60, '-'));
             Console.WriteLine(@"
-using C1.Win.C1BarCode;
+using C1.Win.Barcode;
+using C1.BarCode;
 using System.Drawing;
 
 var barcode = new C1BarCode();
@@ -452,13 +463,14 @@ QRCodeWriter.CreateQrCode(""https://example.com"", 200)
     .SaveAsPng(""qr-code.png"");
 
 // OR with logo embedded (ComponentOne cannot do this)
-QRCodeWriter.CreateQrCodeWithLogo(""https://example.com"", ""logo.png"", 300)
+QRCodeWriter.CreateQrCode(""https://example.com"", 300)
+    .AddBrandLogo(""logo.png"")
     .ChangeBarCodeColor(Color.DarkBlue)
     .SaveAsPng(""qr-with-logo.png"");
 
 // AND read it back (ComponentOne cannot do this)
 var result = BarcodeReader.Read(""qr-code.png"");
-Console.WriteLine(result.First().Text);
+Console.WriteLine(result.First().Value);
 
 // Lines of code: 3-6
 // Can: Add logo to QR code
@@ -478,7 +490,7 @@ Console.WriteLine(result.First().Text);
             var comparison = new SuiteDependencyComparison();
 
             Console.WriteLine("=".PadRight(70, '='));
-            Console.WriteLine("GRAPECITY COMPONENTONE vs IRONBARCODE: SUITE DEPENDENCY COMPARISON");
+            Console.WriteLine("MESCIUS COMPONENTONE vs IRONBARCODE: SUITE DEPENDENCY COMPARISON");
             Console.WriteLine("=".PadRight(70, '='));
             Console.WriteLine();
 
@@ -517,15 +529,15 @@ Console.WriteLine(result.First().Text);
             Console.WriteLine("=".PadRight(70, '='));
             Console.WriteLine(@"
 ComponentOne:
-- UI suite with 100+ components (barcode is ~1% of offering)
-- Windows-only deployment (System.Drawing dependency)
-- Suite licensing model (~$1,473/year/developer)
+- UI suite where barcode is one control among many
+- Historically Windows-only for the WinForms/WPF barcode controls
+- Subscription licensing ($799-$1,299/year/developer depending on edition)
 - Generation-only (no reading capability)
 
 IronBarcode:
 - Standalone barcode SDK (100% barcode functionality)
 - Cross-platform (Windows, Linux, macOS, Docker)
-- Perpetual license option ($749-$1,499 one-time)
+- Perpetual license ($799 Lite / $1,199 Plus / $2,399 Pro / $4,799 Unlimited)
 - Full read/write capability
 
 Recommendation:

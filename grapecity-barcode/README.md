@@ -1,12 +1,12 @@
-# GrapeCity ComponentOne Barcode vs IronBarcode: C# Barcode Comparison 2026
+# MESCIUS ComponentOne Barcode vs IronBarcode: C# Barcode Comparison 2026
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-GrapeCity ComponentOne is a comprehensive UI suite for .NET developers that includes barcode generation controls among its 100+ components. The C1BarCode control provides barcode generation for WinForms, WPF, ASP.NET Core MVC, and Blazor applications. This guide compares ComponentOne's barcode capabilities with [IronBarcode](https://ironsoftware.com/csharp/barcode/) to help developers understand when each solution fits their requirements.
+MESCIUS ComponentOne (formerly GrapeCity ComponentOne, rebranded in 2023) is a comprehensive UI suite for .NET developers that includes barcode generation controls among its many components. The C1BarCode control provides barcode generation for WinForms, WPF, WinUI, ASP.NET Core MVC, and Blazor applications. This guide compares ComponentOne's barcode capabilities with [IronBarcode](https://ironsoftware.com/csharp/barcode/) to help developers understand when each solution fits their requirements.
 
 ## Table of Contents
 
-1. [What is GrapeCity ComponentOne Barcode?](#what-is-grapecity-componentone-barcode)
+1. [What is MESCIUS ComponentOne Barcode?](#what-is-mescius-componentone-barcode)
 2. [Suite Bundling Context](#suite-bundling-context)
 3. [Capabilities Comparison](#capabilities-comparison)
 4. [Installation and Setup](#installation-and-setup)
@@ -17,15 +17,15 @@ GrapeCity ComponentOne is a comprehensive UI suite for .NET developers that incl
 
 ---
 
-## What is GrapeCity ComponentOne Barcode?
+## What is MESCIUS ComponentOne Barcode?
 
-GrapeCity (operating under the MESCIUS brand in some markets) has been building developer tools since 1980. ComponentOne Studio is their flagship .NET UI control suite, and the C1BarCode control is one component within this extensive library.
+MESCIUS (formerly GrapeCity, which rebranded its developer-tools division to MESCIUS in 2023) has been building developer tools for decades. ComponentOne Studio is their flagship .NET UI control suite, and the C1BarCode control is one component within this extensive library.
 
 ### Core Capabilities
 
 The C1BarCode control focuses on barcode generation:
 
-- 26 encoding types supported (Code 39, Code 128, EAN-13, UPC-A, QR Code, PDF417, etc.)
+- 38 standard encoding types supported (Code 39, Code 128, EAN-13, UPC-A, QR Code, PDF417, DataMatrix, etc.)
 - Automatic checksums and control symbol calculation
 - Customizable appearance (bar height, module width, colors)
 - Image export in PNG, JPEG, BMP formats
@@ -37,17 +37,17 @@ C1BarCode is available across multiple .NET platforms:
 
 | Platform | Package | Status |
 |----------|---------|--------|
-| WinForms | C1.Win.C1BarCode | Mature |
+| WinForms | C1.Win.BarCode | Mature |
 | WPF | C1.WPF.BarCode | Mature |
+| WinUI | C1.WinUI.BarCode | Mature |
 | ASP.NET Core MVC | C1.AspNetCore.Api | Mature |
 | Blazor | C1.Blazor.BarCode | Mature |
-| ASP.NET WebForms | C1.Web.Wijmo.Controls | Legacy |
 
 ### The Generation-Only Limitation
 
 The most significant limitation developers encounter with ComponentOne barcode: **it can only generate barcodes, not read them**.
 
-This is documented in GrapeCity's own product description. The C1BarCode control has no barcode recognition or scanning capability. If your application needs to:
+This is consistent with the MESCIUS ComponentOne product description, which describes the control's purpose as adding barcode images and computing control symbols and checksums for the encoded value — there is no documented decoding, scanning, or recognition API. The C1BarCode control has no barcode recognition or scanning capability. If your application needs to:
 
 - Scan barcodes from uploaded images
 - Extract barcodes from PDFs
@@ -71,17 +71,20 @@ ComponentOne Studio is not sold as individual components. The barcode control is
 - PDF and Excel document libraries
 - And the C1BarCode control
 
-**Current pricing (as of January 2026):**
-- ComponentOne Studio Enterprise: ~$1,473 per developer
-- ComponentOne Studio Ultimate: Higher tier with additional features
-- Additional costs for maintenance and support renewals
+**Current pricing (verified May 2026 on developer.mescius.com/componentone/pricing):**
+- ComponentOne Studio Enterprise: $1,299 per developer per year (subscription)
+- Individual platform editions (WinForms, WPF): $799 per developer per year
+- WinUI/MAUI, ASP.NET MVC, Blazor editions: $699 per developer per year
+- Subscription includes unlimited version access during the term; standard support included
+
+ComponentOne is sold as an annual subscription rather than a perpetual licence — you must continue renewing to receive updates and support.
 
 ### The Suite Lock-In Problem
 
 When you only need barcode functionality, purchasing a full UI suite creates several challenges:
 
 **Cost Inefficiency:**
-If barcode generation is 5% of the suite's functionality, you're paying ~$1,400+ for ~$70 worth of barcode capability.
+If barcode generation is a small fraction of the suite's functionality, you're paying $1,299/yr for the entire suite when only the barcode control is in use. The single-platform editions ($799/yr) reduce this somewhat but still bundle dozens of unrelated controls.
 
 **Dependency Bloat:**
 Your project references the entire ComponentOne suite even if you only use barcode controls. This affects:
@@ -119,9 +122,9 @@ For organizations already invested in ComponentOne, adding barcode generation co
 | **Barcode Reading** | No | Yes |
 | **PDF Barcode Extraction** | No | Yes |
 | **Automatic Format Detection** | N/A (no reading) | Yes |
-| **1D Formats** | 20+ | 30+ |
-| **2D Formats** | 6 (QR, PDF417, DataMatrix, etc.) | 15+ |
-| **Total Symbologies** | 26 | 50+ |
+| **1D Formats** | 25+ | 30+ |
+| **2D Formats** | 6 (QR, PDF417, DataMatrix, MicroPDF417, etc.) | 15+ |
+| **Total Symbologies** | 38 | 50+ |
 | **ML Error Correction** | N/A (no reading) | Yes |
 | **Styled QR with Logos** | No | Yes |
 | **Batch Processing** | Manual loop | Built-in array support |
@@ -167,7 +170,7 @@ This table illustrates the fundamental difference:
 | Read from camera frame | Not possible | `BarcodeReader.Read(bitmap)` |
 | Multi-barcode detection | Not possible | Returns all barcodes found |
 | Format auto-detection | Not possible | Automatic |
-| Damaged barcode handling | Not possible | ML-powered correction |
+| Damaged barcode handling | Not possible | Built-in correction options |
 
 ---
 
@@ -180,7 +183,10 @@ ComponentOne requires suite installation and license registration:
 **Step 1: NuGet Package**
 ```bash
 # For WinForms
-dotnet add package C1.Win.C1BarCode
+dotnet add package C1.Win.BarCode
+
+# For WPF
+dotnet add package C1.WPF.BarCode
 
 # For Blazor
 dotnet add package C1.Blazor.BarCode
@@ -211,7 +217,7 @@ Even for barcode-only usage, ComponentOne packages have dependencies on shared C
 
 **Step 1: Single NuGet Package**
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 **Step 2: License Key (Optional for Development)**
@@ -226,7 +232,7 @@ During development, IronBarcode works without a license key (with watermarks). N
 
 | Setup Aspect | ComponentOne | IronBarcode |
 |--------------|--------------|-------------|
-| Primary package | C1.Win.C1BarCode (+ platform variants) | IronBarcode |
+| Primary package | C1.Win.BarCode (+ platform variants) | BarCode |
 | Dependencies | Multiple C1.* assemblies | Self-contained |
 | License requirement | Required for non-watermarked output | Optional during development |
 | Configuration | License key registration required | Single line key assignment |
@@ -242,7 +248,8 @@ The following examples demonstrate the practical differences between ComponentOn
 
 **ComponentOne (WinForms):**
 ```csharp
-using C1.Win.C1BarCode;
+using C1.Win.Barcode;
+using C1.BarCode;
 using System.Drawing;
 
 public void GenerateBarcode(string data, string outputPath)
@@ -300,7 +307,7 @@ public string ReadBarcode(string imagePath)
 {
     // Automatic format detection, reads any supported barcode
     var result = BarcodeReader.Read(imagePath);
-    return result.FirstOrDefault()?.Text;
+    return result.FirstOrDefault()?.Value;
 }
 ```
 
@@ -310,7 +317,8 @@ This is the fundamental capability gap between the two libraries.
 
 **ComponentOne:**
 ```csharp
-using C1.Win.C1BarCode;
+using C1.Win.Barcode;
+using C1.BarCode;
 using System.Drawing;
 
 public void GenerateBatch(Dictionary<string, string> items)
@@ -348,11 +356,13 @@ public void GenerateBatch(Dictionary<string, string> items)
 ```csharp
 // ComponentOne cannot do this at all
 var files = Directory.GetFiles("input", "*.png");
-var results = BarcodeReader.Read(files);
-
-foreach (var barcode in results)
+foreach (var file in files)
 {
-    Console.WriteLine($"{barcode.InputPath}: {barcode.Text}");
+    var results = BarcodeReader.Read(file);
+    foreach (var barcode in results)
+    {
+        Console.WriteLine($"{file}: {barcode.Value}");
+    }
 }
 ```
 
@@ -368,49 +378,51 @@ For detailed code examples, see:
 
 | Product | License Model | Cost | What You Get |
 |---------|--------------|------|--------------|
-| ComponentOne Studio Enterprise | Subscription | ~$1,473/year | 100+ controls including barcode generation |
-| ComponentOne Maintenance | Annual renewal | ~$500-700/year | Updates and support |
-| IronBarcode Lite | Perpetual | $749 one-time | 1 developer, generation + reading |
-| IronBarcode Professional | Perpetual | $1,499 one-time | 10 developers, generation + reading |
+| ComponentOne Studio Enterprise | Annual subscription | $1,299/dev/year | All ComponentOne platforms including barcode generation |
+| ComponentOne WinForms / WPF Edition | Annual subscription | $799/dev/year | Single-platform suite including barcode generation |
+| IronBarcode Lite | Perpetual | $799 one-time | 1 developer, generation + reading |
+| IronBarcode Plus | Perpetual | $1,199 one-time | 3 developers, generation + reading |
+| IronBarcode Professional | Perpetual | $2,399 one-time | 10 developers, generation + reading |
+| IronBarcode Unlimited | Perpetual | $4,799 one-time | Unlimited developers and projects |
 
 ### 5-Year Total Cost Analysis
 
 **Scenario: Small team (3 developers) needing barcode functionality**
 
-**ComponentOne path:**
+**ComponentOne path (Studio Enterprise subscription):**
 ```
-Year 1: $1,473 × 3 developers = $4,419
-Year 2: Maintenance renewal = ~$1,800
-Year 3: Maintenance renewal = ~$1,800
-Year 4: Maintenance renewal = ~$1,800
-Year 5: Maintenance renewal = ~$1,800
+Year 1: $1,299 × 3 developers = $3,897
+Year 2: $1,299 × 3 developers = $3,897
+Year 3: $1,299 × 3 developers = $3,897
+Year 4: $1,299 × 3 developers = $3,897
+Year 5: $1,299 × 3 developers = $3,897
 ─────────────────────────────────────────
-Total: $11,619
+Total: $19,485
 
 Plus if you need reading: Additional library cost
 ```
 
-**IronBarcode path:**
+**IronBarcode path (Plus, 3 developers):**
 ```
-Year 1: $1,499 (Professional, up to 10 devs)
+Year 1: $1,199 (Plus, perpetual, up to 3 devs)
 Year 2: $0
 Year 3: $0
 Year 4: $0
 Year 5: $0
 ─────────────────────────────────────────
-Total: $1,499
+Total: $1,199
 
 Includes: Both generation AND reading
 ```
 
-**5-Year savings with IronBarcode: $10,120+**
+**5-Year savings with IronBarcode: ~$18,000**
 
 ### Hidden Cost Considerations
 
 **ComponentOne hidden costs:**
-- Maintenance renewal pressure (lose support without it)
-- Potential version lock if you stop renewing
-- Need for additional reading library
+- Subscription stops mean no more updates or support
+- You can keep using the last build you deployed, but new versions require renewal
+- Need for an additional library if you ever need reading capability
 - Suite lock-in makes switching expensive
 
 **IronBarcode hidden costs:**
@@ -422,11 +434,11 @@ Includes: Both generation AND reading
 
 | Metric | ComponentOne | IronBarcode |
 |--------|--------------|-------------|
-| Cost per format | ~$57 (26 formats / $1,473) | ~$15 (50 formats / $749) |
+| Cost per format | ~$34/yr (38 formats / $1,299/yr) | ~$16 one-time (50 formats / $799 Lite) |
 | Generation | Included | Included |
 | Reading | Not included | Included |
 | PDF support | Not included | Included |
-| Effective barcode value | ~5% of suite price (~$74) | 100% of price |
+| Effective barcode value | Bundled with full suite — most controls likely unused | 100% of price |
 
 ---
 
@@ -438,7 +450,7 @@ Includes: Both generation AND reading
 
 2. **You only need barcode generation** - If your application creates barcodes but never needs to read them, ComponentOne's generation capabilities may suffice.
 
-3. **Your organization has enterprise agreements with GrapeCity** - Some organizations have volume licensing that makes ComponentOne economical.
+3. **Your organization has enterprise agreements with MESCIUS** - Some organizations have volume licensing that makes ComponentOne economical.
 
 4. **You need UI-integrated barcode controls** - For WinForms or WPF applications where you want drag-and-drop barcode controls in the designer, ComponentOne integrates with Visual Studio toolbox.
 
@@ -454,9 +466,9 @@ Includes: Both generation AND reading
 
 4. **You need headless server processing** - For backend services, API endpoints, or batch processing jobs that run without UI, IronBarcode's server-optimized architecture is purpose-built for this use case.
 
-5. **You need broader format support** - With 50+ symbologies versus 26, IronBarcode covers more specialized formats including postal codes, GS1 variants, and industry-specific symbologies.
+5. **You need broader format support** - With 50+ symbologies versus 38, IronBarcode covers more specialized formats including postal codes, GS1 variants, and industry-specific symbologies.
 
-6. **You're processing damaged or low-quality barcodes** - IronBarcode's ML-powered error correction handles real-world barcode quality issues that affect warehouse labels, printed documents, and mobile photos.
+6. **You're processing damaged or low-quality barcodes** - IronBarcode's reading pipeline handles real-world barcode quality issues that affect warehouse labels, printed documents, and mobile photos.
 
 ---
 
@@ -469,26 +481,27 @@ If you're moving from ComponentOne barcode generation to IronBarcode, this secti
 **Remove ComponentOne:**
 ```xml
 <!-- Remove from .csproj -->
-<PackageReference Include="C1.Win.C1BarCode" Version="x.x.x" />
+<PackageReference Include="C1.Win.BarCode" Version="x.x.x" />
 ```
 
 **Add IronBarcode:**
 ```xml
 <!-- Add to .csproj -->
-<PackageReference Include="IronBarcode" Version="2024.x.x" />
+<PackageReference Include="BarCode" Version="x.x.x" />
 ```
 
 Or via CLI:
 ```bash
-dotnet remove package C1.Win.C1BarCode
-dotnet add package IronBarcode
+dotnet remove package C1.Win.BarCode
+dotnet add package BarCode
 ```
 
 ### Namespace Changes
 
 ```csharp
 // Remove
-using C1.Win.C1BarCode;
+using C1.Win.Barcode;
+using C1.BarCode;
 
 // Add
 using IronBarCode;
@@ -552,14 +565,14 @@ After migrating to IronBarcode, you gain barcode reading that ComponentOne lacks
 var results = BarcodeReader.Read("uploaded-image.png");
 foreach (var barcode in results)
 {
-    Console.WriteLine($"Found {barcode.BarcodeType}: {barcode.Text}");
+    Console.WriteLine($"Found {barcode.BarcodeType}: {barcode.Value}");
 }
 
 // PDF barcode extraction - also impossible with ComponentOne
 var pdfBarcodes = BarcodeReader.Read("document.pdf");
 foreach (var barcode in pdfBarcodes)
 {
-    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
 }
 ```
 
@@ -573,8 +586,8 @@ foreach (var barcode in pdfBarcodes)
 - [ ] Obtain IronBarcode license
 
 **Migration:**
-- [ ] Remove C1.Win.C1BarCode package
-- [ ] Add IronBarcode package
+- [ ] Remove C1.Win.BarCode package
+- [ ] Add BarCode (IronBarcode) package
 - [ ] Update namespace imports
 - [ ] Convert generation code (see mapping above)
 - [ ] Configure IronBarcode license
@@ -595,7 +608,8 @@ foreach (var barcode in pdfBarcodes)
 
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/docs/) - Official IronBarcode guides
 - [IronBarcode on NuGet](https://www.nuget.org/packages/BarCode) - Package download
-- [ComponentOne Barcode Documentation](https://www.grapecity.com/componentone/docs/winforms/online-barcode/overview.html) - Official GrapeCity documentation
+- [ComponentOne BarCode for WinForms Documentation](https://developer.mescius.com/componentone/docs/win/online-barcode/overview.html) - Official MESCIUS documentation
+- [ComponentOne Pricing](https://developer.mescius.com/componentone/pricing) - Current MESCIUS pricing
 
 ### Code Example Files
 

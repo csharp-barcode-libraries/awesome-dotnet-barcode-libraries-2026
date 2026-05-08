@@ -27,13 +27,13 @@ ZXing.Net.MAUI is a community-maintained .NET MAUI library that wraps ZXing.Net'
 
 | Aspect | Details |
 |--------|---------|
-| **NuGet Package** | ZXing.Net.Maui.Controls |
-| **Current Version** | 0.5.0 (pre-release) |
+| **NuGet Package** | ZXing.Net.Maui.Controls (XAML control) and ZXing.Net.Maui (core) |
+| **Current Version** | 0.7.4 (stable, released January 13 2026) |
 | **GitHub Repository** | Redth/ZXing.Net.Maui |
 | **Maintainer** | Jon Dick (Redth) - Community |
 | **License** | MIT (Free) |
 | **Core Engine** | ZXing.Net (Apache 2.0) |
-| **Platforms** | iOS, Android (Windows NOT supported) |
+| **Platforms** | iOS, Android scanning; Windows generation only (scanning not supported) |
 
 ### How It Works
 
@@ -44,13 +44,13 @@ ZXing.Net.MAUI provides:
 
 The camera view component uses platform camera APIs to capture frames, which are then processed by ZXing.Net's decoding engine. This architecture means you get ZXing's barcode detection with MAUI camera integration.
 
-### Pre-Release Status Warning
+### Pre-1.0 Status
 
-ZXing.Net.MAUI is currently at version 0.5.0 - a pre-release version number. This indicates:
-- API may change between versions
-- Stability is not guaranteed for production
-- Bug fixes may be slow
+ZXing.Net.MAUI is currently at version 0.7.4 - a stable release on NuGet, but still pre-1.0 under semantic versioning. This indicates:
+- API may still change between minor versions before 1.0
+- Bug fix cadence depends on community maintainer availability
 - Community-maintained, not commercially supported
+- 54 open issues at time of writing on the GitHub tracker
 
 ---
 
@@ -76,7 +76,7 @@ ZXing.Net.MAUI is currently at version 0.5.0 - a pre-release version number. Thi
 | **iPhone 15 auto-focus bugs** | Camera focus issues on newer devices |
 | **Camera resource leaks** | Memory not released properly |
 | **Android Camera 1.5.0 build errors** | Compatibility issues with camera libraries |
-| **Pre-release stability** | v0.5.0 not production-ready |
+| **Pre-1.0 stability** | v0.7.4 is stable but still pre-1.0 |
 
 ---
 
@@ -84,21 +84,21 @@ ZXing.Net.MAUI is currently at version 0.5.0 - a pre-release version number. Thi
 
 These issues are actively tracked in the ZXing.Net.MAUI GitHub repository:
 
-### Issue 1: iPhone 15 PRO Auto-Focus Problems
+### Issue 1: iPhone 15 PRO Auto-Focus Problems (issue #260)
 
-Users report that iPhone 15 PRO models have difficulty focusing on barcodes. The camera view shows the barcode but fails to focus sharply enough for detection.
+Users report that iPhone 15 PRO models have difficulty focusing on barcodes. The camera view shows the barcode but fails to focus sharply enough for detection. The Pro models' triple-camera system does not switch to the macro lens automatically when the user moves close to a barcode.
 
-**From GitHub:** "On iPhone 15 PRO, barcodes that scan fine on iPhone 12 won't scan at all. Manual distance adjustment (moving phone closer/farther) sometimes helps."
+**From GitHub issue #260:** Users must manually adjust the distance between phone and barcode until focus locks before the decoder can read it — a workflow that scans fine on older iPhones but fails on iPhone 15 Pro.
 
 **Workaround:** Manually adjust device distance from barcode until focus locks. No programmatic fix available.
 
-### Issue 2: Windows Support Not Implemented
+### Issue 2: Windows Scanning Not Implemented
 
-The GitHub repository explicitly states Windows MAUI is not supported. There is no camera implementation for Windows, and no roadmap for adding it.
+The GitHub repository explicitly states Windows MAUI scanning is not supported — only barcode generation works on Windows. There is no camera scanning implementation for Windows.
 
-**Impact:** If you need a cross-platform MAUI app including Windows, ZXing.Net.MAUI cannot be used alone.
+**Impact:** If you need a cross-platform MAUI app that scans on Windows, ZXing.Net.MAUI cannot be used alone.
 
-### Issue 3: Camera Not Released Properly (Memory Leaks)
+### Issue 3: Camera Not Released Properly (issue #164)
 
 When navigating away from scanning pages, the camera resources may not be released properly, causing:
 - Memory leaks over time
@@ -108,11 +108,11 @@ When navigating away from scanning pages, the camera resources may not be releas
 
 **Workaround:** Manually dispose camera view on page disappearing and reinitialize on appearing.
 
-### Issue 4: Android Camera 1.5.0 Build Errors
+### Issue 4: Android Camera 1.5.0 Build Errors (issue #275)
 
-Compatibility issues with Android's Camera 1.5.0 library cause build failures in some configurations. The error manifests as missing method exceptions or type load failures.
+Compatibility issues with the AndroidX Camera 1.5.0 library cause build failures in some configurations. Reports include `minSdkVersion` conflicts (the camera library requires API 23 but older project templates target 21) and dependency version constraint violations on `Xamarin.AndroidX.Fragment`.
 
-**Workaround:** Pin to earlier camera library versions or await library updates.
+**Workaround:** Pin Camera packages to 1.4.x or raise the project `minSdkVersion` to 23.
 
 ---
 
@@ -122,13 +122,13 @@ Compatibility issues with Android's Camera 1.5.0 library cause build failures in
 |---------|---------------|-------------|
 | **MAUI Mobile** | Yes (iOS, Android) | Yes (all MAUI targets) |
 | **MAUI Windows** | No | Yes |
-| **MAUI macOS** | No | Yes |
+| **MAUI macOS** | Mac Catalyst targeted; scanning not officially documented | Yes |
 | **Auto-Detection** | No (inherited from ZXing.Net) | Yes |
 | **PDF Support** | No (inherited from ZXing.Net) | Yes |
 | **Camera Input** | Yes (primary purpose) | No (image-based) |
 | **Image Input** | Via ZXing.Net core | Yes |
 | **Damaged Barcode Handling** | Limited | ML-powered |
-| **Production Status** | Pre-release (v0.5.0) | Production-ready |
+| **Production Status** | Stable but pre-1.0 (v0.7.4) | Production-ready |
 | **Commercial Support** | No (community) | Yes |
 | **License** | MIT (Free) | Commercial |
 
@@ -244,15 +244,15 @@ public partial class ScannerPage : ContentPage
 }
 ```
 
-### Pre-Release Version Concerns
+### Pre-1.0 Version Concerns
 
-At v0.5.0, ZXing.Net.MAUI is not considered production-ready:
+At v0.7.4, ZXing.Net.MAUI is a stable NuGet release but still pre-1.0:
 
-- API breaking changes may occur
-- Bug fixes depend on community availability
+- Minor-version API changes are still possible before 1.0
+- Bug fixes depend on community maintainer availability
 - No SLA for issue resolution
-- Limited documentation
-- Testing coverage may be incomplete
+- Documentation is concentrated in the GitHub README
+- 54 open issues on the tracker at time of writing
 
 ---
 
@@ -338,7 +338,7 @@ public partial class IronBarcodePage : ContentPage
             foreach (var barcode in results)
             {
                 Console.WriteLine($"Type: {barcode.BarcodeType}");
-                Console.WriteLine($"Value: {barcode.Text}");
+                Console.WriteLine($"Value: {barcode.Value}");
             }
         }
     }
@@ -357,7 +357,7 @@ public partial class IronBarcodePage : ContentPage
 | **Familiar with ZXing.Net** | Same core engine, familiar APIs |
 | **iOS/Android only** | Windows not needed |
 | **Known barcode formats** | You control what formats appear |
-| **Prototype or POC** | Pre-release acceptable for testing |
+| **Prototype or POC** | Pre-1.0 acceptable for testing |
 | **Accept camera bugs** | iPhone 15 issues won't affect your users |
 
 ### Choose IronBarcode When:
@@ -399,7 +399,7 @@ If you've started with ZXing.Net.MAUI and need to migrate to IronBarcode, here's
 | Must specify formats | ZXing.Net inheritance | Automatic detection |
 | iPhone 15 focus issues | MAUI camera bugs | Image capture workflow |
 | Memory leaks | Camera lifecycle bugs | No camera dependency |
-| Pre-release instability | v0.5.0 status | Production-ready |
+| Pre-1.0 instability | v0.7.4 still pre-1.0 | Production-ready |
 | PDF processing needed | Not supported | Native PDF support |
 
 ### Migration Steps
@@ -429,7 +429,7 @@ ZXing.Net.MAUI uses real-time camera detection. IronBarcode uses image processin
 <PackageReference Include="ZXing.Net.Maui.Controls" Version="*" />
 
 <!-- Add -->
-<PackageReference Include="IronBarcode" Version="2024.*" />
+<PackageReference Include="BarCode" Version="*" />
 ```
 
 #### Step 3: Update Code
@@ -463,7 +463,7 @@ private async void OnCaptureClicked(object sender, EventArgs e)
 
         foreach (var barcode in results)
         {
-            ProcessBarcode(barcode.Text);
+            ProcessBarcode(barcode.Value);
         }
     }
 }
@@ -489,7 +489,7 @@ ReaderOptions = new BarcodeReaderOptions
 | `CameraBarcodeReaderView` | N/A - use MediaPicker | Different architecture |
 | `BarcodeReaderOptions.Formats` | Not needed | Automatic detection |
 | `BarcodeDetectionEventArgs.Results` | `BarcodeReader.Read()` return | Method vs event |
-| `BarcodeResult.Value` | `BarcodeResult.Text` | Same data |
+| `BarcodeResult.Value` | `BarcodeResult.Value` | Same property name |
 | `BarcodeResult.Format` | `BarcodeResult.BarcodeType` | Renamed |
 | Camera view lifecycle | N/A | No camera management needed |
 

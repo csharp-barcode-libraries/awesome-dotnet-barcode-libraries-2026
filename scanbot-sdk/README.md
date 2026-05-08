@@ -33,38 +33,42 @@ Scanbot is a German software company that provides mobile document scanning SDKs
 **Technical Architecture:**
 - Native iOS SDK (Swift/Objective-C)
 - Native Android SDK (Kotlin/Java)
-- .NET MAUI SDK (ScanbotBarcodeSDK.MAUI)
+- .NET MAUI SDK (`ScanbotBarcodeSDK.MAUI`) and underlying iOS/Android bindings (`ScanbotBarcodeSDK.NET`)
+- A separate Windows SDK (`Scanbot.BarcodeSDK.Windows`) for UWP / WinUI 3 desktop apps with autofocus cameras
 - Camera-first design with viewfinder UI components
 - Completely offline - no network code included
 
-### NuGet Package
+### NuGet Packages
 
-The .NET package is specifically for MAUI mobile development:
+The primary .NET package for cross-platform mobile development is:
 
 ```bash
 dotnet add package ScanbotBarcodeSDK.MAUI
 ```
 
-Current version as of 2026: 7.1.1
+Current version as of 2026: 8.0.0 (published February 2026), targeting `net9.0-android` and `net9.0-ios` (with .NET 10 target frameworks also published).
+
+A separate Windows package, `Scanbot.BarcodeSDK.Windows` (v7.0.0, March 2025), exists for UWP and WinUI 3 desktop applications. It still requires a connected camera with autofocus and Windows 10 1809+ on x64 — it is not a headless server-side SDK.
 
 ### Licensing Model
 
-Scanbot uses a yearly flat fee licensing model (non-volume-based), which differentiates it from per-scan or per-device pricing models used by some competitors. This makes costs more predictable, though still requires annual renewal.
+Scanbot uses a yearly flat fee licensing model (non-volume-based), with no published tier numbers — pricing is quoted per-app on request. A trial license is not required for evaluation: without a license key the SDK runs for 60 seconds per app session, after which it must be reinitialized. Production use requires an annual licence agreement.
 
 ---
 
-## Platform Limitation: MAUI Mobile Only
+## Platform Limitation: Camera-Bound Mobile and UWP
 
-The most significant limitation for .NET developers evaluating Scanbot SDK is its platform restriction.
+The most significant limitation for .NET developers evaluating Scanbot SDK is that every supported .NET target requires a camera-bound runtime — there is no headless server-side .NET SDK.
 
-### What "MAUI Mobile Only" Means
+### What "Camera-Bound" Means in Practice
 
-Scanbot's .NET SDK specifically requires:
+Scanbot's .NET SDKs cover three integration points:
 
-1. **.NET MAUI framework** - Cannot be used without MAUI project structure
-2. **Mobile platforms** - iOS and Android only
-3. **Native platform dependencies** - Uses iOS and Android native APIs
-4. **Camera hardware** - Designed for camera input, not file processing
+1. **.NET MAUI for iOS / Android** via `ScanbotBarcodeSDK.MAUI`
+2. **UWP / WinUI 3 on Windows 10 1809+ (x64) with autofocus camera** via `Scanbot.BarcodeSDK.Windows`
+3. **Direct iOS / Android native bindings** via `ScanbotBarcodeSDK.NET`
+
+All three assume a live camera feed and a UI shell. None of them target classic .NET Framework, ASP.NET Core, console workloads, or Linux/Docker servers.
 
 ### Where Scanbot Does NOT Work
 
@@ -82,7 +86,9 @@ Scanbot's .NET SDK specifically requires:
 | Docker Container | No | Yes |
 | Windows Service | No | Yes |
 | Linux Server | No | Yes |
-| .NET MAUI | Yes | Yes |
+| UWP / WinUI 3 (with camera) | Yes | Yes |
+| .NET MAUI (iOS/Android) | Yes | Yes |
+| .NET MAUI (Windows / macOS) | No | Yes |
 
 This means Scanbot cannot be used for:
 - Server-side barcode processing
@@ -221,10 +227,11 @@ Neither approach is "better" - they solve different problems.
 
 ```csharp
 // Requires: dotnet add package ScanbotBarcodeSDK.MAUI
-// Requires: .NET MAUI mobile app project
+// Requires: .NET MAUI mobile app project (iOS / Android targets)
 // Requires: Camera permissions in app manifests
 
-using ScanbotBarcodeSDK.MAUI;
+using ScanbotSDK.MAUI;
+using ScanbotSDK.MAUI.Barcode;
 
 namespace MyMauiApp;
 
@@ -233,44 +240,30 @@ public partial class ScanPage : ContentPage
     public ScanPage()
     {
         InitializeComponent();
-        SetupScanner();
     }
 
-    private void SetupScanner()
-    {
-        // Initialize Scanbot with license
-        ScanbotSDK.Initialize(new ScanbotSDKConfiguration
-        {
-            LicenseKey = "YOUR-SCANBOT-LICENSE-KEY",
-            EnableLogging = false
-        });
-    }
+    // Initialization is normally done once at startup in MauiProgram.cs
+    // ScanbotSDKMain.Initialize(new SdkConfiguration {
+    //     LicenseKey = "YOUR-SCANBOT-LICENSE-KEY",
+    //     LoggingEnabled = false
+    // }, builder);
 
     private async void OnScanButtonClicked(object sender, EventArgs e)
     {
-        // Configure scanner
-        var configuration = new BarcodeScannerConfiguration
+        var configuration = new BarcodeScannerScreenConfiguration
         {
-            AcceptedFormats = new[]
-            {
-                BarcodeFormat.Code128,
-                BarcodeFormat.QrCode,
-                BarcodeFormat.Ean13
-            },
-            FinderAspectRatio = new AspectRatio(1, 1),
-            TopBarBackgroundColor = Colors.Blue
+            UseCase = new SingleScanningMode()
         };
 
-        // Launch camera scanner
-        var result = await ScanbotBarcodeSDK.BarcodeScanner
-            .Open(configuration);
+        // Launch the full-screen camera scanner UI
+        var result = await ScanbotSDKMain.Barcode.StartScannerAsync(configuration);
 
-        if (result.Status == OperationResult.Ok)
+        if (result.IsSuccess)
         {
-            foreach (var barcode in result.Barcodes)
+            foreach (var item in result.Value.Items)
             {
                 await DisplayAlert("Scanned",
-                    $"{barcode.Format}: {barcode.Text}",
+                    $"{item.Barcode.Format}: {item.Barcode.Text}",
                     "OK");
             }
         }
@@ -301,14 +294,14 @@ IronBarCode.License.LicenseKey = "YOUR-KEY";
 var imageResults = BarcodeReader.Read("barcode.png");
 foreach (var barcode in imageResults)
 {
-    Console.WriteLine($"{barcode.BarcodeType}: {barcode.Text}");
+    Console.WriteLine($"{barcode.BarcodeType}: {barcode.Value}");
 }
 
 // Read from PDF document
 var pdfResults = BarcodeReader.Read("invoice.pdf");
 foreach (var barcode in pdfResults)
 {
-    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
 }
 
 // Batch process directory
@@ -393,7 +386,7 @@ public async Task ProcessGalleryImage()
         foreach (var barcode in results)
         {
             await DisplayAlert("Found",
-                $"{barcode.BarcodeType}: {barcode.Text}",
+                $"{barcode.BarcodeType}: {barcode.Value}",
                 "OK");
         }
     }
@@ -405,7 +398,7 @@ public void ProcessPdfAttachment(Stream pdfStream)
     var results = BarcodeReader.Read(pdfStream);
     foreach (var barcode in results)
     {
-        Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+        Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
     }
 }
 
@@ -465,12 +458,15 @@ Migrating from Scanbot to IronBarcode makes sense when your actual need is file 
 
 ```bash
 dotnet remove package ScanbotBarcodeSDK.MAUI
+# Also if present:
+# dotnet remove package ScanbotBarcodeSDK.NET
+# dotnet remove package Scanbot.BarcodeSDK.Windows
 ```
 
 **Add IronBarcode:**
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### License Migration
@@ -479,10 +475,11 @@ dotnet add package IronBarcode
 
 ```csharp
 // Remove
-ScanbotSDK.Initialize(new ScanbotSDKConfiguration
+ScanbotSDKMain.Initialize(new SdkConfiguration
 {
-    LicenseKey = "YOUR-SCANBOT-KEY"
-});
+    LicenseKey = "YOUR-SCANBOT-KEY",
+    LoggingEnabled = false
+}, builder);
 ```
 
 **Add IronBarcode license:**
@@ -499,8 +496,11 @@ The key migration challenge is transforming from camera-based to file-based work
 **Scanbot Camera Workflow:**
 ```csharp
 // User points camera, UI handles scanning
-var result = await ScanbotBarcodeSDK.BarcodeScanner.Open(config);
-var barcodes = result.Barcodes;
+var result = await ScanbotSDKMain.Barcode.StartScannerAsync(config);
+if (result.IsSuccess)
+{
+    var barcodes = result.Value.Items;
+}
 ```
 
 **IronBarcode File Workflow:**
@@ -546,11 +546,11 @@ This gives you camera capture without Scanbot's UI, then IronBarcode's processin
 
 | Scanbot Feature | IronBarcode Equivalent |
 |-----------------|----------------------|
-| `BarcodeScannerConfiguration` | `BarcodeReaderOptions` |
-| `AcceptedFormats` | Automatic detection |
-| `result.Barcodes` | `BarcodeReader.Read()` results |
-| `barcode.Format` | `result.BarcodeType` |
-| `barcode.Text` | `result.Text` |
+| `BarcodeScannerScreenConfiguration` | `BarcodeReaderOptions` |
+| `UseCase = new SingleScanningMode()` | Automatic detection |
+| `result.Value.Items` | `BarcodeReader.Read()` results |
+| `item.Barcode.Format` | `result.BarcodeType` |
+| `item.Barcode.Text` | `result.Value` |
 | Camera UI | Use MediaPicker + IronBarcode |
 
 ### Migration Checklist
@@ -585,7 +585,8 @@ For camera workflow examples, see [Scanbot Camera Focus Example](scanbot-camera-
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/docs/) - Official guides and API reference
 - [IronBarcode on NuGet](https://www.nuget.org/packages/BarCode) - Package download
 - [Scanbot SDK Documentation](https://docs.scanbot.io/) - Official Scanbot guides
-- [ScanbotBarcodeSDK.MAUI on NuGet](https://www.nuget.org/packages/ScanbotBarcodeSDK.MAUI) - Scanbot package
+- [ScanbotBarcodeSDK.MAUI on NuGet](https://www.nuget.org/packages/ScanbotBarcodeSDK.MAUI) - Scanbot MAUI package (v8.0.0)
+- [Scanbot.BarcodeSDK.Windows on NuGet](https://www.nuget.org/packages/Scanbot.BarcodeSDK.Windows) - Scanbot UWP/WinUI 3 package
 
 ### Code Example Files
 

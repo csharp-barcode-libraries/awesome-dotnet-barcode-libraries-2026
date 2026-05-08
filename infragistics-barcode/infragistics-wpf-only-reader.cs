@@ -27,8 +27,10 @@ namespace InfragisticsPlatformLimitation
     /// </summary>
     public class InfragisticsWpfBarcodeService
     {
-        // Install: Infragistics.WPF.BarcodeReader
-        // Requires: Infragistics Ultimate license ($1,675+/year)
+        // Distribution: Infragistics installer or private NuGet feed
+        //   https://packages.infragistics.com/nuget/labs/
+        // Assembly: InfragisticsWPF.Controls.Barcodes.BarcodeReader
+        // Requires: Infragistics Ultimate license (~$2,300+/year per developer)
 
         /*
         using Infragistics.Controls.Barcodes;
@@ -47,22 +49,24 @@ namespace InfragisticsPlatformLimitation
             // Load as WPF BitmapSource
             var bitmap = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
 
-            // Specify symbologies to look for
-            _reader.SymbologyTypes = SymbologyType.Code128 |
-                                     SymbologyType.QR |
-                                     SymbologyType.EAN13 |
-                                     SymbologyType.DataMatrix;
+            // Symbology is the SECOND argument to Decode()/DecodeAsync().
+            // The Symbology enum is [Flags]. EAN-8/13 + UPC-A/E share the
+            // single EanUpc flag. DataMatrix is NOT in the enum at all.
+            var symbologies = Symbology.Code128 |
+                              Symbology.QRCode |
+                              Symbology.EanUpc;
 
             // Trigger async decode
-            _reader.Decode(bitmap);
+            _reader.DecodeAsync(bitmap, symbologies);
             // Result comes via event callback
         }
 
         private void OnDecodeComplete(object sender, ReaderDecodeArgs e)
         {
-            if (e.SymbologyValue != null)
+            // ReaderDecodeArgs has: FilteredImage, SymbolFound, Symbology, Value
+            if (e.SymbolFound)
             {
-                Console.WriteLine($"Decoded: {e.Symbology} = {e.SymbologyValue}");
+                Console.WriteLine($"Decoded: {e.Symbology} = {e.Value}");
             }
         }
         */
@@ -71,9 +75,11 @@ namespace InfragisticsPlatformLimitation
         {
             Console.WriteLine("Infragistics WPF Barcode Capabilities:");
             Console.WriteLine("  - Generation: YES (XamBarcode control)");
-            Console.WriteLine("  - Reading: YES (BarcodeReader assembly)");
+            Console.WriteLine("  - Reading: YES (BarcodeReader class)");
             Console.WriteLine("  - API Style: Event-driven (async callbacks)");
-            Console.WriteLine("  - Symbologies: ~15 formats");
+            Console.WriteLine("  - Symbologies: 6 families (QR, EAN/UPC, Code 39,");
+            Console.WriteLine("    Code 128, MaxiCode, Interleaved 2 of 5)");
+            Console.WriteLine("  - DataMatrix: NOT supported by the WPF reader");
             Console.WriteLine();
             Console.WriteLine("  This is the ONLY platform with reading capability.");
         }
@@ -85,8 +91,10 @@ namespace InfragisticsPlatformLimitation
     /// </summary>
     public class InfragisticsWinFormsBarcodeService
     {
-        // Install: Infragistics.Win.UltraWinBarcode
-        // Requires: Infragistics Ultimate license ($1,675+/year)
+        // Distribution: Infragistics installer or private NuGet feed
+        //   https://packages.infragistics.com/nuget/labs/
+        // Assembly: Infragistics.Win.UltraWinBarcode (shipped in the WinForms suite)
+        // Requires: Infragistics Ultimate license (~$2,300+/year per developer)
 
         /*
         using Infragistics.Win.UltraWinBarcode;
@@ -139,7 +147,7 @@ namespace InfragisticsPlatformLimitation
     public class InfragisticsWebBarcodeService
     {
         // Ignite UI for Blazor, ASP.NET
-        // Requires: Infragistics Ultimate license ($1,675+/year)
+        // Requires: Infragistics Ultimate license (~$2,300+/year per developer)
 
         /*
         // In Blazor, can use IgbBarcode for generation
@@ -185,7 +193,7 @@ namespace InfragisticsPlatformLimitation
             Console.WriteLine("  3. ASP.NET Core API for mobile uploads");
             Console.WriteLine("  4. Blazor web app for customer self-service");
             Console.WriteLine();
-            Console.WriteLine("  With Infragistics Ultimate ($1,675/year per dev):");
+            Console.WriteLine("  With Infragistics Ultimate (~$2,300+/year per dev):");
             Console.WriteLine();
             Console.WriteLine("  ┌────────────────────────────────────────────────┐");
             Console.WriteLine("  │ Platform        │ Generation │ Reading         │");
@@ -219,7 +227,7 @@ namespace IronBarcodeAllPlatforms
     /// </summary>
     public class UniversalBarcodeService
     {
-        // Install: dotnet add package IronBarcode
+        // Install: dotnet add package BarCode
         // License: IronBarCode.License.LicenseKey = "YOUR-KEY";
 
         /// <summary>
@@ -241,7 +249,7 @@ namespace IronBarcodeAllPlatforms
             if (results.Any())
             {
                 var barcode = results.First();
-                return $"{barcode.BarcodeType}: {barcode.Text}";
+                return $"{barcode.BarcodeType}: {barcode.Value}";
             }
 
             return "No barcode found";
@@ -262,7 +270,7 @@ namespace IronBarcodeAllPlatforms
         public string[] ReadFromPdf(string pdfPath)
         {
             var results = BarcodeReader.Read(pdfPath);
-            return results.Select(r => $"Page {r.PageNumber}: {r.Text}").ToArray();
+            return results.Select(r => $"Page {r.PageNumber}: {r.Value}").ToArray();
         }
 
         public void DemoUniversalCapabilities()
@@ -271,7 +279,7 @@ namespace IronBarcodeAllPlatforms
             Console.WriteLine("  - Generation: YES (all platforms)");
             Console.WriteLine("  - Reading: YES (all platforms)");
             Console.WriteLine("  - API Style: Synchronous (simple)");
-            Console.WriteLine("  - Symbologies: 50+ formats");
+            Console.WriteLine("  - Symbologies: 30+ formats (including DataMatrix)");
             Console.WriteLine("  - PDF Support: YES");
             Console.WriteLine("  - Auto Detection: YES");
             Console.WriteLine();
@@ -294,7 +302,7 @@ namespace IronBarcodeAllPlatforms
             Console.WriteLine("  3. ASP.NET Core API for mobile uploads");
             Console.WriteLine("  4. Blazor web app for customer self-service");
             Console.WriteLine();
-            Console.WriteLine("  With IronBarcode ($749 one-time or $2,999 team):");
+            Console.WriteLine("  With IronBarcode ($799 Lite / $2,399 Pro perpetual):");
             Console.WriteLine();
             Console.WriteLine("  ┌────────────────────────────────────────────────┐");
             Console.WriteLine("  │ Platform        │ Generation │ Reading         │");
@@ -331,7 +339,7 @@ namespace IronBarcodeAllPlatforms
                 Barcodes = results.Select(r => new BarcodeInfo
                 {
                     Type = r.BarcodeType.ToString(),
-                    Value = r.Text,
+                    Value = r.Value,
                     Page = r.PageNumber
                 }).ToList()
             };
@@ -430,30 +438,30 @@ namespace PlatformComparison
             Console.WriteLine("║                                                                  ║");
             Console.WriteLine("║  With Infragistics (to cover all platforms):                     ║");
             Console.WriteLine("║  ┌──────────────────────────────────────────────────────────┐   ║");
-            Console.WriteLine("║  │ Infragistics Ultimate     $1,675/year × 10 devs          │   ║");
-            Console.WriteLine("║  │                           = $16,750/year                 │   ║");
+            Console.WriteLine("║  │ Infragistics Ultimate    ~$2,300/yr × 10 devs            │   ║");
+            Console.WriteLine("║  │                          = ~$23,000/year                 │   ║");
             Console.WriteLine("║  │                                                          │   ║");
             Console.WriteLine("║  │ PLUS: Still need another library for:                    │   ║");
             Console.WriteLine("║  │   - WinForms reading                                     │   ║");
             Console.WriteLine("║  │   - ASP.NET Core reading                                 │   ║");
             Console.WriteLine("║  │   - Console/Docker reading                               │   ║");
             Console.WriteLine("║  │                                                          │   ║");
-            Console.WriteLine("║  │ Total: $16,750/year + IronBarcode $2,999 one-time        │   ║");
+            Console.WriteLine("║  │ Total: ~$23,000/yr + IronBarcode Pro $2,399 one-time     │   ║");
             Console.WriteLine("║  └──────────────────────────────────────────────────────────┘   ║");
             Console.WriteLine("║                                                                  ║");
             Console.WriteLine("║  With IronBarcode alone (covers ALL platforms):                  ║");
             Console.WriteLine("║  ┌──────────────────────────────────────────────────────────┐   ║");
-            Console.WriteLine("║  │ IronBarcode Professional  $2,999 one-time (10 devs)      │   ║");
+            Console.WriteLine("║  │ IronBarcode Pro          $2,399 one-time (up to 10 devs) │   ║");
             Console.WriteLine("║  │                                                          │   ║");
             Console.WriteLine("║  │ Covers: WPF, WinForms, ASP.NET, Blazor, Console,         │   ║");
             Console.WriteLine("║  │         Docker, Azure Functions, AWS Lambda              │   ║");
             Console.WriteLine("║  │                                                          │   ║");
-            Console.WriteLine("║  │ Total: $2,999 one-time                                   │   ║");
+            Console.WriteLine("║  │ Total: $2,399 one-time                                   │   ║");
             Console.WriteLine("║  └──────────────────────────────────────────────────────────┘   ║");
             Console.WriteLine("║                                                                  ║");
             Console.WriteLine("║  5-Year Comparison:                                              ║");
-            Console.WriteLine("║    Infragistics alone: $83,750 (still incomplete!)              ║");
-            Console.WriteLine("║    IronBarcode alone:  $2,999  (complete coverage)              ║");
+            Console.WriteLine("║    Infragistics alone: ~$115,000 (still incomplete!)            ║");
+            Console.WriteLine("║    IronBarcode alone:    $2,399  (complete coverage)            ║");
             Console.WriteLine("║                                                                  ║");
             Console.WriteLine("╚══════════════════════════════════════════════════════════════════╝");
         }

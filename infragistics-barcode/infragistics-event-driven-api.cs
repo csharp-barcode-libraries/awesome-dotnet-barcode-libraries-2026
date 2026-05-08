@@ -60,21 +60,22 @@ namespace InfragisticsEventDriven
             // Step 4: Load image as WPF BitmapSource
             var bitmap = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
 
-            // Step 5: Configure symbology types (NO auto-detection)
-            // Must specify EVERY format you want to support
-            _reader.SymbologyTypes = SymbologyType.Code128 |
-                                     SymbologyType.Code39 |
-                                     SymbologyType.Code39Extended |
-                                     SymbologyType.QR |
-                                     SymbologyType.EAN8 |
-                                     SymbologyType.EAN13 |
-                                     SymbologyType.UPCA |
-                                     SymbologyType.UPCE |
-                                     SymbologyType.DataMatrix |
-                                     SymbologyType.Interleaved2of5;
+            // Step 5: Configure symbology families to search for.
+            // The Symbology enum is [Flags]. Note that:
+            //   - The enum is named Symbology (NOT SymbologyType)
+            //   - EAN-8/EAN-13/UPC-A/UPC-E share the single EanUpc flag
+            //   - DataMatrix is NOT in the enum (the WPF reader does not support it)
+            //   - Code 39 is exposed only as Code39Ext (Code 39 Extended)
+            // Pass Symbology.All to search every supported family.
+            var symbologies = Symbology.Code128 |
+                              Symbology.Code39Ext |
+                              Symbology.QRCode |
+                              Symbology.EanUpc |
+                              Symbology.Interleaved2Of5;
 
-            // Step 6: Trigger decode (async operation)
-            _reader.Decode(bitmap);
+            // Step 6: Trigger async decode. Symbology is the SECOND argument
+            // to Decode/DecodeAsync — it is NOT a property on the reader.
+            _reader.DecodeAsync(bitmap, symbologies);
 
             // Step 7: Wait for callback to complete
             // Result comes via OnDecodeComplete event
@@ -82,14 +83,15 @@ namespace InfragisticsEventDriven
         }
 
         /// <summary>
-        /// Event handler - called when decode completes
+        /// Event handler - called when decode completes.
+        /// ReaderDecodeArgs has: FilteredImage, SymbolFound (bool), Symbology, Value.
         /// </summary>
         private void OnDecodeComplete(object sender, ReaderDecodeArgs e)
         {
             // Step 8: Process result in callback
-            if (e.SymbologyValue != null)
+            if (e.SymbolFound)
             {
-                _currentResult?.TrySetResult($"{e.Symbology}: {e.SymbologyValue}");
+                _currentResult?.TrySetResult($"{e.Symbology}: {e.Value}");
             }
             else
             {
@@ -142,10 +144,10 @@ namespace InfragisticsEventDriven
             Console.WriteLine("  2. Wire up DecodeComplete event handler");
             Console.WriteLine("  3. Create TaskCompletionSource for async conversion");
             Console.WriteLine("  4. Load image as BitmapSource");
-            Console.WriteLine("  5. Configure SymbologyTypes (must specify each format)");
-            Console.WriteLine("  6. Call Decode() to start async operation");
+            Console.WriteLine("  5. Build the Symbology flags argument (or use Symbology.All)");
+            Console.WriteLine("  6. Call Decode(bitmap, symbology) to start async operation");
             Console.WriteLine("  7. Wait for event callback");
-            Console.WriteLine("  8. Process result in callback");
+            Console.WriteLine("  8. Process result in callback (e.SymbolFound, e.Value, e.Symbology)");
             Console.WriteLine("  9. Clean up event handler on dispose");
             Console.WriteLine();
             Console.WriteLine("  Total lines of code: 40-60 for basic read");
@@ -197,15 +199,16 @@ public class InfragisticsBarcodeService : IDisposable
             bitmap.UriSource = new Uri(imagePath, UriKind.Absolute);
             bitmap.EndInit();
 
-            // Configure symbologies - no auto-detection
-            _reader.SymbologyTypes = SymbologyType.Code128 |
-                                     SymbologyType.Code39 |
-                                     SymbologyType.QR |
-                                     SymbologyType.EAN13 |
-                                     SymbologyType.DataMatrix;
+            // Build symbology flags. Use Symbology.All to search every
+            // supported family (QR, EAN/UPC, Code 39 Ext, Code 128,
+            // MaxiCode, Interleaved 2 of 5).
+            var symbologies = Symbology.Code128 |
+                              Symbology.Code39Ext |
+                              Symbology.QRCode |
+                              Symbology.EanUpc;
 
-            // Start decode
-            _reader.Decode(bitmap);
+            // Start decode — symbology is the second argument
+            _reader.DecodeAsync(bitmap, symbologies);
 
             // Wait with timeout
             var completedTask = await Task.WhenAny(
@@ -234,8 +237,8 @@ public class InfragisticsBarcodeService : IDisposable
     {
         _pendingResult?.TrySetResult(new DecodeResult
         {
-            Symbology = e.Symbology?.ToString(),
-            Value = e.SymbologyValue
+            Symbology = e.Symbology.ToString(),
+            Value = e.SymbolFound ? e.Value : null
         });
     }
 
@@ -282,7 +285,7 @@ namespace IronBarcodeSynchronous
     /// </summary>
     public class IronBarcodeSynchronousReader
     {
-        // Install: dotnet add package IronBarcode
+        // Install: dotnet add package BarCode
         // License: IronBarCode.License.LicenseKey = "YOUR-KEY";
 
         /// <summary>
@@ -296,7 +299,7 @@ namespace IronBarcodeSynchronous
             // - No event handling
             var results = BarcodeReader.Read(imagePath);
 
-            return results.FirstOrDefault()?.Text ?? "No barcode found";
+            return results.FirstOrDefault()?.Value ?? "No barcode found";
         }
 
         /// <summary>
@@ -314,7 +317,7 @@ namespace IronBarcodeSynchronous
                 .GroupBy(r => r.InputPath ?? "")
                 .ToDictionary(
                     g => g.Key,
-                    g => g.First().Text
+                    g => g.First().Value
                 );
         }
 
@@ -327,7 +330,7 @@ namespace IronBarcodeSynchronous
             return await Task.Run(() =>
             {
                 var results = BarcodeReader.Read(imagePath);
-                return results.FirstOrDefault()?.Text ?? "No barcode found";
+                return results.FirstOrDefault()?.Value ?? "No barcode found";
             });
         }
 
@@ -362,7 +365,7 @@ public class IronBarcodeService
     public string ReadBarcode(string imagePath)
     {
         var results = BarcodeReader.Read(imagePath);
-        return results.FirstOrDefault()?.Text ?? ""No barcode found"";
+        return results.FirstOrDefault()?.Value ?? ""No barcode found"";
     }
 
     public Dictionary<string, string> ReadBatch(string[] imagePaths)
@@ -371,13 +374,13 @@ public class IronBarcodeService
 
         return results
             .GroupBy(r => r.InputPath)
-            .ToDictionary(g => g.Key, g => g.First().Text);
+            .ToDictionary(g => g.Key, g => g.First().Value);
     }
 
     public string ReadFromPdf(string pdfPath)
     {
         var results = BarcodeReader.Read(pdfPath);
-        return string.Join("", "", results.Select(r => r.Text));
+        return string.Join("", "", results.Select(r => r.Value));
     }
 }
 
@@ -419,17 +422,16 @@ namespace CodeComparison
             Console.WriteLine("║    {                                                              ║");
             Console.WriteLine("║        _result = new TaskCompletionSource<string>();              ║");
             Console.WriteLine("║        var bitmap = new BitmapImage(new Uri(path));               ║");
-            Console.WriteLine("║        _reader.SymbologyTypes = SymbologyType.Code128 |           ║");
-            Console.WriteLine("║                                 SymbologyType.QR |                ║");
-            Console.WriteLine("║                                 SymbologyType.EAN13;              ║");
-            Console.WriteLine("║        _reader.Decode(bitmap);                                    ║");
+            Console.WriteLine("║        var s = Symbology.Code128 | Symbology.QRCode |             ║");
+            Console.WriteLine("║                Symbology.EanUpc;                                  ║");
+            Console.WriteLine("║        _reader.DecodeAsync(bitmap, s);                            ║");
             Console.WriteLine("║        return await _result.Task;                                 ║");
             Console.WriteLine("║    }                                                              ║");
             Console.WriteLine("║                                                                   ║");
             Console.WriteLine("║    // Callback handler                                            ║");
             Console.WriteLine("║    private void OnDecodeComplete(object s, ReaderDecodeArgs e)    ║");
             Console.WriteLine("║    {                                                              ║");
-            Console.WriteLine("║        _result?.TrySetResult(e.SymbologyValue);                   ║");
+            Console.WriteLine("║        _result?.TrySetResult(e.SymbolFound ? e.Value : null);     ║");
             Console.WriteLine("║    }                                                              ║");
             Console.WriteLine("║                                                                   ║");
             Console.WriteLine("║    // Total: ~25 lines                                            ║");
@@ -442,7 +444,7 @@ namespace CodeComparison
             Console.WriteLine("║    public string ReadBarcode(string path)                         ║");
             Console.WriteLine("║    {                                                              ║");
             Console.WriteLine("║        var results = BarcodeReader.Read(path);                    ║");
-            Console.WriteLine("║        return results.FirstOrDefault()?.Text;                     ║");
+            Console.WriteLine("║        return results.FirstOrDefault()?.Value;                    ║");
             Console.WriteLine("║    }                                                              ║");
             Console.WriteLine("║                                                                   ║");
             Console.WriteLine("║    // Total: 4 lines                                              ║");
@@ -498,7 +500,7 @@ namespace CodeComparison
             Console.WriteLine("║                                                                   ║");
             Console.WriteLine("║        return results                                             ║");
             Console.WriteLine("║            .GroupBy(r => r.InputPath)                             ║");
-            Console.WriteLine("║            .ToDictionary(g => g.Key, g => g.First().Text);        ║");
+            Console.WriteLine("║            .ToDictionary(g => g.Key, g => g.First().Value);       ║");
             Console.WriteLine("║    }                                                              ║");
             Console.WriteLine("║                                                                   ║");
             Console.WriteLine("║    // Total: 7 lines                                              ║");
@@ -517,20 +519,17 @@ namespace CodeComparison
             Console.WriteLine("║  INFRAGISTICS - Manual Specification Required                     ║");
             Console.WriteLine("║  ───────────────────────────────────────────                      ║");
             Console.WriteLine("║                                                                   ║");
-            Console.WriteLine("║    // Must specify EVERY format you want to support               ║");
-            Console.WriteLine("║    _reader.SymbologyTypes = SymbologyType.Code128 |               ║");
-            Console.WriteLine("║                            SymbologyType.Code39 |                 ║");
-            Console.WriteLine("║                            SymbologyType.Code39Extended |         ║");
-            Console.WriteLine("║                            SymbologyType.QR |                     ║");
-            Console.WriteLine("║                            SymbologyType.EAN8 |                   ║");
-            Console.WriteLine("║                            SymbologyType.EAN13 |                  ║");
-            Console.WriteLine("║                            SymbologyType.UPCA |                   ║");
-            Console.WriteLine("║                            SymbologyType.UPCE |                   ║");
-            Console.WriteLine("║                            SymbologyType.DataMatrix |             ║");
-            Console.WriteLine("║                            SymbologyType.Interleaved2of5;         ║");
+            Console.WriteLine("║    // Symbology is the second arg to Decode().                    ║");
+            Console.WriteLine("║    // Enum: Symbology (NOT SymbologyType). [Flags] enum.          ║");
+            Console.WriteLine("║    // EAN-8/13 + UPC-A/E share one EanUpc flag.                   ║");
+            Console.WriteLine("║    // DataMatrix is NOT supported by the WPF reader.              ║");
+            Console.WriteLine("║    var s = Symbology.Code128 | Symbology.Code39Ext |              ║");
+            Console.WriteLine("║            Symbology.QRCode | Symbology.EanUpc |                  ║");
+            Console.WriteLine("║            Symbology.Interleaved2Of5;                             ║");
+            Console.WriteLine("║    _reader.DecodeAsync(bitmap, s);                                ║");
             Console.WriteLine("║                                                                   ║");
-            Console.WriteLine("║    // If you forget a format, that barcode won't be decoded       ║");
-            Console.WriteLine("║    // More formats = slower scanning                              ║");
+            Console.WriteLine("║    // Or use Symbology.All to search every supported family.      ║");
+            Console.WriteLine("║    // If you omit a flag, that barcode won't be decoded.          ║");
             Console.WriteLine("║                                                                   ║");
             Console.WriteLine("╠═══════════════════════════════════════════════════════════════════╣");
             Console.WriteLine("║                                                                   ║");
@@ -540,7 +539,7 @@ namespace CodeComparison
             Console.WriteLine("║    // No format specification needed                              ║");
             Console.WriteLine("║    var results = BarcodeReader.Read(imagePath);                   ║");
             Console.WriteLine("║                                                                   ║");
-            Console.WriteLine("║    // Automatically detects any of 50+ formats                    ║");
+            Console.WriteLine("║    // Automatically detects every supported format                ║");
             Console.WriteLine("║    // Optimized detection algorithm (doesn't slow down)           ║");
             Console.WriteLine("║    // Never misses a format because you forgot to specify it      ║");
             Console.WriteLine("║                                                                   ║");

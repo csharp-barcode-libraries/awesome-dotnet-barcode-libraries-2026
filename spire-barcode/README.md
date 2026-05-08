@@ -2,7 +2,7 @@
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-Spire.Barcode is a freemium barcode library from E-iceblue that offers both generation and reading capabilities for .NET applications. With a free version (FreeSpire.Barcode) for evaluation and commercial tiers starting at $349, it positions itself as an accessible option for developers exploring barcode functionality. This comprehensive guide examines Spire.Barcode's capabilities, its free version limitations, pricing structure, and how it compares to [IronBarcode](https://ironsoftware.com/csharp/barcode/) for production deployments.
+Spire.Barcode is a freemium barcode library from E-iceblue that offers both generation and reading capabilities for .NET applications. With a free version (FreeSpire.Barcode) for evaluation and commercial subscription tiers, it positions itself as an accessible option for developers exploring barcode functionality. This comprehensive guide examines Spire.Barcode's capabilities, its free version limitations, pricing structure, and how it compares to [IronBarcode](https://ironsoftware.com/csharp/barcode/) for production deployments.
 
 ## Table of Contents
 
@@ -25,17 +25,17 @@ Spire.Barcode is part of the E-iceblue product family, which includes document p
 
 The free version provides a limited subset of functionality:
 
-- Basic barcode generation with watermarks
-- Reduced symbology support
-- Slower scan performance
+- Basic barcode generation
+- Reduced symbology support compared to the commercial release
+- Slower scan performance (E-iceblue states scan speed is significantly improved in the paid edition)
 - No technical support
-- Requires registration key to suppress warnings
+- Last published as version 6.6.0 in 2022 (no recent updates on NuGet)
 
 ### Spire.Barcode (Commercial Version)
 
 The paid version offers:
 
-- 39+ barcode symbologies
+- ~38 barcode symbologies (1D + 2D + postal)
 - No watermarks on generated barcodes
 - Improved scan performance
 - Technical support included
@@ -47,8 +47,8 @@ Spire.Barcode supports multiple .NET variants:
 
 - .NET Framework 4.0 and above
 - .NET Standard 2.0
-- .NET 6, .NET 7, .NET 8
-- Windows, Linux, macOS (via .NET Core/.NET 5+)
+- .NET 6.0
+- Windows, Linux, macOS (via .NET 6+)
 
 ### Product Context
 
@@ -60,14 +60,14 @@ E-iceblue positions Spire.Barcode alongside their document processing products. 
 
 Understanding FreeSpire.Barcode's limitations is critical before adopting it, even for evaluation purposes. The free version differs substantially from the commercial product.
 
-### Watermark on Generated Barcodes
+### Evaluation Notices on Generated Output
 
-FreeSpire.Barcode adds an evaluation watermark to all generated barcode images. This watermark appears across the barcode image and cannot be removed without a commercial license.
+FreeSpire-family products from E-iceblue typically inject an evaluation notice on generated output. For the barcode library this manifests as evaluation messaging on generated images that cannot be removed without a commercial license.
 
 **Impact:**
-- Generated barcodes are unsuitable for production use
-- Testing requires visual inspection to imagine production output
-- Client-facing demos look unprofessional
+- Generated barcodes from the free edition are not intended for production use
+- Client-facing demos may carry evaluation messaging
+- Confirm current behaviour against the FreeSpire.Barcode 6.6.0 package — E-iceblue has not refreshed this package since 2022
 
 ### Limited Barcode Type Support
 
@@ -75,18 +75,18 @@ The free version supports fewer symbologies than the commercial version:
 
 | Category | Free Version | Commercial Version |
 |----------|-------------|-------------------|
-| 1D Linear | ~15 types | 25+ types |
-| 2D Matrix | Basic QR, DataMatrix | Full QR, DataMatrix, PDF417, Aztec |
-| Postal | Limited | Full postal format support |
-| Total | ~20 | 39+ |
+| 1D Linear | Subset of paid | ~22 types (Code 39/93/128, EAN, UPC, ITF, Codabar, MSI, Postnet, etc.) |
+| 2D Matrix | Subset of paid | QR Code, DataMatrix, PDF417, Aztec, MaxiCode-class formats |
+| Postal | Subset of paid | Royal Mail, Deutsche Post, Singapore Post, USPS OneCode, etc. |
+| Total | Fewer than paid (per E-iceblue) | ~38 symbologies |
 
 ### Significantly Slower Scan Speed
 
-FreeSpire.Barcode's reading performance is intentionally degraded in the free version:
+E-iceblue's own NuGet description states scan speed has been significantly improved in the paid edition, implying the free edition is intentionally slower:
 
-- Scans take 2-3x longer than commercial version
-- Batch processing becomes impractical
-- Multi-page document processing is very slow
+- Scans are slower than the commercial release
+- Batch processing throughput is reduced
+- Specific multipliers are not published by E-iceblue
 
 ### No Technical Support
 
@@ -96,15 +96,9 @@ Free version users do not have access to E-iceblue's technical support:
 - No direct email or ticket support
 - Bug fixes not prioritized for free users
 
-### Registration Key Required
+### Registration / License Key
 
-Even the free version requires a registration process:
-
-1. Download from E-iceblue website or NuGet
-2. Apply for a registration key (free, but requires providing information)
-3. Set the key in code to remove warning dialogs
-
-Without the registration key, warning dialogs appear during execution.
+The free edition can be used directly from NuGet. To suppress evaluation messaging on output, E-iceblue offers a free community license key on request. Without applying a key, evaluation messaging may appear in generated output and console output.
 
 ### Comparison: IronBarcode Trial
 
@@ -112,12 +106,12 @@ IronBarcode takes a different approach to evaluation:
 
 | Aspect | FreeSpire.Barcode | IronBarcode Trial |
 |--------|------------------|-------------------|
-| Feature access | Limited subset | Full features |
-| Watermarks | Baked into output | Small, removable at edge |
-| Performance | Degraded | Full speed |
+| Feature access | Limited subset of paid edition | Full features |
+| Evaluation notice | On output until key applied | Small watermark, removable with trial key |
+| Performance | Slower than paid edition | Full speed |
 | Support | None | Available |
 | Time limit | None | 30 days |
-| Registration | Required | Email only |
+| Registration | Free key required to suppress notice | Email only |
 
 IronBarcode's trial provides full functionality with a small watermark, allowing genuine evaluation of production capabilities.
 
@@ -133,8 +127,8 @@ A direct feature comparison reveals where each library excels.
 |---------|--------------|-------------|
 | Generation | Yes | Yes |
 | Reading/Scanning | Yes | Yes |
-| Symbology Count | 39+ | 50+ |
-| Auto Format Detection | No | Yes |
+| Symbology Count | ~38 | 30+ |
+| Auto Format Detection | No (type required) | Yes |
 | PDF Native Support | Via Spire.PDF | Built-in |
 | ML Error Correction | No | Yes |
 | QR with Logo | Commercial only | Yes |
@@ -198,7 +192,7 @@ var results = BarcodeReader.Read("document.pdf");
 
 foreach (var barcode in results)
 {
-    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+    Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
 }
 ```
 
@@ -242,20 +236,17 @@ dotnet add package FreeSpire.Barcode
 ```csharp
 using Spire.Barcode;
 
-// For FreeSpire.Barcode - apply registration key
-Spire.Barcode.BarcodeSettings.ApplyKey("your-free-registration-key");
-
-// For commercial Spire.Barcode - apply license
-Spire.License.LicenseProvider.SetLicenseKey("your-commercial-license-key");
+// Apply license key (commercial or free community key)
+Spire.License.LicenseProvider.SetLicenseKey("your-license-key");
 ```
 
-Without the registration key (free) or license key (commercial), warning dialogs or watermarks appear.
+Without a key applied, evaluation messaging may appear on generated output.
 
 ### IronBarcode Installation
 
 **NuGet Package:**
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 **License Setup (Single Line):**
@@ -411,20 +402,22 @@ var results = BarcodeReader.Read("barcode.png");
 
 ### Spire.Barcode Pricing Structure
 
-E-iceblue offers multiple licensing tiers:
+E-iceblue offers multiple subscription-based licensing tiers. Confirm current pricing on the [E-iceblue Spire.Barcode purchase page](https://www.e-iceblue.com/Buy/Spire.BarCode.html); the figures below reflect the published structure at time of writing:
 
-| License Type | Price | Developers | Deployment |
-|-------------|-------|-----------|------------|
-| Single Developer | $349 | 1 | Unlimited projects |
-| Site License | $1,398 | Up to 10 | Single location |
-| OEM | $6,990 | Unlimited | Redistribute |
-| Subscription | $999/year | 1 | Includes updates |
+| License Type | Approx. Price | Developers | Deployment |
+|-------------|--------------|-----------|------------|
+| Site License (Small Business, internal use only) | $1,398 | 1 | Single location |
+| Site Subscription (1-year updates/support) | $999/year | 1 | Single location |
+| Developer OEM Subscription (with releases & support) | $3,395/year | 1 | Public-facing / cloud / Docker |
+| Developer OEM Subscription (without releases/support) | $1,695 | 1 | Public-facing / cloud / Docker |
+| Site OEM Subscription (with releases & support) | $10,187/year | Up to 10 | Public-facing / cloud / Docker |
 
 **Additional Considerations:**
-- Prices may vary by region
+- Only OEM subscriptions permit deployment for public-facing websites, Docker, or cloud applications
+- Site (non-OEM) is restricted to internal use at one geographic location
 - Updates and support typically require active subscription
 - Some features (QR logos) only in commercial versions
-- Bundle discounts available with other Spire products
+- Bundle discounts available with other Spire products via Spire.Office
 
 ### Pricing Complexity
 
@@ -441,30 +434,30 @@ IronBarcode offers clearer pricing:
 
 | License Type | Price | Developers | Deployment |
 |-------------|-------|-----------|------------|
-| Lite | $749 | 1 | Single project |
-| Professional | $1,499 | 10 | 10 projects |
-| Unlimited | $2,999 | Unlimited | Unlimited |
+| Lite | $799 | 1 | 1 project / 1 location |
+| Plus | $1,199 | 3 | 3 projects / 3 locations |
+| Professional | $2,399 | 10 | 10 projects / 10 locations |
+| Unlimited | $4,799 | Unlimited | Unlimited |
 
-All licenses are perpetual with the option to add support/updates subscription.
+All licenses are perpetual with the option to add a support/updates subscription.
 
 ### 3-Year Cost Comparison
 
 **Scenario: 5-developer team with updates/support**
 
 ```
-Spire.Barcode (Site + Subscription pattern):
-  Year 1: $1,398 + subscription
-  Year 2: Subscription renewal
-  Year 3: Subscription renewal
-  Estimated total: $2,500-3,500
+Spire.Barcode (Site + Subscription pattern, internal use only):
+  Year 1: $1,398 (Site) + $999 (Subscription) = $2,397
+  Year 2: $999 (Subscription renewal for updates)
+  Year 3: $999 (Subscription renewal for updates)
+  3-year total: $4,395
+  Note: Public-facing/Docker/cloud requires OEM tier instead
 
 IronBarcode Professional:
-  Year 1: $1,499 one-time
+  Year 1: $2,399 one-time
   Year 2: $0 (perpetual)
   Year 3: $0 (perpetual)
-  Total: $1,499
-
-Optional support subscription: +$749/year
+  3-year total: $2,399 (perpetual; covers up to 10 developers)
 ```
 
 For teams preferring perpetual licenses, IronBarcode provides clearer long-term value.
@@ -533,7 +526,7 @@ dotnet remove package FreeSpire.Barcode
 
 **Add IronBarcode:**
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Namespace Changes
@@ -695,12 +688,12 @@ BarcodeReader.Read("image.png")
 
 **Problem:** Code expects `string[]` return type.
 
-**Solution:** Access `.Text` property from results:
+**Solution:** Access `.Value` property from results:
 
 ```csharp
 // If you need string array
 string[] texts = BarcodeReader.Read("image.png")
-    .Select(r => r.Text)
+    .Select(r => r.Value)
     .ToArray();
 ```
 

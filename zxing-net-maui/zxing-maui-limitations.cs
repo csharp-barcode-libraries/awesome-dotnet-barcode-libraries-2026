@@ -145,7 +145,7 @@ namespace ZXingMauiLimitationsExample
             foreach (var barcode in results)
             {
                 // Format is reported in the result
-                Console.WriteLine($"Auto-detected: {barcode.BarcodeType} - {barcode.Text}");
+                Console.WriteLine($"Auto-detected: {barcode.BarcodeType} - {barcode.Value}");
             }
         }
     }
@@ -184,7 +184,7 @@ namespace ZXingMauiLimitationsExample
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
             }
         }
     }
@@ -296,7 +296,7 @@ namespace ZXingMauiLimitationsExample
                     {
                         var barcode = results.First();
                         await DisplayAlert("Success",
-                            $"Type: {barcode.BarcodeType}\nValue: {barcode.Text}",
+                            $"Type: {barcode.BarcodeType}\nValue: {barcode.Value}",
                             "OK");
                     }
                     else

@@ -10,7 +10,7 @@ This guide covers the complete migration from LEADTOOLS Barcode to IronBarcode f
 
 **Legacy API Design:** LEADTOOLS barcode operations require constructing multiple objects in a specific sequence before any work can be done. Reading a barcode requires a `RasterCodecs` instance to load the image and a `BarcodeEngine` instance to scan it, with an explicit `BarcodeSymbology` array declaring which formats to look for. Generating a barcode requires constructing a `BarcodeData` object, creating a blank `RasterImage` with explicit pixel parameters, filling it with a background color using `FillCommand`, writing the barcode onto it, and saving with `RasterCodecs`. That API reflects the design patterns of its era. IronBarcode performs the same operations through static method calls that accept file paths directly.
 
-**Pricing Transparency:** LEADTOOLS development licenses are priced at $1,295–$1,469 per developer per year. Deployment licenses for production servers are separately quoted through LEADTOOLS sales and are not published. Teams that need a complete cost picture before beginning development must engage with sales before they can confirm that LEADTOOLS fits their budget. IronBarcode's Professional license is $1,499 one-time — perpetual, covering 10 developers and unlimited servers, with no deployment tracking and no separate production license required.
+**Pricing Transparency:** LEADTOOLS development licenses start at approximately $1,469 per developer per year (per the published ComponentSource listing for LEADTOOLS Barcode v23). Deployment licenses for production servers are separately quoted through LEADTOOLS sales and are not published. Teams that need a complete cost picture before beginning development must engage with sales before they can confirm that LEADTOOLS fits their budget. IronBarcode's Professional license is $2,399 one-time — perpetual, covering 10 developers and unlimited servers, with no deployment tracking and no separate production license required.
 
 ### The Fundamental Problem
 
@@ -91,10 +91,10 @@ On Windows Server deployments, the MSVC++ 2017 Runtime can be removed from provi
 ### Step 2: Install IronBarcode
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
-This single package includes all image format support, native PDF barcode extraction, ML error correction, and all 50+ supported symbologies. No additional codec packages are required.
+This single package (NuGet ID `BarCode`, namespace `IronBarCode`) includes all image format support, native PDF barcode extraction, ML error correction, and all 50+ supported symbologies. No additional codec packages are required.
 
 ### Step 3: Initialize the License
 
@@ -154,7 +154,7 @@ using IronBarCode;
 var results = BarcodeReader.Read("scan.png");
 
 foreach (var result in results)
-    Console.WriteLine($"{result.Format}: {result.Value}");
+    Console.WriteLine($"{result.BarcodeType}: {result.Value}");
 ```
 
 IronBarcode accepts the file path directly, loads the image internally, and auto-detects formats across all 50+ supported symbologies without requiring the caller to enumerate expected types. For advanced configuration — reading speed tuning, multi-barcode detection, and low-quality image handling — see the [reading barcodes from images guide](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/).
@@ -340,7 +340,7 @@ The license key is injected at container runtime through Docker secrets, Kuberne
 | `codecs.Load(imagePath)` | (removed) | Pass file path directly |
 | `engine.Reader.ReadBarcodes(image, LogicalRectangle.Empty, 0, symbologies)` | `BarcodeReader.Read(imagePath)` | Auto-detects symbologies |
 | `BarcodeData.Value` | `result.Value` | Same property name |
-| `BarcodeData.Symbology` | `result.Format` | Property renamed |
+| `BarcodeData.Symbology` | `result.BarcodeType` | Property renamed |
 | `new BarcodeData(BarcodeSymbology.Code128)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code128)` | Fluent creation |
 | `BarcodeSymbology.Code128` | `BarcodeEncoding.Code128` | Namespace change |
 | `BarcodeSymbology.QR` | `BarcodeEncoding.QRCode` | Name change |
@@ -422,7 +422,7 @@ Document the count and location of initialization blocks, read call sites, write
 ### Code Update Tasks
 
 1. Remove all five LEADTOOLS NuGet packages (and the PDF codec if present)
-2. Install `IronBarcode` via `dotnet add package IronBarcode`
+2. Install IronBarcode via `dotnet add package BarCode` (NuGet package id: `BarCode`)
 3. Replace all `using Leadtools.*` namespace imports with `using IronBarCode`
 4. Replace the entire `RasterSupport.SetLicense` initialization block with `IronBarCode.License.LicenseKey = "key"`
 5. Remove all `RasterSupport.KernelExpired` checks

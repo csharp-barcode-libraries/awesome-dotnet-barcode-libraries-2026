@@ -27,7 +27,7 @@ using System.IO;
 using Spire.Barcode;
 
 // IronBarcode
-// Install: dotnet add package IronBarcode
+// Install: dotnet add package BarCode
 using IronBarCode;
 
 namespace BarcodeComparison
@@ -211,7 +211,7 @@ namespace BarcodeComparison
                     var result = results.First();
                     Console.WriteLine($"File: {filename}");
                     Console.WriteLine($"  Detected type: {result.BarcodeType}");
-                    Console.WriteLine($"  Value: {result.Text}");
+                    Console.WriteLine($"  Value: {result.Value}");
                     Console.WriteLine($"  Time: {stopwatch.ElapsedMilliseconds}ms\n");
                 }
                 else
@@ -303,7 +303,7 @@ namespace BarcodeComparison
             Console.WriteLine("  Results:");
             foreach (var result in allResults)
             {
-                Console.WriteLine($"    {Path.GetFileName(result.InputPath ?? "unknown")}: {result.BarcodeType} = {result.Text}");
+                Console.WriteLine($"    {Path.GetFileName(result.InputPath ?? "unknown")}: {result.BarcodeType} = {result.Value}");
             }
             Console.WriteLine();
 
@@ -359,14 +359,14 @@ namespace BarcodeComparison
     {
         switch (barcode.BarcodeType)
         {
-            case BarcodeType.Code128:
-                ProcessTrackingNumber(barcode.Text);
+            case BarcodeEncoding.Code128:
+                ProcessTrackingNumber(barcode.Value);
                 break;
-            case BarcodeType.QRCode:
-                ProcessUrl(barcode.Text);
+            case BarcodeEncoding.QRCode:
+                ProcessUrl(barcode.Value);
                 break;
-            case BarcodeType.DataMatrix:
-                ProcessLotInfo(barcode.Text);
+            case BarcodeEncoding.DataMatrix:
+                ProcessLotInfo(barcode.Value);
                 break;
             default:
                 ProcessUnexpectedBarcode(barcode);

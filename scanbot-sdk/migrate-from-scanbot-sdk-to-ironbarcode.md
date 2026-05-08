@@ -2,17 +2,17 @@
 
 This guide is written for .NET development teams moving barcode processing from Scanbot SDK to IronBarcode for server-side, desktop, or expanded file-based scenarios. This is not a like-for-like replacement: Scanbot SDK is a mobile camera scanning component, and IronBarcode is a file and document processing library. The migration is a scope change driven by requirements that the camera-only model cannot satisfy. Teams replacing a live mobile camera scanning UI without adding other requirements should evaluate whether migration is appropriate before proceeding.
 
-For teams who started with Scanbot for a MAUI mobile app and now need barcode processing in ASP.NET Core, a desktop build, or a document pipeline, the mechanical migration is straightforward. The core change is replacing `ScanbotBarcodeSDK.BarcodeScanner.Open(configuration)` with `BarcodeReader.Read(source)`, where `source` is a file path, a stream, a byte array, or a PDF.
+For teams who started with Scanbot for a MAUI mobile app and now need barcode processing in ASP.NET Core, a desktop build, or a document pipeline, the mechanical migration is straightforward. The core change is replacing `ScanbotSDKMain.Barcode.StartScannerAsync(configuration)` with `BarcodeReader.Read(source)`, where `source` is a file path, a stream, a byte array, or a PDF.
 
 ## Why Migrate from Scanbot SDK
 
-**Server-Side Processing Requirements:** Scanbot SDK does not compile in ASP.NET Core, console applications, Azure Functions, or any non-MAUI project. When the mobile application requires a server-side companion that also processes barcodes — extracting them from uploaded PDFs or validating barcode values in incoming documents — Scanbot cannot cross that boundary. IronBarcode runs in all of those contexts with the same `BarcodeReader.Read()` API.
+**Server-Side Processing Requirements:** Scanbot does not ship a headless server-side .NET SDK. `ScanbotBarcodeSDK.MAUI` and `ScanbotBarcodeSDK.NET` target iOS / Android, and `Scanbot.BarcodeSDK.Windows` targets UWP / WinUI 3 desktop apps with an autofocus camera. None of them compile cleanly in ASP.NET Core, console applications, Azure Functions, or Linux Docker containers. When the mobile application requires a server-side companion that also processes barcodes — extracting them from uploaded PDFs or validating barcode values in incoming documents — Scanbot cannot cross that boundary. IronBarcode runs in all of those contexts with the same `BarcodeReader.Read()` API.
 
-**Desktop MAUI Support:** Scanbot's package targets `net8.0-android` and `net8.0-ios`. A MAUI project that adds `net8.0-windows` or `net8.0-maccatalyst` to its `TargetFrameworks` will fail to build the desktop targets because the Scanbot package provides no assemblies for those platforms. IronBarcode [supports Windows and macOS MAUI](https://ironsoftware.com/csharp/barcode/how-to/barcode-desktop-maui/) alongside iOS and Android, which means the same package works in a multi-target MAUI project without platform-specific exclusions or conditional references.
+**Desktop MAUI Support:** `ScanbotBarcodeSDK.MAUI` (v8.0.0) targets `net9.0-android` and `net9.0-ios` only. A MAUI project that adds `net9.0-windows` or `net9.0-maccatalyst` to its `TargetFrameworks` will fail to resolve those desktop targets because the package provides no assemblies for them. The separate `Scanbot.BarcodeSDK.Windows` package covers UWP / WinUI 3 but is not a MAUI-Windows binding. IronBarcode [supports Windows and macOS MAUI](https://ironsoftware.com/csharp/barcode/how-to/barcode-desktop-maui/) alongside iOS and Android from a single package.
 
-**PDF Document Workflows:** There is no `BarcodeScanner.Read(filePath)` in Scanbot. When a workflow evolves to include reading barcodes from document uploads, scanned image archives, or PDF invoices, Scanbot's architecture cannot accommodate it. IronBarcode reads PDFs and images directly, with each result carrying the page number on which the barcode was found.
+**PDF Document Workflows:** There is no `BarcodeReader.Read(filePath)` in Scanbot. When a workflow evolves to include reading barcodes from document uploads, scanned image archives, or PDF invoices, Scanbot's architecture cannot accommodate it. IronBarcode reads PDFs and images directly, with each result carrying the page number on which the barcode was found.
 
-**Pricing Model Predictability:** Scanbot uses a yearly flat fee. For some organizations the annual renewal is the trigger for evaluating alternatives — particularly when the project scope has grown to include server-side or desktop targets that fall outside Scanbot's coverage. IronBarcode is a one-time perpetual purchase, eliminating the annual renewal obligation.
+**Pricing Model Predictability:** Scanbot uses a yearly flat fee, quoted per-app on request — there is no published price list. For some organizations the annual renewal is the trigger for evaluating alternatives, particularly when the project scope has grown to include server-side or non-camera targets that fall outside Scanbot's coverage. IronBarcode is a one-time perpetual purchase, eliminating the annual renewal obligation.
 
 ### The Fundamental Problem
 
@@ -20,14 +20,17 @@ Scanbot SDK requires a live camera feed. When requirements expand beyond mobile,
 
 ```csharp
 // Scanbot SDK: camera-only — no file or server equivalent exists
-var configuration = new BarcodeScannerConfiguration
+using ScanbotSDK.MAUI;
+using ScanbotSDK.MAUI.Barcode;
+
+var configuration = new BarcodeScannerScreenConfiguration
 {
-    BarcodeFormats = new[] { BarcodeFormat.Code128, BarcodeFormat.QrCode }
+    UseCase = new SingleScanningMode()
 };
 
 // This call requires iOS or Android hardware and a MAUI camera UI
 // It cannot be redirected to a file path, stream, or server context
-var result = await ScanbotBarcodeSDK.BarcodeScanner.Open(configuration);
+var result = await ScanbotSDKMain.Barcode.StartScannerAsync(configuration);
 ```
 
 IronBarcode accepts the same source types — file, stream, byte array, or PDF — in any project context:
@@ -39,7 +42,7 @@ IronBarCode.License.LicenseKey = "YOUR-KEY";
 // From a file — works on any platform
 var results = BarcodeReader.Read("invoice.pdf");
 foreach (var result in results)
-    Console.WriteLine($"Page {result.PageNumber}: {result.Value} ({result.Format})");
+    Console.WriteLine($"Page {result.PageNumber}: {result.Value} ({result.BarcodeType})");
 ```
 
 ## IronBarcode vs Scanbot SDK: Feature Comparison
@@ -66,7 +69,7 @@ foreach (var result in results)
 | **1D formats** | 20+ | 30+ |
 | **2D formats** | QR, DataMatrix, PDF417, Aztec | QR, DataMatrix, PDF417, Aztec, MaxiCode |
 | **License model** | Yearly flat fee | One-time perpetual |
-| **Published pricing** | Contact sales | Yes ($749–$5,999) |
+| **Published pricing** | Contact sales | Yes ($799–$4,799) |
 
 ## Quick Start: Scanbot SDK to IronBarcode Migration
 
@@ -82,16 +85,18 @@ If the project uses conditional package references in the `.csproj` file, remove
 
 ```xml
 <!-- Remove any Scanbot-related package references -->
-<PackageReference Include="ScanbotBarcodeSDK.MAUI" Version="7.1.1" />
+<PackageReference Include="ScanbotBarcodeSDK.MAUI" Version="8.0.0" />
+<PackageReference Include="ScanbotBarcodeSDK.NET" Version="8.0.0" />
+<PackageReference Include="Scanbot.BarcodeSDK.Windows" Version="7.0.0" />
 ```
 
 Install IronBarcode:
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
-IronBarcode is available on NuGet and supports .NET 6, 7, 8, 9, and .NET Framework 4.6.2+. For a MAUI multi-target project, a single `dotnet add package` works across all targets — no platform-conditional package references are needed.
+IronBarcode is published on NuGet as `BarCode` and supports .NET 6, 7, 8, 9, and .NET Framework 4.6.2+. For a MAUI multi-target project, a single `dotnet add package` works across all targets — no platform-conditional package references are needed.
 
 ### Step 2: Update Namespaces
 
@@ -99,7 +104,8 @@ Replace Scanbot namespaces with the IronBarcode namespace:
 
 ```csharp
 // Remove
-using ScanbotBarcodeSDK.MAUI;
+using ScanbotSDK.MAUI;
+using ScanbotSDK.MAUI.Barcode;
 
 // Add
 using IronBarCode;
@@ -110,12 +116,12 @@ using IronBarCode;
 Remove the Scanbot initialization block and replace it with the IronBarcode license key. Add the license initialization at application startup in `MauiProgram.cs`, `App.xaml.cs`, or `Program.cs` depending on project type:
 
 ```csharp
-// Remove this
-ScanbotSDK.Initialize(new ScanbotSDKConfiguration
+// Remove this (typically inside MauiProgram.CreateMauiApp)
+ScanbotSDKMain.Initialize(new SdkConfiguration
 {
     LicenseKey = "YOUR-SCANBOT-LICENSE-KEY",
-    EnableLogging = false
-});
+    LoggingEnabled = false
+}, builder);
 
 // Add this — one line, placed once at startup
 IronBarCode.License.LicenseKey = "YOUR-IRONBARCODE-KEY";
@@ -130,28 +136,22 @@ Scanbot's scanning call opens a full-screen camera UI and returns when the user 
 **Scanbot SDK Approach:**
 
 ```csharp
-using ScanbotBarcodeSDK.MAUI;
+using ScanbotSDK.MAUI;
+using ScanbotSDK.MAUI.Barcode;
 
 private async void ScanButton_Clicked(object sender, EventArgs e)
 {
-    var configuration = new BarcodeScannerConfiguration
+    var configuration = new BarcodeScannerScreenConfiguration
     {
-        BarcodeFormats = new[]
-        {
-            BarcodeFormat.Code128,
-            BarcodeFormat.QrCode,
-            BarcodeFormat.Ean13
-        },
-        FinderAspectRatio = new AspectRatio(1, 1),
-        TopBarBackgroundColor = Colors.DarkBlue
+        UseCase = new SingleScanningMode()
     };
 
-    var result = await ScanbotBarcodeSDK.BarcodeScanner.Open(configuration);
+    var result = await ScanbotSDKMain.Barcode.StartScannerAsync(configuration);
 
-    if (result.Status == OperationResult.Ok)
+    if (result.IsSuccess)
     {
-        foreach (var barcode in result.Barcodes)
-            ResultLabel.Text = $"{barcode.Format}: {barcode.Text}";
+        foreach (var item in result.Value.Items)
+            ResultLabel.Text = $"{item.Barcode.Format}: {item.Barcode.Text}";
     }
 }
 ```
@@ -174,7 +174,7 @@ private async void ScanButton_Clicked(object sender, EventArgs e)
     var results = BarcodeReader.Read(ms.ToArray());
     var first = results.FirstOrDefault();
     ResultLabel.Text = first != null
-        ? $"{first.Format}: {first.Value}"
+        ? $"{first.BarcodeType}: {first.Value}"
         : "No barcode found";
 }
 ```
@@ -188,20 +188,23 @@ Scanbot's `BarcodeScannerConfiguration` controls which formats the scanner accep
 **Scanbot SDK Approach:**
 
 ```csharp
-var configuration = new BarcodeScannerConfiguration
+using ScanbotSDK.MAUI;
+using ScanbotSDK.MAUI.Barcode;
+
+var configuration = new BarcodeScannerScreenConfiguration
 {
-    BarcodeFormats = new[] { BarcodeFormat.Code128, BarcodeFormat.QrCode },
-    FinderAspectRatio = new AspectRatio(1, 1),
-    FlashEnabled = false,
-    OrientationLockMode = OrientationLockMode.Portrait
+    UseCase = new SingleScanningMode()
+    // Symbology filters, finder aspect ratio, flash and orientation
+    // are configured on the UseCase and the camera screen properties
+    // (see Scanbot docs — names vary across the v8 API surface).
 };
 
-var result = await ScanbotBarcodeSDK.BarcodeScanner.Open(configuration);
+var result = await ScanbotSDKMain.Barcode.StartScannerAsync(configuration);
 
-if (result.Status == OperationResult.Ok)
+if (result.IsSuccess)
 {
-    foreach (var barcode in result.Barcodes)
-        Console.WriteLine($"{barcode.Format}: {barcode.Text}");
+    foreach (var item in result.Value.Items)
+        Console.WriteLine($"{item.Barcode.Format}: {item.Barcode.Text}");
 }
 ```
 
@@ -227,7 +230,7 @@ await photoStream.CopyToAsync(ms);
 
 var results = BarcodeReader.Read(ms.ToArray(), options);
 foreach (var result in results)
-    Console.WriteLine($"{result.Format}: {result.Value}");
+    Console.WriteLine($"{result.BarcodeType}: {result.Value}");
 ```
 
 Format specification is not required — IronBarcode auto-detects all supported formats. The `BarcodeReaderOptions` parameters that correspond most directly to Scanbot configuration are `Speed` (controls processing thoroughness versus performance) and `ExpectMultipleBarcodes` (continues scanning after the first match).
@@ -262,7 +265,7 @@ public async Task<IActionResult> ExtractBarcodes(IFormFile file)
     var values = results.Select(r => new
     {
         r.Value,
-        Format = r.Format.ToString(),
+        Format = r.BarcodeType.ToString(),
         r.PageNumber
     });
 
@@ -296,7 +299,7 @@ public void ProcessInvoiceBatch(IEnumerable<string> filePaths)
     {
         var results = BarcodeReader.Read(filePath);
         foreach (var result in results)
-            Console.WriteLine($"File: {filePath} | Page {result.PageNumber}: {result.Value} ({result.Format})");
+            Console.WriteLine($"File: {filePath} | Page {result.PageNumber}: {result.Value} ({result.BarcodeType})");
     }
 }
 ```
@@ -305,20 +308,20 @@ public void ProcessInvoiceBatch(IEnumerable<string> filePaths)
 
 | Scanbot SDK | IronBarcode |
 |---|---|
-| `ScanbotSDK.Initialize(new ScanbotSDKConfiguration { LicenseKey = "..." })` | `IronBarCode.License.LicenseKey = "key"` |
-| `new BarcodeScannerConfiguration()` | `new BarcodeReaderOptions()` |
-| `ScanbotBarcodeSDK.BarcodeScanner.Open(configuration)` | `BarcodeReader.Read(path / stream / bytes)` |
-| `result.Status == OperationResult.Ok` | `results.Any()` or `results.FirstOrDefault() != null` |
-| `result.Barcodes` | Return value of `BarcodeReader.Read()` |
-| `barcode.Format` | `result.Format` (IronBarCode.BarcodeEncoding) |
-| `barcode.Text` | `result.Value` |
+| `ScanbotSDKMain.Initialize(new SdkConfiguration { LicenseKey = "..." }, builder)` | `IronBarCode.License.LicenseKey = "key"` |
+| `new BarcodeScannerScreenConfiguration()` | `new BarcodeReaderOptions()` |
+| `ScanbotSDKMain.Barcode.StartScannerAsync(configuration)` | `BarcodeReader.Read(path / stream / bytes)` |
+| `result.IsSuccess` | `results.Any()` or `results.FirstOrDefault() != null` |
+| `result.Value.Items` | Return value of `BarcodeReader.Read()` |
+| `item.Barcode.Format` | `result.BarcodeType` (IronBarCode.BarcodeEncoding) |
+| `item.Barcode.Text` | `result.Value` |
 | `BarcodeFormat.Code128` | `BarcodeEncoding.Code128` |
 | `BarcodeFormat.QrCode` | `BarcodeEncoding.QRCode` |
 | `BarcodeFormat.Ean13` | `BarcodeEncoding.EAN13` |
-| `BarcodeScannerConfiguration.FinderAspectRatio` | No equivalent — image framing handled by MediaPicker |
-| `BarcodeScannerConfiguration.FlashEnabled` | No equivalent — use MediaPicker options |
+| `BarcodeScannerScreenConfiguration` finder properties | No equivalent — image framing handled by MediaPicker |
+| `UseCase` flash / orientation properties | No equivalent — use MediaPicker options |
 | Camera-required input | File path, stream, byte array, or PDF |
-| iOS and Android MAUI only | All .NET platforms and project types |
+| iOS / Android MAUI and UWP / WinUI 3 only | All .NET platforms and project types |
 
 ## Common Migration Issues and Solutions
 
@@ -358,20 +361,20 @@ For business applications, the system camera is adequate. For consumer apps wher
 
 ### Issue 3: Windows Build Errors Cleared
 
-**Scanbot SDK:** The `ScanbotBarcodeSDK.MAUI` package targets only `net8.0-android` and `net8.0-ios`, causing build failures when `net8.0-windows` is present in `TargetFrameworks`.
+**Scanbot SDK:** The `ScanbotBarcodeSDK.MAUI` v8.0.0 package targets only `net9.0-android` and `net9.0-ios` (with `net10.0-android` and `net10.0-ios` also published), causing build failures when `net9.0-windows` or `net9.0-maccatalyst` is present in `TargetFrameworks`.
 
 **Solution:** Removing the Scanbot package reference resolves the Windows build failure. IronBarcode resolves correctly across all MAUI targets with no platform-conditional configuration:
 
 ```bash
 # Verify the build succeeds on all targets after removing Scanbot and adding IronBarcode
-dotnet build -f net8.0-windows10.0.19041.0
-dotnet build -f net8.0-ios
-dotnet build -f net8.0-android
+dotnet build -f net9.0-windows10.0.19041.0
+dotnet build -f net9.0-ios
+dotnet build -f net9.0-android
 ```
 
 ### Issue 4: Format Enum Namespace Change
 
-**Scanbot SDK:** Uses `BarcodeFormat` enum values such as `BarcodeFormat.Code128` from the `ScanbotBarcodeSDK.MAUI` namespace.
+**Scanbot SDK:** Uses `BarcodeFormat` enum values such as `BarcodeFormat.Code128` from the `ScanbotSDK.MAUI.Barcode` namespace.
 
 **Solution:** IronBarcode uses the `BarcodeEncoding` enum in the `IronBarCode` namespace. Update all format references and any code that stores, compares, or switches on format enum values:
 
@@ -396,14 +399,15 @@ Note that IronBarcode auto-detects all supported formats by default — explicit
 Audit the codebase to identify all Scanbot SDK usage:
 
 ```bash
-grep -rn "ScanbotSDK.Initialize" --include="*.cs" .
-grep -rn "BarcodeScannerConfiguration" --include="*.cs" .
-grep -rn "ScanbotBarcodeSDK.BarcodeScanner.Open" --include="*.cs" .
-grep -rn "result\.Barcodes" --include="*.cs" .
-grep -rn "barcode\.Format" --include="*.cs" .
-grep -rn "barcode\.Text" --include="*.cs" .
-grep -rn "OperationResult\.Ok" --include="*.cs" .
-grep -rn "using ScanbotBarcodeSDK" --include="*.cs" .
+grep -rn "ScanbotSDKMain" --include="*.cs" .
+grep -rn "SBSDKInitializer" --include="*.cs" .
+grep -rn "BarcodeScannerScreenConfiguration" --include="*.cs" .
+grep -rn "StartScannerAsync" --include="*.cs" .
+grep -rn "result\.Value\.Items" --include="*.cs" .
+grep -rn "Barcode\.Format" --include="*.cs" .
+grep -rn "Barcode\.Text" --include="*.cs" .
+grep -rn "result\.IsSuccess" --include="*.cs" .
+grep -rn "using ScanbotSDK" --include="*.cs" .
 grep -rn "BarcodeFormat\." --include="*.cs" .
 ```
 
@@ -414,18 +418,18 @@ grep -rn "BarcodeFormat\." --include="*.cs" .
 
 ### Code Update Tasks
 
-1. Remove `ScanbotBarcodeSDK.MAUI` NuGet package
+1. Remove `ScanbotBarcodeSDK.MAUI`, `ScanbotBarcodeSDK.NET`, and `Scanbot.BarcodeSDK.Windows` NuGet packages where present
 2. Remove any conditional `<PackageReference>` entries for Scanbot from the `.csproj`
-3. Install `IronBarcode` NuGet package
-4. Replace `using ScanbotBarcodeSDK.MAUI;` with `using IronBarCode;` in all files
-5. Replace `ScanbotSDK.Initialize(...)` with `IronBarCode.License.LicenseKey = "key"` at application startup
-6. Replace `ScanbotBarcodeSDK.BarcodeScanner.Open(configuration)` with `MediaPicker.CapturePhotoAsync()` followed by stream copy and `BarcodeReader.Read(bytes)` in MAUI camera workflows
-7. Replace `ScanbotBarcodeSDK.BarcodeScanner.Open(configuration)` with `BarcodeReader.Read(filePath)` or `BarcodeReader.Read(stream)` in server-side and file processing contexts
-8. Replace `result.Status == OperationResult.Ok` checks with `results.Any()` or `results.FirstOrDefault() != null`
-9. Replace `result.Barcodes` collection references with the return value of `BarcodeReader.Read()`
-10. Replace `barcode.Text` property access with `result.Value`
+3. Install the `BarCode` NuGet package
+4. Replace `using ScanbotSDK.MAUI;` and `using ScanbotSDK.MAUI.Barcode;` with `using IronBarCode;` in all files
+5. Replace `ScanbotSDKMain.Initialize(...)` with `IronBarCode.License.LicenseKey = "key"` at application startup
+6. Replace `ScanbotSDKMain.Barcode.StartScannerAsync(configuration)` with `MediaPicker.CapturePhotoAsync()` followed by stream copy and `BarcodeReader.Read(bytes)` in MAUI camera workflows
+7. Replace `ScanbotSDKMain.Barcode.StartScannerAsync(configuration)` with `BarcodeReader.Read(filePath)` or `BarcodeReader.Read(stream)` in server-side and file processing contexts
+8. Replace `result.IsSuccess` checks with `results.Any()` or `results.FirstOrDefault() != null`
+9. Replace `result.Value.Items` collection references with the return value of `BarcodeReader.Read()`
+10. Replace `item.Barcode.Text` property access with `result.Value`
 11. Replace `BarcodeFormat.*` enum values with `BarcodeEncoding.*` equivalents
-12. Replace `new BarcodeScannerConfiguration()` with `new BarcodeReaderOptions()` where processing options are needed
+12. Replace `new BarcodeScannerScreenConfiguration()` with `new BarcodeReaderOptions()` where processing options are needed
 
 ### Post-Migration Testing
 
@@ -433,7 +437,7 @@ grep -rn "BarcodeFormat\." --include="*.cs" .
 - Test the `MediaPicker.CapturePhotoAsync()` flow on a physical iOS device and a physical Android device
 - Confirm that barcode values decoded by IronBarcode match values previously decoded by Scanbot for the same physical barcodes
 - Test multi-page PDF extraction if the project includes document processing workflows
-- Verify that format detection covers all barcode types previously configured in `BarcodeScannerConfiguration.BarcodeFormats`
+- Verify that format detection covers all barcode types previously configured on the Scanbot `BarcodeScannerScreenConfiguration.UseCase`
 - Confirm that server-side endpoints or background jobs produce correct results on the same document samples
 - Verify camera permission prompts appear correctly on first launch on iOS and Android
 

@@ -2,7 +2,7 @@
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-OnBarcode is a focused barcode generation library for .NET that has recently expanded its distribution through NuGet packages. Originally distributed as manual DLL downloads, OnBarcode positions itself as a straightforward generation solution. However, barcode reading requires a separate product purchase. This comprehensive guide examines OnBarcode's capabilities, its split product model, pricing transparency, and how it compares to [IronBarcode](https://ironsoftware.com/csharp/barcode/) for production deployments.
+OnBarcode is a focused barcode generation library for .NET that distributes through both manual DLL downloads and NuGet packages (`OnBarcode.Barcode.Generator`, currently version 10.5.x). Barcode reading is sold as a separate product (`OnBarcode.Barcode.Reader`) with a separate license. This comprehensive guide examines OnBarcode's capabilities, its split product model, pricing structure, and how it compares to [IronBarcode](https://ironsoftware.com/csharp/barcode/) for production deployments.
 
 ## Table of Contents
 
@@ -50,22 +50,19 @@ OnBarcode's .NET library supports:
 - .NET Core 3.1
 - .NET Framework 4.x
 
-### Recent NuGet Transition
+### NuGet and DLL Distribution
 
-Historically, OnBarcode was distributed as downloadable DLL files. Users would:
+OnBarcode publishes its libraries on nuget.org under the `OnBarcode` profile. Current packages include:
 
-1. Purchase license from website
-2. Download DLL files
-3. Manually add references to projects
-4. Manage updates manually
+- `OnBarcode.Barcode.Generator` (generation)
+- `OnBarcode.Barcode.Generator.SkiaSharp` (cross-platform variant)
+- `OnBarcode.Barcode.Generator.AspNet.Framework`
+- `OnBarcode.Barcode.Generator.WinForms.Framework`
+- `OnBarcode.Barcode.Reader` (reading — separate package and license)
+- `OnBarcode.Barcode.Reader.Framework`
+- `OnBarcode.Barcode.Reader.Document.PDF` (PDF reading add-on)
 
-Recently (2025-2026), OnBarcode added NuGet packages:
-
-- `OnBarcode.Barcode.Generator`
-- `OnBarcode.QRCode`
-- Other symbology-specific packages
-
-This modernization improves the developer experience but changes the traditional workflow.
+OnBarcode also continues to offer manual DLL downloads from its website for customers who prefer that distribution model. Whichever path is used, runtime activation requires a license obtained directly from OnBarcode.
 
 ### Target Use Cases
 
@@ -142,24 +139,23 @@ This means organizations needing both generation and reading must:
 3. Manage two different products
 4. Potentially deal with API differences between products
 
-### Pricing Opacity
+### Published Pricing — Two Separate Products
 
-OnBarcode's pricing is not publicly listed on their website in a clear price table. Instead:
+OnBarcode publishes per-product pricing on dedicated purchase pages. The .NET Barcode Generator Suite uses these tiers (perpetual licenses, 30-day money-back guarantee):
 
-- Contact sales for pricing
-- Custom quotes based on needs
-- License types available:
-  - Single Developer
-  - 5 Developer
-  - Unlimited Developer
-  - Server licenses
+**Linear-only (1D barcodes):**
+- Single Developer: $990
+- Five Developer: $1,990
+- Unlimited Developer: $2,990
 
-This "contact sales" model creates uncertainty:
+**Linear + 2D (full symbology coverage including QR Code, Data Matrix, PDF417):**
+- Single Developer: $1,690
+- Five Developer: $2,690
+- Unlimited Developer: $3,990
 
-- No upfront price comparison possible
-- Negotiation may be required
-- Prices may vary by customer
-- Budget planning is difficult
+The Barcode Reader SDK is priced and purchased separately ("License Price From $990"). An optional one-year Premier Support and Free Upgrade subscription costs 20–35% of the license price.
+
+The friction is not opacity — it is duplication. An organization that needs both generation and reading must complete two purchases against two SKUs, and an organization that needs 2D barcodes must select the Linear + 2D tier rather than the cheaper Linear-only tier.
 
 ---
 
@@ -174,9 +170,9 @@ A direct comparison of what each library provides.
 | Generation | Yes | Yes |
 | Reading/Scanning | Separate purchase | Included |
 | Symbology Count | 20+ | 50+ |
-| Auto Format Detection | N/A (no reader) | Yes |
-| PDF Native Support | No | Built-in |
-| ML Error Correction | N/A (no reader) | Yes |
+| Auto Format Detection | No — explicit `BarcodeType` argument required (Reader SDK only) | Yes |
+| PDF Native Support | Add-on (`OnBarcode.Barcode.Reader.Document.PDF`) | Built-in |
+| ML Error Correction | Reader SDK only — no auto-detection | Yes |
 | QR with Logo | Manual implementation | Built-in |
 | NuGet First-Class | Recent addition | Day one |
 | Unified SDK | No (separate products) | Yes |
@@ -187,9 +183,11 @@ Both libraries support barcode generation, but with different approaches:
 
 **OnBarcode Generation:**
 ```csharp
-// Create barcode with specific settings
-Barcode barcode = new Barcode();
-barcode.Symbology = Symbology.Code128Auto;
+using OnBarcode.Barcode;
+
+// Create a Linear (1D) barcode object and configure properties
+Linear barcode = new Linear();
+barcode.Type = BarcodeType.CODE128;
 barcode.Data = "12345678";
 barcode.Resolution = 96;
 barcode.drawBarcode("barcode.png");
@@ -255,12 +253,12 @@ barcode.SaveAsPdf("barcode.pdf");
 
 ### OnBarcode Installation
 
-**Via NuGet (Modern Approach):**
+**Via NuGet:**
 ```bash
 dotnet add package OnBarcode.Barcode.Generator
 ```
 
-**Via Manual DLL (Traditional):**
+**Via Manual DLL (Alternative):**
 1. Download DLL from OnBarcode website
 2. Add reference to project:
 ```xml
@@ -273,19 +271,17 @@ dotnet add package OnBarcode.Barcode.Generator
 ```csharp
 using OnBarcode.Barcode;
 
-// Apply license (format may vary)
-OnBarcode.Barcode.License.SetLicense("YOUR-LICENSE-KEY");
-// or
-OnBarcode.Barcode.License.SetLicenseFile("license.lic");
+// Apply license (license key obtained from OnBarcode after purchase)
+License.RegisterLicense("YOUR-LICENSE-KEY");
 ```
 
-**If Reader is Needed (Separate Installation):**
+**If Reader is Needed (Separate Installation and License):**
 ```bash
 # Separate package
 dotnet add package OnBarcode.Barcode.Reader
 
-# Separate license
-OnBarcode.Barcode.Reader.License.SetLicense("YOUR-READER-LICENSE-KEY");
+# Separate license — purchased independently from the Generator license
+License.RegisterLicense("YOUR-READER-LICENSE-KEY");
 ```
 
 ### IronBarcode Installation
@@ -348,14 +344,15 @@ See: [Manual Setup Comparison](onbarcode-manual-setup.cs)
 **OnBarcode:**
 ```csharp
 using OnBarcode.Barcode;
+using System.Drawing;
 
-// Create barcode object
-Barcode barcode = new Barcode();
-barcode.Symbology = Symbology.Code128Auto;
+// Create Linear (1D) barcode object and configure properties
+Linear barcode = new Linear();
+barcode.Type = BarcodeType.CODE128;
 barcode.Data = "12345678";
 barcode.Resolution = 96;
-barcode.BarWidth = 1;
-barcode.BarHeight = 80;
+barcode.X = 1;        // module width
+barcode.BarcodeHeight = 80;
 barcode.ShowText = true;
 barcode.TextFont = new Font("Arial", 10);
 
@@ -382,15 +379,13 @@ BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
 // This code requires OnBarcode.Barcode.Reader package
 // AND a separate Reader license
 
-using OnBarcode.Barcode.Reader;
+using OnBarcode.Barcode;
 
-// Separate license for reader
-OnBarcode.Barcode.Reader.License.SetLicense("READER-LICENSE-KEY");
+// Separate license for the Reader product
+License.RegisterLicense("READER-LICENSE-KEY");
 
-// Then use reader
-BarcodeReader reader = new BarcodeReader();
-reader.BarcodeTypes = new BarcodeType[] { BarcodeType.Code128 };
-string[] results = reader.Scan("barcode.png");
+// Static scanner API; format must be specified up front
+string[] results = BarcodeScanner.Scan("barcode.png", BarcodeType.CODE128);
 ```
 
 **IronBarcode (included):**
@@ -402,7 +397,7 @@ var results = BarcodeReader.Read("barcode.png");
 
 foreach (var barcode in results)
 {
-    Console.WriteLine($"{barcode.BarcodeType}: {barcode.Text}");
+    Console.WriteLine($"{barcode.BarcodeType}: {barcode.Value}");
 }
 ```
 
@@ -410,23 +405,22 @@ foreach (var barcode in results)
 
 **OnBarcode Generation + Reading (two products):**
 ```csharp
-using OnBarcode.Barcode;
-using OnBarcode.Barcode.Reader; // Separate package
+using OnBarcode.Barcode; // Generator and Reader share this namespace
+                         // but ship as two separate NuGet packages and licenses
 
 // Generate barcodes
 foreach (var item in items)
 {
-    Barcode barcode = new Barcode();
-    barcode.Symbology = Symbology.Code128Auto;
+    Linear barcode = new Linear();
+    barcode.Type = BarcodeType.CODE128;
     barcode.Data = item.Code;
     barcode.drawBarcode($"{item.Id}.png");
 }
 
-// Read barcodes (requires separate Reader license)
-BarcodeReader reader = new BarcodeReader();
+// Read barcodes (requires separate Reader license + OnBarcode.Barcode.Reader package)
 foreach (var file in Directory.GetFiles(".", "*.png"))
 {
-    string[] results = reader.Scan(file);
+    string[] results = BarcodeScanner.Scan(file, BarcodeType.CODE128);
     // Process results
 }
 ```
@@ -458,9 +452,8 @@ foreach (var result in allResults)
 using OnBarcode.Barcode;
 using System.Drawing;
 
-// Generate base QR code
-Barcode qr = new Barcode();
-qr.Symbology = Symbology.QRCode;
+// Generate base QR code using the dedicated QRCode class
+QRCode qr = new QRCode();
 qr.Data = "https://example.com";
 qr.QRCodeDataMode = QRCodeDataMode.Auto;
 qr.QRCodeECL = QRCodeECL.H; // High for logo overlay
@@ -495,77 +488,65 @@ qr.SaveAsPng("qr-with-logo.png");
 
 ### OnBarcode Pricing Structure
 
-OnBarcode does not publish clear pricing. Based on available information:
+OnBarcode publishes pricing on its purchase pages. The Generator SDK is split into Linear-only and Linear + 2D tiers, and the Reader SDK is sold separately.
 
-**License Types:**
-- Single Developer: Contact sales
-- 5 Developer: Contact sales
-- Unlimited Developer: Contact sales (includes source code)
-- Server licenses: Contact sales
+**.NET Barcode Generator Suite — Linear (1D only):**
+- Single Developer: $990
+- Five Developer: $1,990
+- Unlimited Developer: $2,990
 
-**Separate Products:**
-- Generator SDK: Requires quote
-- Reader SDK: Separate quote required
-- Bundle pricing: Unknown
+**.NET Barcode Generator Suite — Linear + 2D (full coverage):**
+- Single Developer: $1,690
+- Five Developer: $2,690
+- Unlimited Developer: $3,990
 
-### Pricing Opacity Concerns
+**.NET Barcode Reader SDK:**
+- Sold as a separate product, separate license. Pricing starts from $990 with tiered Single / Five / Unlimited Developer licenses, plus Server Distribution licenses for production deployment.
 
-The "contact sales" model creates challenges:
-
-1. **No Price Comparison:** Cannot compare OnBarcode pricing with competitors without going through sales process
-
-2. **Budget Planning Difficult:** Hard to allocate budget without knowing costs upfront
-
-3. **Negotiation Variability:** Prices may vary based on customer, making value assessment difficult
-
-4. **Hidden Total Cost:** Generator + Reader pricing unknown until both quotes received
+All licenses are perpetual with a 30-day money-back guarantee. An optional one-year Premier Support and Free Upgrade subscription costs 20–35% of the license price.
 
 ### IronBarcode Pricing
 
-Clear, published pricing:
+Single-product pricing covers both generation and reading:
 
 | License Type | Price | Developers | Includes |
 |-------------|-------|-----------|----------|
-| Lite | $749 | 1 | Generation + Reading |
-| Professional | $1,499 | 10 | Generation + Reading |
-| Unlimited | $2,999 | Unlimited | Generation + Reading |
+| Lite | $799 | 1 | Generation + Reading + PDF |
+| Plus | $1,199 | 3 | Generation + Reading + PDF |
+| Professional | $2,399 | 10 | Generation + Reading + PDF |
+| Unlimited | $4,799 | Unlimited | Generation + Reading + PDF |
 
 All licenses are perpetual with the option for support subscriptions.
 
 ### Cost Comparison Scenario
 
-**Scenario: Development team needs generation AND reading**
+**Scenario: Five-developer team needs 2D generation AND reading**
 
 ```
 OnBarcode:
-  Generator SDK: $X (contact sales)
-  Reader SDK: $Y (contact sales)
-  Total: $X + $Y (unknown until both quotes)
+  Generator Suite Linear + 2D, Five Developer:  $2,690
+  Reader SDK, Five Developer (from):            $1,690+
+  Total:                                        $4,380+
 
-  Additional considerations:
-  - May need to negotiate
-  - Prices may not be consistent
-  - Budget approval difficult without firm numbers
+  Two procurement transactions, two licenses to manage,
+  two NuGet packages, separate version cadences.
 
 IronBarcode Professional:
-  Everything included: $1,499
+  Everything included (10 devs):                $2,399
 
-  Known upfront:
-  - Includes generation
-  - Includes reading
-  - Includes PDF support
-  - Clear budget planning
+  One purchase, one license, one package.
+  Includes generation, reading, and native PDF support.
 ```
 
 ### Value Transparency
 
 | Aspect | OnBarcode | IronBarcode |
 |--------|----------|-------------|
-| Published pricing | No | Yes |
-| Generation cost | Unknown | Included |
-| Reading cost | Unknown (separate) | Included |
-| Total cost visibility | Requires quotes | Clear |
-| Budget planning | Difficult | Straightforward |
+| Published pricing | Yes — per-product pages | Yes — single page |
+| Generation cost | $990–$3,990 (1D vs 1D+2D tier) | Included |
+| Reading cost | Sold separately ($990+) | Included |
+| Total cost visibility | Sum of two SKUs | Single SKU |
+| 1D vs 2D tier choice required | Yes | No |
 
 ---
 
@@ -640,8 +621,7 @@ dotnet add package IronBarcode
 
 **Before:**
 ```csharp
-using OnBarcode.Barcode;
-using OnBarcode.Barcode.Reader;  // If using reader
+using OnBarcode.Barcode;  // covers both Generator and Reader namespaces
 ```
 
 **After:**
@@ -655,21 +635,20 @@ using IronBarCode;
 
 | OnBarcode | IronBarcode | Notes |
 |----------|-------------|-------|
-| `Barcode` class | `BarcodeWriter.CreateBarcode()` | Static factory |
-| `barcode.Symbology` | Second parameter | Encoding enum |
+| `Linear` / `QRCode` / `DataMatrix` / `PDF417` classes | `BarcodeWriter.CreateBarcode()` | Static factory |
+| `barcode.Type = BarcodeType.X` | Second parameter | Encoding enum |
 | `barcode.Data` | First parameter | Data string |
 | `barcode.drawBarcode()` | `barcode.SaveAsPng()` | Format-specific |
-| `Symbology.Code128Auto` | `BarcodeEncoding.Code128` | Similar enums |
-| `Symbology.QRCode` | `BarcodeEncoding.QRCode` | Same name |
+| `BarcodeType.CODE128` | `BarcodeEncoding.Code128` | Direct mapping |
+| `QRCode` class | `BarcodeEncoding.QRCode` | Direct mapping |
 
 #### Reading Classes (If Using Separate Reader)
 
 | OnBarcode Reader | IronBarcode | Notes |
 |-----------------|-------------|-------|
-| `BarcodeReader` class | `BarcodeReader.Read()` | Static method |
-| `reader.Scan()` | `BarcodeReader.Read()` | Similar signature |
-| `reader.BarcodeTypes` | Not needed | Auto-detection |
-| Return `string[]` | Return `BarcodeResults` | Richer result |
+| `BarcodeScanner.Scan()` static | `BarcodeReader.Read()` | Static method |
+| Format must be specified up front | Auto-detection | No `BarcodeType` argument needed |
+| Return `string[]` | Return `BarcodeResults` | Richer result with `.Value`, `.BarcodeType`, `.PageNumber` |
 
 ### Code Migration Examples
 
@@ -679,8 +658,8 @@ using IronBarCode;
 ```csharp
 using OnBarcode.Barcode;
 
-Barcode barcode = new Barcode();
-barcode.Symbology = Symbology.Code128Auto;
+Linear barcode = new Linear();
+barcode.Type = BarcodeType.CODE128;
 barcode.Data = "12345678";
 barcode.Resolution = 96;
 barcode.ShowText = true;
@@ -701,8 +680,7 @@ BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
 ```csharp
 using OnBarcode.Barcode;
 
-Barcode qr = new Barcode();
-qr.Symbology = Symbology.QRCode;
+QRCode qr = new QRCode();
 qr.Data = "https://example.com";
 qr.QRCodeDataMode = QRCodeDataMode.Auto;
 qr.QRCodeECL = QRCodeECL.M;
@@ -723,13 +701,11 @@ QRCodeWriter.CreateQrCode("https://example.com")
 ```csharp
 // Required OnBarcode.Barcode.Reader package
 // Required separate Reader license
-using OnBarcode.Barcode.Reader;
+using OnBarcode.Barcode;
 
-OnBarcode.Barcode.Reader.License.SetLicense("READER-KEY");
+License.RegisterLicense("READER-KEY");
 
-BarcodeReader reader = new BarcodeReader();
-reader.BarcodeTypes = new BarcodeType[] { BarcodeType.Code128 };
-string[] results = reader.Scan("barcode.png");
+string[] results = BarcodeScanner.Scan("barcode.png", BarcodeType.CODE128);
 ```
 
 **After (IronBarcode - included):**
@@ -753,8 +729,8 @@ using OnBarcode.Barcode;
 
 foreach (var file in files)
 {
-    Barcode barcode = new Barcode();
-    barcode.Symbology = Symbology.Code128Auto;
+    Linear barcode = new Linear();
+    barcode.Type = BarcodeType.CODE128;
     barcode.Data = GetDataForFile(file);
     barcode.drawBarcode(GetOutputPath(file));
 }
@@ -773,35 +749,39 @@ foreach (var file in files)
 
 ### Common Migration Issues
 
-#### Issue 1: No Equivalent for Barcode Class
+#### Issue 1: No Symbology-Specific Class in IronBarcode
 
-**Problem:** Looking for OnBarcode `Barcode` class equivalent.
+**Problem:** OnBarcode uses one class per symbology family (`Linear`, `QRCode`, `DataMatrix`, `PDF417`). Developers look for the same shape in IronBarcode.
 
-**Solution:** Use static factory methods:
+**Solution:** IronBarcode uses a single static factory parameterized by encoding:
 
 ```csharp
 // OnBarcode pattern
-var barcode = new Barcode();
-barcode.Symbology = ...;
-barcode.Data = ...;
+Linear barcode = new Linear();
+barcode.Type = BarcodeType.CODE128;
+barcode.Data = "...";
+barcode.drawBarcode("out.png");
 
 // IronBarcode pattern
-var barcode = BarcodeWriter.CreateBarcode(data, encoding);
+BarcodeWriter.CreateBarcode("...", BarcodeEncoding.Code128).SaveAsPng("out.png");
 ```
 
-#### Issue 2: Symbology Enum Mapping
+#### Issue 2: BarcodeType Enum Mapping
 
-**Problem:** Symbology enum names differ.
+**Problem:** Enum value casing and names differ.
 
 **Solution:** Common mappings:
 
 ```csharp
 // OnBarcode -> IronBarcode
-Symbology.Code128Auto -> BarcodeEncoding.Code128
-Symbology.QRCode -> BarcodeEncoding.QRCode
-Symbology.EAN13 -> BarcodeEncoding.EAN13
-Symbology.DataMatrix -> BarcodeEncoding.DataMatrix
-Symbology.PDF417 -> BarcodeEncoding.PDF417
+BarcodeType.CODE128   -> BarcodeEncoding.Code128
+BarcodeType.CODE39    -> BarcodeEncoding.Code39
+BarcodeType.EAN13     -> BarcodeEncoding.EAN13
+BarcodeType.UPCA      -> BarcodeEncoding.UPCA
+// 2D classes -> encoding values
+QRCode class      -> BarcodeEncoding.QRCode
+DataMatrix class  -> BarcodeEncoding.DataMatrix
+PDF417 class      -> BarcodeEncoding.PDF417
 ```
 
 #### Issue 3: Reader License Not Needed
@@ -811,8 +791,7 @@ Symbology.PDF417 -> BarcodeEncoding.PDF417
 **Solution:** IronBarcode includes reading with the same license:
 
 ```csharp
-// Remove separate reader license
-// OnBarcode.Barcode.Reader.License.SetLicense("...");
+// Remove separate reader license registration
 
 // IronBarcode - same key works for everything
 IronBarCode.License.LicenseKey = "YOUR-KEY";

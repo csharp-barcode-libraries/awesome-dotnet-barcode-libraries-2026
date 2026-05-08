@@ -1,12 +1,20 @@
 /**
  * Telerik RadBarcode Platform Inconsistency Comparison
  *
- * This example demonstrates the fundamental platform limitation of Telerik RadBarcode:
+ * This example demonstrates the platform inconsistency of Telerik RadBarcode:
  * - Barcode GENERATION works on all platforms (WPF, WinForms, Blazor, ASP.NET)
- * - Barcode READING only works on WPF and WinForms (desktop platforms)
- * - Web applications (Blazor, ASP.NET Core, ASP.NET AJAX) have NO reading capability
+ * - Barcode READING only ships on WPF and WinForms (desktop platforms)
+ * - The WPF reader supports 1D + QR/PDF417/DataMatrix (no Aztec/MaxiCode/MicroQR/DotCode)
+ * - The WinForms reader supports 1D ONLY (no 2D formats at all)
+ * - Blazor / ASP.NET AJAX / ASP.NET Core have NO barcode reader
  *
- * IronBarcode provides consistent read/write capabilities across ALL platforms.
+ * Distribution: Telerik UI packages are NOT on public nuget.org. They are
+ * distributed via the licensed feed at https://nuget.telerik.com/v3/index.json
+ * with API-key authentication.
+ *
+ * IronBarcode provides consistent read/write capabilities across ALL platforms,
+ * is shipped on public nuget.org as the `BarCode` package, and uses one API
+ * surface everywhere.
  *
  * Author: Jacob Mellor, CTO of Iron Software
  * Comparison: Telerik RadBarcode vs IronBarcode
@@ -23,12 +31,14 @@ namespace TelerikPlatformExample
 
     /// <summary>
     /// Telerik WPF Implementation - READING WORKS HERE
-    /// Only WPF and WinForms have RadBarcodeReader available
+    /// Namespace: Telerik.Windows.Controls.Barcode
+    /// Assembly:  Telerik.Windows.Controls.DataVisualization.dll
     /// </summary>
     public class TelerikWpfBarcodeService
     {
-        // Install: Telerik.UI.for.Wpf.60.Xaml
-        // Requires: Telerik UI for WPF license ($1,149+/year)
+        // Install (private feed): Telerik.UI.for.Wpf.60.Xaml
+        // Requires: Telerik UI for WPF license — 2026 list price
+        //   $749 (Lite) to $1,249 (Ultimate) per developer per year
 
         /*
         using Telerik.Windows.Controls.Barcode;
@@ -39,22 +49,22 @@ namespace TelerikPlatformExample
             // Load image as WPF BitmapImage
             var bitmap = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
 
-            // Create reader - only available in WPF
+            // Create reader - only available in WPF and WinForms
             var reader = new RadBarcodeReader();
 
-            // Must specify decode types - only 1D formats supported
-            reader.DecodeTypes = new DecodeType[]
-            {
-                DecodeType.Code128,
-                DecodeType.Code39,
-                DecodeType.EAN13,
-                DecodeType.EAN8,
-                DecodeType.UPCA,
-                DecodeType.UPCE,
-                DecodeType.Codabar,
-                DecodeType.ITF
-                // Note: No QR, DataMatrix, PDF417 support
-            };
+            // The WPF DecodeType is a [Flags] enum — combine with bitwise OR.
+            // 1D formats plus QR, PDF417, and DataMatrix are supported.
+            // Aztec, MaxiCode, MicroQR, and DotCode are NOT in the enum.
+            reader.DecodeTypes = DecodeType.Code128
+                               | DecodeType.Code39
+                               | DecodeType.EAN13
+                               | DecodeType.EAN8
+                               | DecodeType.UPCA
+                               | DecodeType.UPCE
+                               | DecodeType.Codabar
+                               | DecodeType.QR
+                               | DecodeType.PDF417
+                               | DecodeType.DataMatrix;
 
             // Decode the barcode
             var result = reader.Decode(bitmap);
@@ -67,7 +77,7 @@ namespace TelerikPlatformExample
             // Generation works - create RadBarcode in code-behind
             var barcode = new RadBarcode();
             barcode.Value = value;
-            barcode.Symbology = new Code128ASettings();
+            barcode.Symbology = new Code128();
 
             // Render to image
             return RenderBarcode(barcode);
@@ -78,43 +88,47 @@ namespace TelerikPlatformExample
         {
             Console.WriteLine("Telerik WPF Barcode Capabilities:");
             Console.WriteLine("  - Generation: YES");
-            Console.WriteLine("  - Reading: YES (1D only)");
-            Console.WriteLine("  - QR Reading: NO");
+            Console.WriteLine("  - Reading (1D): YES");
+            Console.WriteLine("  - Reading (QR / PDF417 / DataMatrix): YES");
+            Console.WriteLine("  - Reading (Aztec / MaxiCode / MicroQR / DotCode): NO");
             Console.WriteLine("  - PDF Support: NO");
         }
     }
 
     /// <summary>
     /// Telerik WinForms Implementation - READING WORKS HERE
-    /// WinForms also has barcode reader available
+    /// Namespace: Telerik.WinControls.UI.Barcode
+    /// Class:     RadBarcodeReader (1D only)
+    ///
+    /// Telerik docs: "Currently, all of the 1D barcodes, offered by Telerik,
+    ///                are supported."
     /// </summary>
     public class TelerikWinFormsBarcodeService
     {
-        // Install: Telerik.UI.for.WinForms.Barcode
-        // Requires: Telerik UI for WinForms license ($1,149+/year)
+        // Install (private feed): Telerik.UI.for.WinForms
+        // Requires: Telerik UI for WinForms license — 2026 list price
+        //   $749 (Lite) to $1,249 (Ultimate) per developer per year
 
         /*
         using Telerik.WinControls.UI;
         using Telerik.WinControls.UI.Barcode;
+        using System.Drawing;
 
         public string ReadBarcode(string imagePath)
         {
             // Load image as System.Drawing.Image
             using var image = Image.FromFile(imagePath);
 
-            // Create reader - available in WinForms
-            var reader = new BarCodeReader();
+            // Create reader - available in WinForms (1D only)
+            var reader = new RadBarcodeReader();
 
-            // Must specify barcode types to look for
-            reader.DecodeType = new DecodeType[]
-            {
-                DecodeType.Code128,
-                DecodeType.Code39,
-                DecodeType.EAN13,
-                DecodeType.Code11,
-                DecodeType.ITF
-                // Still no 2D barcode support
-            };
+            // The WinForms DecodeType is a [Flags] enum — 1D formats only.
+            // No QR, DataMatrix, PDF417, Aztec, MaxiCode, MicroQR, DotCode.
+            reader.DecodeType = DecodeType.Code128
+                              | DecodeType.Code39
+                              | DecodeType.EAN13
+                              | DecodeType.Code11
+                              | DecodeType.IntelligentMail;
 
             // Read the barcode
             var result = reader.Read(image);
@@ -137,8 +151,8 @@ namespace TelerikPlatformExample
         {
             Console.WriteLine("Telerik WinForms Barcode Capabilities:");
             Console.WriteLine("  - Generation: YES");
-            Console.WriteLine("  - Reading: YES (1D only)");
-            Console.WriteLine("  - QR Reading: NO");
+            Console.WriteLine("  - Reading (1D): YES");
+            Console.WriteLine("  - Reading (any 2D — QR, DataMatrix, PDF417, Aztec, ...): NO");
             Console.WriteLine("  - PDF Support: NO");
         }
     }
@@ -149,8 +163,9 @@ namespace TelerikPlatformExample
     /// </summary>
     public class TelerikBlazorBarcodeService
     {
-        // Install: Telerik.UI.for.Blazor
-        // Requires: Telerik UI for Blazor license ($1,099+/year)
+        // Install (private feed): Telerik.UI.for.Blazor
+        // Requires: Telerik UI for Blazor license — 2026 list price
+        //   $749 (Lite) to $1,249 (Ultimate) per developer per year
 
         /*
         // In .razor file:
@@ -187,7 +202,7 @@ namespace TelerikPlatformExample
     /// </summary>
     public class TelerikAspNetCoreBarcodeService
     {
-        // Install: Telerik.UI.for.AspNet.Core
+        // Install (private feed): Telerik.UI.for.AspNet.Core
         // Requires: Telerik UI for ASP.NET Core license
 
         /*
@@ -243,7 +258,7 @@ namespace IronBarcodePlatformExample
     /// </summary>
     public class UniversalBarcodeService
     {
-        // Install: dotnet add package IronBarcode
+        // Install: dotnet add package BarCode
         // License: IronBarCode.License.LicenseKey = "YOUR-KEY";
 
         /// <summary>
@@ -258,14 +273,15 @@ namespace IronBarcodePlatformExample
             if (results.Any())
             {
                 var barcode = results.First();
-                return $"Type: {barcode.BarcodeType}, Value: {barcode.Text}";
+                return $"Type: {barcode.BarcodeType}, Value: {barcode.Value}";
             }
 
             return "No barcode found";
         }
 
         /// <summary>
-        /// Read QR codes - impossible with Telerik, trivial with IronBarcode
+        /// Read QR codes — works on every platform, including those Telerik
+        /// does not cover at all (Blazor, ASP.NET Core, ASP.NET AJAX, WinForms).
         /// </summary>
         public string ReadQrCode(string imagePath)
         {
@@ -274,7 +290,7 @@ namespace IronBarcodePlatformExample
 
             var qrCodes = results.Where(r => r.BarcodeType == BarcodeEncoding.QRCode);
 
-            return qrCodes.FirstOrDefault()?.Text ?? "No QR code found";
+            return qrCodes.FirstOrDefault()?.Value ?? "No QR code found";
         }
 
         /// <summary>
@@ -285,7 +301,7 @@ namespace IronBarcodePlatformExample
             // Native PDF support - reads all barcodes from all pages
             var results = BarcodeReader.Read(pdfPath);
 
-            return results.Select(r => $"Page {r.PageNumber}: {r.Text}").ToArray();
+            return results.Select(r => $"Page {r.PageNumber}: {r.Value}").ToArray();
         }
 
         /// <summary>
@@ -312,9 +328,8 @@ namespace IronBarcodePlatformExample
             Console.WriteLine("IronBarcode Universal Capabilities:");
             Console.WriteLine("  - Generation: YES (all platforms)");
             Console.WriteLine("  - Reading: YES (all platforms)");
-            Console.WriteLine("  - QR/2D Reading: YES");
+            Console.WriteLine("  - QR / 2D Reading (incl. Aztec, MaxiCode, MicroQR, DotCode): YES");
             Console.WriteLine("  - PDF Support: YES");
-            Console.WriteLine("  - ML Error Correction: YES");
             Console.WriteLine("  - Automatic Detection: YES");
             Console.WriteLine();
             Console.WriteLine("  Same code works everywhere - no platform restrictions.");
@@ -334,44 +349,39 @@ namespace PlatformComparison
     {
         public static void ShowComparison()
         {
-            Console.WriteLine("╔══════════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║        TELERIK VS IRONBARCODE: PLATFORM SUPPORT MATRIX          ║");
-            Console.WriteLine("╠══════════════════════════════════════════════════════════════════╣");
-            Console.WriteLine("║                                                                  ║");
-            Console.WriteLine("║  TELERIK RADBARCODE                                              ║");
-            Console.WriteLine("║  ┌──────────────────┬────────────┬─────────────┬─────────────┐  ║");
-            Console.WriteLine("║  │ Platform         │ Generation │ 1D Reading  │ 2D Reading  │  ║");
-            Console.WriteLine("║  ├──────────────────┼────────────┼─────────────┼─────────────┤  ║");
-            Console.WriteLine("║  │ WPF              │     ✓      │      ✓      │      ✗      │  ║");
-            Console.WriteLine("║  │ WinForms         │     ✓      │      ✓      │      ✗      │  ║");
-            Console.WriteLine("║  │ Blazor           │     ✓      │      ✗      │      ✗      │  ║");
-            Console.WriteLine("║  │ ASP.NET Core     │     ✓      │      ✗      │      ✗      │  ║");
-            Console.WriteLine("║  │ ASP.NET AJAX     │     ✓      │      ✗      │      ✗      │  ║");
-            Console.WriteLine("║  │ Docker/Linux     │     ?      │      ✗      │      ✗      │  ║");
-            Console.WriteLine("║  │ Azure Functions  │     ?      │      ✗      │      ✗      │  ║");
-            Console.WriteLine("║  └──────────────────┴────────────┴─────────────┴─────────────┘  ║");
-            Console.WriteLine("║                                                                  ║");
-            Console.WriteLine("║  IRONBARCODE                                                     ║");
-            Console.WriteLine("║  ┌──────────────────┬────────────┬─────────────┬─────────────┐  ║");
-            Console.WriteLine("║  │ Platform         │ Generation │ 1D Reading  │ 2D Reading  │  ║");
-            Console.WriteLine("║  ├──────────────────┼────────────┼─────────────┼─────────────┤  ║");
-            Console.WriteLine("║  │ WPF              │     ✓      │      ✓      │      ✓      │  ║");
-            Console.WriteLine("║  │ WinForms         │     ✓      │      ✓      │      ✓      │  ║");
-            Console.WriteLine("║  │ Blazor           │     ✓      │      ✓      │      ✓      │  ║");
-            Console.WriteLine("║  │ ASP.NET Core     │     ✓      │      ✓      │      ✓      │  ║");
-            Console.WriteLine("║  │ Console          │     ✓      │      ✓      │      ✓      │  ║");
-            Console.WriteLine("║  │ Docker/Linux     │     ✓      │      ✓      │      ✓      │  ║");
-            Console.WriteLine("║  │ Azure Functions  │     ✓      │      ✓      │      ✓      │  ║");
-            Console.WriteLine("║  │ AWS Lambda       │     ✓      │      ✓      │      ✓      │  ║");
-            Console.WriteLine("║  └──────────────────┴────────────┴─────────────┴─────────────┘  ║");
-            Console.WriteLine("║                                                                  ║");
-            Console.WriteLine("║  Key Differences:                                                ║");
-            Console.WriteLine("║  • Telerik: Reading restricted to desktop (WPF/WinForms)        ║");
-            Console.WriteLine("║  • Telerik: No 2D barcode reading on ANY platform               ║");
-            Console.WriteLine("║  • IronBarcode: Full read/write on ALL platforms                ║");
-            Console.WriteLine("║  • IronBarcode: 50+ formats including all 2D types              ║");
-            Console.WriteLine("║                                                                  ║");
-            Console.WriteLine("╚══════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine("==================================================================");
+            Console.WriteLine("       TELERIK VS IRONBARCODE: PLATFORM SUPPORT MATRIX");
+            Console.WriteLine("==================================================================");
+            Console.WriteLine();
+            Console.WriteLine("  TELERIK RADBARCODE");
+            Console.WriteLine("  Platform         | Generation | 1D Reading | 2D Reading                 ");
+            Console.WriteLine("  -----------------+------------+------------+----------------------------");
+            Console.WriteLine("  WPF              |    YES     |    YES     | QR / PDF417 / DataMatrix only");
+            Console.WriteLine("  WinForms         |    YES     |    YES     | NO (1D-only reader)        ");
+            Console.WriteLine("  Blazor           |    YES     |    NO      | NO                         ");
+            Console.WriteLine("  ASP.NET Core     |    YES     |    NO      | NO                         ");
+            Console.WriteLine("  ASP.NET AJAX     |    YES     |    NO      | NO                         ");
+            Console.WriteLine("  Docker/Linux     |    n/a     |    NO      | NO                         ");
+            Console.WriteLine("  Azure Functions  |    n/a     |    NO      | NO                         ");
+            Console.WriteLine();
+            Console.WriteLine("  IRONBARCODE");
+            Console.WriteLine("  Platform         | Generation | 1D Reading | 2D Reading                 ");
+            Console.WriteLine("  -----------------+------------+------------+----------------------------");
+            Console.WriteLine("  WPF              |    YES     |    YES     | YES                        ");
+            Console.WriteLine("  WinForms         |    YES     |    YES     | YES                        ");
+            Console.WriteLine("  Blazor           |    YES     |    YES     | YES                        ");
+            Console.WriteLine("  ASP.NET Core     |    YES     |    YES     | YES                        ");
+            Console.WriteLine("  Console          |    YES     |    YES     | YES                        ");
+            Console.WriteLine("  Docker/Linux     |    YES     |    YES     | YES                        ");
+            Console.WriteLine("  Azure Functions  |    YES     |    YES     | YES                        ");
+            Console.WriteLine("  AWS Lambda       |    YES     |    YES     | YES                        ");
+            Console.WriteLine();
+            Console.WriteLine("  Key Differences:");
+            Console.WriteLine("  - Telerik: Reading restricted to desktop (WPF / WinForms)");
+            Console.WriteLine("  - Telerik: 2D reading is partial on WPF, absent on WinForms,");
+            Console.WriteLine("    and unavailable on every web platform.");
+            Console.WriteLine("  - Telerik: No Aztec, MaxiCode, MicroQR, or DotCode on any platform.");
+            Console.WriteLine("  - IronBarcode: Same API on every platform with broader format coverage.");
         }
     }
 
@@ -388,12 +398,12 @@ namespace PlatformComparison
             Console.WriteLine("  Problem: You need to build an API that reads barcodes from");
             Console.WriteLine("  uploaded documents on an ASP.NET Core server running in Docker.");
             Console.WriteLine();
-            Console.WriteLine("  Telerik Solution: NOT POSSIBLE");
-            Console.WriteLine("  - RadBarcodeReader only works on WPF/WinForms");
-            Console.WriteLine("  - No server-side reading capability");
-            Console.WriteLine("  - You would need to use a different library");
+            Console.WriteLine("  Telerik Solution: NOT POSSIBLE with Telerik UI alone");
+            Console.WriteLine("  - RadBarcodeReader ships only for WPF and WinForms");
+            Console.WriteLine("  - No server-side reading component on Blazor / ASP.NET Core / AJAX");
+            Console.WriteLine("  - You would need a different library for the server side");
             Console.WriteLine();
-            Console.WriteLine("  Result: Telerik cannot help with this common use case.");
+            Console.WriteLine("  Result: Telerik cannot cover this common use case on its own.");
         }
 
         public void IronBarcodeApproach()
@@ -422,7 +432,7 @@ namespace PlatformComparison
 
         return Ok(results.Select(r => new {
             r.BarcodeType,
-            r.Text,
+            r.Value,
             r.PageNumber
         }));
     }";

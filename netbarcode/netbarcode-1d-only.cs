@@ -10,13 +10,14 @@
 
 using System;
 using System.IO;
+using System.Linq;
 
 // NetBarcode package
 // Install: dotnet add package NetBarcode
 using NetBarcode;
 
 // IronBarcode package
-// Install: dotnet add package IronBarcode
+// Install: dotnet add package BarCode  (NuGet id is "BarCode"; namespace is IronBarCode with capital C)
 using IronBarCode;
 
 namespace NetBarcodeComparison
@@ -44,15 +45,18 @@ namespace NetBarcodeComparison
             ean13.SaveImageFile("netbarcode-ean13.png");
             Console.WriteLine("Generated: netbarcode-ean13.png (EAN-13) - SUCCESS");
 
-            // UPC-A - works
-            var upca = new Barcode("012345678905", Type.UPCA);
-            upca.SaveImageFile("netbarcode-upca.png");
-            Console.WriteLine("Generated: netbarcode-upca.png (UPC-A) - SUCCESS");
+            // EAN-8 - works (NetBarcode does NOT include UPC-A or UPC-E)
+            var ean8 = new Barcode("96385074", Type.EAN8);
+            ean8.SaveImageFile("netbarcode-ean8.png");
+            Console.WriteLine("Generated: netbarcode-ean8.png (EAN-8) - SUCCESS");
 
             // Code39 - works
             var code39 = new Barcode("CODE39TEST", Type.Code39);
             code39.SaveImageFile("netbarcode-code39.png");
             Console.WriteLine("Generated: netbarcode-code39.png (Code39) - SUCCESS");
+
+            // UPC-A is NOT supported in NetBarcode - the following would not compile:
+            // var upca = new Barcode("012345678905", Type.UPCA); // Type.UPCA does not exist
 
             Console.WriteLine("\nNetBarcode handles these 1D formats well.\n");
         }
@@ -137,14 +141,17 @@ namespace NetBarcodeComparison
         {
             Console.WriteLine("=== Real-World Scenario: E-commerce Evolution ===\n");
 
-            Console.WriteLine("Phase 1: Product UPC barcodes");
-            Console.WriteLine("  NetBarcode: Works");
-            Console.WriteLine("  IronBarcode: Works\n");
+            Console.WriteLine("Phase 1: Product retail barcodes");
+            Console.WriteLine("  NetBarcode: EAN-13 / EAN-8 only (no UPC-A or UPC-E)");
+            Console.WriteLine("  IronBarcode: EAN-13, EAN-8, UPC-A, UPC-E\n");
 
-            // Both can generate UPC codes
-            var netBarcodeUpc = new Barcode("012345678905", Type.UPCA);
-            netBarcodeUpc.SaveImageFile("product-upc-net.png");
+            // NetBarcode supports EAN family but not UPC family
+            var netBarcodeEan = new Barcode("5901234123457", Type.EAN13);
+            netBarcodeEan.SaveImageFile("product-ean-net.png");
 
+            // IronBarcode supports both EAN and UPC
+            BarcodeWriter.CreateBarcode("5901234123457", BarcodeEncoding.EAN13)
+                .SaveAsPng("product-ean-iron.png");
             BarcodeWriter.CreateBarcode("012345678905", BarcodeEncoding.UPCA)
                 .SaveAsPng("product-upc-iron.png");
 
@@ -166,12 +173,12 @@ namespace NetBarcodeComparison
             Console.WriteLine("  IronBarcode: Works\n");
 
             // NetBarcode cannot read
-            // IronBarcode can
+            // IronBarcode can — reader returns BarcodeResult objects with .Value and .BarcodeType
             var results = BarcodeReader.Read("product-upc-iron.png");
-            Console.WriteLine($"  IronBarcode read UPC: {results.FirstOrDefault()?.Text}");
+            Console.WriteLine($"  IronBarcode read UPC: {results.FirstOrDefault()?.Value}");
 
             var qrResults = BarcodeReader.Read("product-qr-iron.png");
-            Console.WriteLine($"  IronBarcode read QR: {qrResults.FirstOrDefault()?.Text}\n");
+            Console.WriteLine($"  IronBarcode read QR: {qrResults.FirstOrDefault()?.Value}\n");
         }
 
         /// <summary>
@@ -183,7 +190,7 @@ namespace NetBarcodeComparison
 
             Console.WriteLine("Starting requirement: Generate Code128 shipping labels");
             Console.WriteLine("  NetBarcode: Good choice initially ($0)");
-            Console.WriteLine("  IronBarcode: Also works ($749)\n");
+            Console.WriteLine("  IronBarcode: Also works ($799 perpetual, Lite tier)\n");
 
             Console.WriteLine("6 months later: 'We need QR codes for contactless delivery'");
             Console.WriteLine("  NetBarcode path:");
@@ -197,7 +204,7 @@ namespace NetBarcodeComparison
             Console.WriteLine("    1. Change encoding parameter");
             Console.WriteLine("    2. Done");
             Console.WriteLine("    Dev time: ~10 minutes ($17 at $100/hr)");
-            Console.WriteLine("    Running total: $749 + $17 = $766\n");
+            Console.WriteLine("    Running total: $799 + $17 = $816\n");
 
             Console.WriteLine("12 months later: 'We need to scan return labels from customers'");
             Console.WriteLine("  NetBarcode path:");
@@ -211,7 +218,7 @@ namespace NetBarcodeComparison
             Console.WriteLine("    1. Use BarcodeReader.Read()");
             Console.WriteLine("    2. Done");
             Console.WriteLine("    Dev time: ~30 minutes ($50 at $100/hr)");
-            Console.WriteLine("    Running total: $766 + $50 = $816\n");
+            Console.WriteLine("    Running total: $816 + $50 = $866\n");
 
             Console.WriteLine("18 months: Ongoing maintenance");
             Console.WriteLine("  NetBarcode path: 3 libraries to update, test compatibility");
@@ -219,8 +226,8 @@ namespace NetBarcodeComparison
 
             Console.WriteLine("SUMMARY:");
             Console.WriteLine("  NetBarcode 'free' path: $2,000+ in dev time");
-            Console.WriteLine("  IronBarcode paid path: $816 total");
-            Console.WriteLine("  Savings with IronBarcode: $1,184+\n");
+            Console.WriteLine("  IronBarcode paid path: $866 total");
+            Console.WriteLine("  Savings with IronBarcode: $1,134+\n");
         }
 
         public static void Main(string[] args)

@@ -23,7 +23,7 @@
  * - MSVC++ 2017 Redistributable
  *
  * IronBarcode:
- * dotnet add package IronBarcode
+ * dotnet add package BarCode    (NuGet package id: BarCode; namespace: IronBarCode)
  *
  * That's it.
  */
@@ -112,7 +112,7 @@ namespace BarcodeComparison
 
             var packages = new[]
             {
-                ("IronBarcode", "~35 MB", "Complete barcode library"),
+                ("BarCode", "~35 MB", "Complete barcode library (namespace IronBarCode)"),
                 ("(Transitive dependencies)", "included", "ImageSharp, IronSoftware.Drawing"),
             };
 
@@ -301,7 +301,7 @@ public class IronBarcodeBarcodeReader
     {
         // Single line: auto-detects format, reads all barcodes
         var results = BarcodeReader.Read(imagePath);
-        return results.Select(b => b.Text).ToArray();
+        return results.Select(b => b.Value).ToArray();
     }
 }
 
@@ -321,7 +321,7 @@ public class IronBarcodeBarcodeReader
 
             // Read it back
             var results = BarcodeReader.Read("demo-barcode.png");
-            Console.WriteLine($"  Generated and read barcode: {results.FirstOrDefault()?.Text}");
+            Console.WriteLine($"  Generated and read barcode: {results.FirstOrDefault()?.Value}");
 
             // Clean up
             File.Delete("demo-barcode.png");
@@ -412,7 +412,7 @@ public List<string> ReadBarcodesFromPdf(string pdfPath)
     var results = BarcodeReader.Read(pdfPath);
 
     return results
-        .Select(b => $""Page {b.PageNumber}: {b.Text}"")
+        .Select(b => $""Page {b.PageNumber}: {b.Value}"")
         .ToList();
 }
 

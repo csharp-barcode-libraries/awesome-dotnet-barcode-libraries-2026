@@ -17,7 +17,7 @@
  * dotnet add package Leadtools.Codecs
  *
  * IronBarcode:
- * dotnet add package IronBarcode
+ * dotnet add package BarCode    (NuGet package id: BarCode; namespace: IronBarCode)
  */
 
 using System;
@@ -167,7 +167,7 @@ LEADTOOLS uses a TWO-TIER licensing model:
 
 1. DEVELOPMENT LICENSE (what you buy first):
    - Per-developer annual subscription
-   - ~$1,295-$1,469 per developer
+   - Starts ~$1,469 per developer (LEADTOOLS Barcode v23, ComponentSource listing)
    - Enables development and testing
    - DOES NOT include production deployment rights
 
@@ -262,9 +262,10 @@ IronBarcode uses SINGLE-TIER perpetual licensing:
 2. PRICING IS TRANSPARENT:
    | License     | Price (one-time) | Developers | Servers   |
    |-------------|------------------|------------|-----------|
-   | Lite        | $749             | 1          | Unlimited |
-   | Professional| $1,499           | 10         | Unlimited |
-   | Enterprise  | $2,999           | Unlimited  | Unlimited |
+   | Lite        | $799             | 1          | Unlimited |
+   | Plus        | $1,199           | 3          | Unlimited |
+   | Professional| $2,399           | 10         | Unlimited |
+   | Unlimited   | $4,799           | Unlimited  | Unlimited |
 
 3. NO ONGOING FEES:
    - Perpetual license (you own it)
@@ -449,7 +450,7 @@ jobs:
             var comparisons = new[]
             {
                 ("License type", "File + Key (two-tier)", "Key only (single-tier)"),
-                ("Development license", "$1,295-$1,469/dev/year", "$749-$2,999 one-time"),
+                ("Development license", "from ~$1,469/dev/year", "$799-$4,799 one-time"),
                 ("Deployment license", "Separate purchase", "Included"),
                 ("Deployment pricing", "Contact sales", "Published on website"),
                 ("License artifact", "File + Key string", "Key string only"),

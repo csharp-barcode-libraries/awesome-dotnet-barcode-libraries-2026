@@ -12,8 +12,8 @@
  * - This is the #1 production issue with ZXing.Net
  *
  * NuGet Packages Required:
- * - ZXing.Net: ZXing.Net version 0.16.x+, ZXing.Net.Bindings.Windows
- * - IronBarcode: IronBarcode version 2024.x+
+ * - ZXing.Net: ZXing.Net 0.16.11+, ZXing.Net.Bindings.Windows.Compatibility
+ * - IronBarcode: BarCode (namespace IronBarCode)
  */
 
 using System;
@@ -357,7 +357,7 @@ namespace IronBarcodeExamples
         {
             // One line - detects all 50+ formats automatically
             var result = BarcodeReader.Read(imagePath).FirstOrDefault();
-            return result?.Text;
+            return result?.Value;
         }
 
         /// <summary>
@@ -379,7 +379,7 @@ namespace IronBarcodeExamples
             foreach (var result in results)
             {
                 Console.WriteLine($"Found: {result.BarcodeType}");
-                Console.WriteLine($"Value: {result.Text}");
+                Console.WriteLine($"Value: {result.Value}");
                 Console.WriteLine($"Position: ({result.X}, {result.Y})");
                 Console.WriteLine();
             }
@@ -390,16 +390,16 @@ namespace IronBarcodeExamples
         /// </summary>
         public static string ReadMedicationBarcode(string imagePath)
         {
-            // Works for DATA_MATRIX, QR, or any other format
+            // Works for DataMatrix, QRCode, or any other format
             var result = BarcodeReader.Read(imagePath).FirstOrDefault();
 
             if (result != null)
             {
                 Console.WriteLine($"SUCCESS: Detected {result.BarcodeType}");
-                Console.WriteLine($"Medication info: {result.Text}");
+                Console.WriteLine($"Medication info: {result.Value}");
             }
 
-            return result?.Text;
+            return result?.Value;
         }
 
         /// <summary>
@@ -407,16 +407,16 @@ namespace IronBarcodeExamples
         /// </summary>
         public static string ReadShippingCarton(string imagePath)
         {
-            // Works for ITF, CODE_128, or any other format
+            // Works for ITF, Code128, or any other format
             var result = BarcodeReader.Read(imagePath).FirstOrDefault();
 
             if (result != null)
             {
                 Console.WriteLine($"SUCCESS: Detected {result.BarcodeType}");
-                Console.WriteLine($"Shipping info: {result.Text}");
+                Console.WriteLine($"Shipping info: {result.Value}");
             }
 
-            return result?.Text;
+            return result?.Value;
         }
 
         /// <summary>
@@ -452,7 +452,7 @@ namespace IronBarcodeExamples
                 // Works regardless of what barcode format each vendor uses
                 var barcodes = BarcodeReader.Read(path);
 
-                results[path] = barcodes.Select(b => $"{b.BarcodeType}: {b.Text}").ToList();
+                results[path] = barcodes.Select(b => $"{b.BarcodeType}: {b.Value}").ToList();
             }
 
             return results;
@@ -473,19 +473,19 @@ namespace IronBarcodeExamples
                 switch (barcode.BarcodeType)
                 {
                     case BarcodeEncoding.Code128:
-                        Console.WriteLine($"Tracking Number: {barcode.Text}");
+                        Console.WriteLine($"Tracking Number: {barcode.Value}");
                         break;
 
                     case BarcodeEncoding.QRCode:
-                        Console.WriteLine($"Detailed Info: {barcode.Text}");
+                        Console.WriteLine($"Detailed Info: {barcode.Value}");
                         break;
 
                     case BarcodeEncoding.ITF:
-                        Console.WriteLine($"Carton ID: {barcode.Text}");
+                        Console.WriteLine($"Carton ID: {barcode.Value}");
                         break;
 
                     default:
-                        Console.WriteLine($"Other ({barcode.BarcodeType}): {barcode.Text}");
+                        Console.WriteLine($"Other ({barcode.BarcodeType}): {barcode.Value}");
                         break;
                 }
             }

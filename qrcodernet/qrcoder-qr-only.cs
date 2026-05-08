@@ -16,7 +16,7 @@ using System.IO;
 using QRCoder;
 
 // IronBarcode package
-// Install: dotnet add package IronBarcode
+// Install: dotnet add package BarCode
 using IronBarCode;
 
 namespace QRCoderComparison
@@ -229,7 +229,7 @@ namespace QRCoderComparison
             Console.WriteLine("  var results = BarcodeReader.Read(\"iron-to-read.png\");");
             foreach (var result in results)
             {
-                Console.WriteLine($"  Read value: {result.Text}");
+                Console.WriteLine($"  Read value: {result.Value}");
                 Console.WriteLine($"  Barcode type: {result.BarcodeType}");
             }
 

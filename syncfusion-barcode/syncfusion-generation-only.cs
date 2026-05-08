@@ -5,9 +5,19 @@
 // Barcode (generation-only UI control) and IronBarcode (read + write SDK).
 //
 // Key differences highlighted:
-// 1. Syncfusion Barcode component CANNOT read barcodes
-// 2. Syncfusion reading requires separate OPX product (uses ZXing internally)
-// 3. IronBarcode provides unified read/write in single package
+// 1. The Syncfusion barcode UI control (SfBarcode / SfBarcodeGenerator)
+//    has no reading API — it is generation-only.
+// 2. Syncfusion offers a separate "Barcode Reader OPX" add-on that wraps
+//    the open-source ZXing library and is paired with Syncfusion Essential PDF.
+// 3. IronBarcode provides unified read/write in single package.
+//
+// NuGet packages (per-platform, install only the one you need):
+//   Syncfusion.SfBarcode.Windows    (WinForms)
+//   Syncfusion.SfBarcode.WPF        (WPF)
+//   Syncfusion.Barcode.WinUI        (WinUI)
+//   Syncfusion.Blazor.BarcodeGenerator (Blazor)
+//   Syncfusion.Maui.Barcode         (.NET MAUI)
+//   Syncfusion.Xamarin.SfBarcode    (Xamarin.Forms)
 // =============================================================================
 
 using System;
@@ -171,7 +181,7 @@ namespace GenerationOnlyComparison
         /// </summary>
         public void GenerateCode128()
         {
-            // Install: dotnet add package IronBarcode
+            // Install: dotnet add package BarCode  (NuGet id is "BarCode"; namespace is IronBarCode)
 
             // One line to generate and save
             BarcodeWriter.CreateBarcode("12345678", BarcodeEncoding.Code128)
@@ -224,8 +234,7 @@ namespace GenerationOnlyComparison
             foreach (var barcode in results)
             {
                 Console.WriteLine($"Type: {barcode.BarcodeType}");
-                Console.WriteLine($"Value: {barcode.Text}");
-                Console.WriteLine($"Confidence: {barcode.Confidence}");
+                Console.WriteLine($"Value: {barcode.Value}");
             }
         }
 
@@ -239,7 +248,7 @@ namespace GenerationOnlyComparison
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Text}");
+                Console.WriteLine($"Page {barcode.PageNumber}: {barcode.Value}");
             }
         }
 
@@ -252,7 +261,7 @@ namespace GenerationOnlyComparison
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Found: {barcode.Text}");
+                Console.WriteLine($"Found: {barcode.Value}");
             }
         }
 
@@ -267,7 +276,7 @@ namespace GenerationOnlyComparison
             foreach (var barcode in results)
             {
                 Console.WriteLine($"File: {barcode.InputPath}");
-                Console.WriteLine($"Value: {barcode.Text}");
+                Console.WriteLine($"Value: {barcode.Value}");
             }
         }
     }
@@ -325,7 +334,7 @@ namespace GenerationOnlyComparison
             // STEP 3: Match and verify
             foreach (var scanned in scannedResults)
             {
-                var packageId = scanned.Text;
+                var packageId = scanned.Value;
                 var sourceFile = scanned.InputPath;
                 var matchStatus = trackingCodes.Contains(packageId)
                     ? "VERIFIED"

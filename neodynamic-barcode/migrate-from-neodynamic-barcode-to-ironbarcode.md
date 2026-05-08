@@ -10,7 +10,7 @@ This guide provides a complete migration path from `Neodynamic.SDK.Barcode` and 
 
 **The Third-Library Problem:** Teams that encountered the 2D reading gap and chose to work around it rather than migrate typically added a third library — ZXing.Net being the most common choice — specifically to cover QR code reading. That decision trades one limitation for a different complexity: three barcode-related dependencies, each with its own version constraints, its own release notes, and its own potential for conflict when the .NET runtime or dependent framework is updated. IronBarcode replaces all three.
 
-**Pricing Complexity:** Neodynamic Barcode Professional SDK is priced at approximately $245 for a single developer license. Barcode Reader SDK carries a separate cost. A project that needs both generation and 1D reading must purchase both, and the combined cost approaches or exceeds $500. A project that needs 2D reading still cannot meet that requirement at any price within the Neodynamic product family. IronBarcode Lite at $749 covers generation and reading — 1D and 2D — under a single license.
+**Pricing Complexity:** Neodynamic Barcode Professional for .NET Standard is priced at approximately $352 (Basic Edition) to $705 (Ultimate Edition) for a single developer license, distributed via ComponentSource. Barcode Reader SDK carries a separate cost and has been end-of-service-life since December 31, 2019, with its NuGet package (`Neodynamic.SDK.BarcodeReader` 1.0.2000) untouched since July 2012. A project that needs both generation and 1D reading must purchase both. A project that needs 2D reading cannot meet that requirement at any price within the Neodynamic product family. IronBarcode Lite at $799 covers generation and reading — 1D and 2D — under a single perpetual license.
 
 ### The Fundamental Problem
 
@@ -24,7 +24,8 @@ using System.Drawing;
 public string ReadQrCode(string imagePath)
 {
     using var bitmap = new Bitmap(imagePath);
-    var results = BarcodeReader.Read(bitmap);
+    var reader = new BarcodeReader();
+    var results = reader.Read(bitmap);
 
     // Results are always null or empty for 2D barcodes
     if (results == null || !results.Any())
@@ -68,7 +69,7 @@ Every `throw new NotSupportedException(...)` placeholder in a codebase that refe
 | License keys required | 1 | 1 (separate) | 1 (covers all) |
 | System.Drawing dependency | Yes | Yes | No |
 | Linux / Docker support | Limited | Limited | Yes |
-| .NET 8 / .NET 9 support | Yes | Limited | Yes |
+| .NET 8 / .NET 9 support | Yes (.NET Standard edition) | No (.NET Framework only, EOL) | Yes |
 | Async batch reading | No | No | Yes |
 
 ## Quick Start: Neodynamic Barcode to IronBarcode Migration
@@ -87,7 +88,7 @@ Verify both entries are gone from the `.csproj` file before proceeding.
 ### Step 2: Add IronBarcode
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Step 3: Replace Dual License Configuration
@@ -99,8 +100,8 @@ Remove both Neodynamic license blocks and replace them with a single IronBarcode
 using Neodynamic.SDK.Barcode;
 using Neodynamic.SDK.BarcodeReader;
 
-BarcodeInfo.LicenseOwner = "Your Company";
-BarcodeInfo.LicenseKey = "GEN-LICENSE-KEY";
+BarcodeProfessional.LicenseOwner = "Your Company";
+BarcodeProfessional.LicenseKey = "GEN-LICENSE-KEY";
 
 Neodynamic.SDK.BarcodeReader.BarcodeReader.LicenseOwner = "Your Company";
 Neodynamic.SDK.BarcodeReader.BarcodeReader.LicenseKey = "READ-LICENSE-KEY";
@@ -127,13 +128,14 @@ using System.Drawing.Imaging;
 
 public void GenerateCode128(string data, string outputPath)
 {
-    var barcode = new BarcodeInfo();
-    barcode.Value = data;
+    var barcode = new BarcodeProfessional();
+    barcode.Code = data;
     barcode.Symbology = Symbology.Code128;
-    barcode.TextAlign = BarcodeTextAlignment.BelowCenter;
-    barcode.Dpi = 300;
+    barcode.BarcodeUnit = BarcodeUnit.Pixel;
+    barcode.ResolutionType = ResolutionType.Custom;
+    barcode.CustomResolution = 300;
 
-    System.Drawing.Image image = barcode.GetImage();
+    System.Drawing.Image image = barcode.GetBarcodeImage();
     image.Save(outputPath, ImageFormat.Png);
 }
 ```
@@ -150,7 +152,7 @@ public void GenerateCode128(string data, string outputPath)
 }
 ```
 
-The `System.Drawing.Imaging` import is no longer required. The `BarcodeInfo` instance and its property assignments collapse into a single method call. For sizing, annotation, and output format options, see the [creating 1D barcodes guide](https://ironsoftware.com/csharp/barcode/how-to/create-1d-barcodes/).
+The `System.Drawing.Imaging` import is no longer required. The `BarcodeProfessional` instance and its property assignments collapse into a single method call. For sizing, annotation, and output format options, see the [creating 1D barcodes guide](https://ironsoftware.com/csharp/barcode/how-to/create-1d-barcodes/).
 
 ### Generating a QR Code
 
@@ -161,12 +163,12 @@ using Neodynamic.SDK.Barcode;
 
 public void GenerateQrCode(string data, string outputPath)
 {
-    var barcode = new BarcodeInfo();
-    barcode.Value = data;
+    var barcode = new BarcodeProfessional();
+    barcode.Code = data;
     barcode.Symbology = Symbology.QRCode;
     barcode.QRCodeECL = QRCodeErrorCorrectionLevel.H;
 
-    barcode.GetImage().Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
+    barcode.GetBarcodeImage().Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
 }
 ```
 
@@ -195,7 +197,8 @@ using System.Drawing;
 public string[] Read1DBarcodes(string imagePath)
 {
     using var bitmap = new Bitmap(imagePath);
-    var results = BarcodeReader.Read(bitmap);
+    var reader = new BarcodeReader();
+    var results = reader.Read(bitmap);
     return results?.Select(r => r.Value).ToArray() ?? Array.Empty<string>();
 }
 ```
@@ -262,7 +265,7 @@ public void ReadBarcodesFromPdf(string pdfPath)
 
     foreach (var result in results)
     {
-        Console.WriteLine($"Value: {result.Value} | Format: {result.Format} | Page: {result.PageNumber}");
+        Console.WriteLine($"Value: {result.Value} | Type: {result.BarcodeType} | Page: {result.PageNumber}");
     }
 }
 ```
@@ -273,19 +276,19 @@ IronBarcode reads barcodes directly from PDF documents across all pages. The pag
 
 | Neodynamic API | IronBarcode Equivalent | Notes |
 |---|---|---|
-| `BarcodeInfo.LicenseOwner = "..."` | `IronBarCode.License.LicenseKey = "key"` | Merged into single key |
-| `BarcodeInfo.LicenseKey = "..."` | (part of single key above) | No separate owner field |
+| `BarcodeProfessional.LicenseOwner = "..."` | `IronBarCode.License.LicenseKey = "key"` | Merged into single key |
+| `BarcodeProfessional.LicenseKey = "..."` | (part of single key above) | No separate owner field |
 | `Neodynamic.SDK.BarcodeReader.BarcodeReader.LicenseOwner` | (removed) | Not required |
 | `Neodynamic.SDK.BarcodeReader.BarcodeReader.LicenseKey` | (removed) | Not required |
-| `new BarcodeInfo()` | `BarcodeWriter.CreateBarcode(data, encoding)` | Static, no instance |
-| `barcode.Value = data` | First parameter of `CreateBarcode` | Passed at construction |
+| `new BarcodeProfessional()` | `BarcodeWriter.CreateBarcode(data, encoding)` | Static, no instance |
+| `barcode.Code = data` | First parameter of `CreateBarcode` | Passed at construction |
 | `barcode.Symbology = Symbology.Code128` | `BarcodeEncoding.Code128` | Second parameter |
 | `barcode.Symbology = Symbology.QRCode` | `BarcodeEncoding.QRCode` | Full round-trip now supported |
 | `barcode.QRCodeECL = QRCodeErrorCorrectionLevel.H` | `QRCodeWriter.QrErrorCorrectionLevel.Highest` | Different class entry point |
-| `barcode.GetImage().Save(path, ImageFormat.Png)` | `.SaveAsPng(path)` | Fluent, no ImageFormat enum |
-| `BarcodeReader.Read(bitmap)` | `BarcodeReader.Read(imagePath)` | File path replaces Bitmap |
+| `barcode.GetBarcodeImage().Save(path, ImageFormat.Png)` | `.SaveAsPng(path)` | Fluent, no ImageFormat enum |
+| `new BarcodeReader().Read(bitmap)` | `BarcodeReader.Read(imagePath)` | Static, file path accepted |
 | `result.Value` | `result.Value` | Same property name |
-| `Symbology.DataMatrix` | `BarcodeEncoding.DataMatrix` | Generation only → generation and reading |
+| `Symbology.DataMatrix` (generate only) | `BarcodeEncoding.DataMatrix` | Generation only → generation and reading |
 | `throw new NotSupportedException(...)` for 2D reading | `BarcodeReader.Read(imagePath)` | Replace with working implementation |
 
 ## Common Migration Issues and Solutions
@@ -342,7 +345,7 @@ Replace the throwing method body with `BarcodeReader.Read(imagePath)` and remove
 - Search for all Neodynamic package references: `grep -r "Neodynamic.SDK" --include="*.csproj" .`
 - Search for all Neodynamic using directives: `grep -r "using Neodynamic" --include="*.cs" .`
 - Search for license configuration locations: `grep -r "LicenseOwner\|LicenseKey" --include="*.cs" .`
-- Search for all `BarcodeInfo` instantiation sites: `grep -r "new BarcodeInfo\(\)" --include="*.cs" .`
+- Search for all `BarcodeProfessional` instantiation sites: `grep -r "new BarcodeProfessional\(\)" --include="*.cs" .`
 - Search for all Neodynamic read calls: `grep -r "BarcodeReader.Read" --include="*.cs" .`
 - Search for all `NotSupportedException` usages in barcode paths: `grep -r "NotSupportedException" --include="*.cs" .`
 - Identify any third-party library (ZXing.Net or similar) that was added specifically to cover the 2D reading gap — this can be removed after migration
@@ -352,14 +355,14 @@ Replace the throwing method body with `BarcodeReader.Read(imagePath)` and remove
 
 1. Run `dotnet remove package Neodynamic.SDK.Barcode`
 2. Run `dotnet remove package Neodynamic.SDK.BarcodeReader`
-3. Run `dotnet add package IronBarcode`
+3. Run `dotnet add package BarCode`
 4. Remove all `using Neodynamic.SDK.Barcode` and `using Neodynamic.SDK.BarcodeReader` directives
 5. Add `using IronBarCode` in all files that perform barcode operations
 6. Remove both Neodynamic license configuration blocks
 7. Add `IronBarCode.License.LicenseKey = "YOUR-KEY"` once at application startup
-8. Replace `new BarcodeInfo()` + property assignments + `barcode.GetImage().Save(...)` with `BarcodeWriter.CreateBarcode(data, encoding).SaveAsPng(path)`
-9. Replace `QRCodeWriter` patterns accordingly using `QRCodeWriter.CreateQrCode()`
-10. Replace `BarcodeReader.Read(bitmap)` calls by removing the `new Bitmap(imagePath)` construction and passing the file path directly to `BarcodeReader.Read(imagePath)`
+8. Replace `new BarcodeProfessional()` + property assignments + `barcode.GetBarcodeImage().Save(...)` with `BarcodeWriter.CreateBarcode(data, encoding).SaveAsPng(path)`
+9. Replace QR generation with `QRCodeWriter.CreateQrCode()`
+10. Replace `new BarcodeReader().Read(bitmap)` calls by removing the `new Bitmap(imagePath)` construction and passing the file path directly to `BarcodeReader.Read(imagePath)`
 11. Remove all `throw new NotSupportedException(...)` placeholders for 2D reading and replace with `BarcodeReader.Read(imagePath)`
 12. Remove corresponding `catch (NotSupportedException)` blocks from callers
 13. Remove any third-party library that was added solely to cover the Neodynamic 2D reading gap

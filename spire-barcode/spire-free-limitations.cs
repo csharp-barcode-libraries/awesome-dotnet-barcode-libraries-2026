@@ -26,7 +26,7 @@ using System.IO;
 using Spire.Barcode;
 
 // IronBarcode
-// Install: dotnet add package IronBarcode
+// Install: dotnet add package BarCode
 using IronBarCode;
 
 namespace BarcodeComparison
@@ -45,12 +45,12 @@ namespace BarcodeComparison
 
             string testData = "DEMO-12345";
 
-            // FreeSpire.Barcode - Generates with evaluation watermark
+            // FreeSpire.Barcode - Generates with evaluation messaging until a free key is applied
             Console.WriteLine("FreeSpire.Barcode:");
-            Console.WriteLine("- Evaluation watermark covers significant portion of barcode");
-            Console.WriteLine("- Watermark text appears across the barcode image");
-            Console.WriteLine("- Makes generated barcodes unsuitable for production use");
-            Console.WriteLine("- Cannot be disabled without commercial license\n");
+            Console.WriteLine("- Evaluation messaging on output until a free community key is applied");
+            Console.WriteLine("- Subset of paid symbology coverage");
+            Console.WriteLine("- Slower scan speed than the paid edition (per E-iceblue)");
+            Console.WriteLine("- Free community key obtained from E-iceblue on request\n");
 
             try
             {
@@ -66,7 +66,7 @@ namespace BarcodeComparison
                 barcodeImage.Save("spire-free-watermarked.png", ImageFormat.Png);
 
                 Console.WriteLine("Generated: spire-free-watermarked.png");
-                Console.WriteLine("(Contains evaluation watermark)\n");
+                Console.WriteLine("(May contain evaluation messaging until free key is applied)\n");
             }
             catch (Exception ex)
             {
@@ -169,10 +169,10 @@ namespace BarcodeComparison
 
             // FreeSpire.Barcode limited symbologies
             Console.WriteLine("FreeSpire.Barcode symbology support:");
-            Console.WriteLine("- ~20 barcode types in free version");
+            Console.WriteLine("- Subset of paid Spire.Barcode symbologies");
             Console.WriteLine("- Some 2D formats restricted");
             Console.WriteLine("- Postal codes may be limited");
-            Console.WriteLine("- Full 39+ types require commercial license\n");
+            Console.WriteLine("- Paid edition supports ~38 symbologies\n");
 
             // Types commonly restricted in free version
             var restrictedTypes = new[]
@@ -192,7 +192,7 @@ namespace BarcodeComparison
 
             // IronBarcode full support in trial
             Console.WriteLine("IronBarcode trial symbology support:");
-            Console.WriteLine("- All 50+ barcode types available");
+            Console.WriteLine("- Full supported symbology set available during trial");
             Console.WriteLine("- No feature restrictions during trial");
             Console.WriteLine("- Full 2D format support (QR, DataMatrix, PDF417, Aztec)");
             Console.WriteLine("- Complete postal code support\n");
@@ -243,11 +243,11 @@ namespace BarcodeComparison
             // Code example for FreeSpire registration
             Console.WriteLine("FreeSpire.Barcode registration code:");
             Console.WriteLine(@"
-    // Apply registration key (obtained from E-iceblue)
-    Spire.Barcode.BarcodeSettings.ApplyKey(""FREE-REGISTRATION-KEY"");
+    // Apply license key (obtained from E-iceblue — same call for free or commercial)
+    Spire.License.LicenseProvider.SetLicenseKey(""YOUR-SPIRE-KEY"");
 
-    // Without this, warning dialogs may appear
-    // during barcode generation or scanning
+    // Without a key, evaluation messaging may appear
+    // on generated output
 ");
 
             // IronBarcode trial approach
@@ -278,11 +278,11 @@ namespace BarcodeComparison
 
             Console.WriteLine("| Aspect                 | FreeSpire.Barcode      | IronBarcode Trial      |");
             Console.WriteLine("|------------------------|------------------------|------------------------|");
-            Console.WriteLine("| Watermarks             | Large, intrusive       | Small, edge-placed     |");
+            Console.WriteLine("| Evaluation notice      | On output until keyed  | Small edge watermark   |");
             Console.WriteLine("| Feature access         | Limited subset         | Full features          |");
-            Console.WriteLine("| Performance            | Intentionally degraded | Full speed             |");
-            Console.WriteLine("| Symbology support      | ~20 types              | 50+ types              |");
-            Console.WriteLine("| Registration required  | Yes (free key)         | No                     |");
+            Console.WriteLine("| Performance            | Slower than paid       | Full speed             |");
+            Console.WriteLine("| Symbology support      | Subset of paid (~38)   | 30+ types              |");
+            Console.WriteLine("| Registration required  | Free key for notice    | No                     |");
             Console.WriteLine("| Support available      | No                     | Yes                    |");
             Console.WriteLine("| Time limit             | None                   | 30 days                |");
             Console.WriteLine("| Production suitable    | No                     | With license           |");

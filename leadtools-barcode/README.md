@@ -82,7 +82,7 @@ LEADTOOLS requires two separate license components:
 **1. Development License**
 - Per-developer annual subscription
 - Enables development and testing
-- Typically $1,295-$1,469+ per developer
+- Starts at approximately $1,469 per developer (LEADTOOLS Barcode v23, per ComponentSource listing)
 - Required for each developer writing LEADTOOLS code
 
 **2. Deployment License**
@@ -265,7 +265,7 @@ if (barcode1DRead || barcode2DRead || barcodeWrite)
 
 **Step 1: Single NuGet Package**
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 **Step 2: License Key (Optional During Development)**
@@ -404,7 +404,7 @@ public string[] ReadBarcodes(string imagePath)
 {
     // Auto-detect formats, no codec setup, no symbology specification
     var results = BarcodeReader.Read(imagePath);
-    return results.Select(r => r.Text).ToArray();
+    return results.Select(r => r.Value).ToArray();
 }
 ```
 
@@ -519,7 +519,7 @@ public List<string> ExtractFromPdf(string pdfPath)
 {
     // Native PDF support, handles multi-page automatically
     var results = BarcodeReader.Read(pdfPath);
-    return results.Select(r => $"Page {r.PageNumber}: {r.Text}").ToList();
+    return results.Select(r => $"Page {r.PageNumber}: {r.Value}").ToList();
 }
 ```
 
@@ -537,9 +537,10 @@ LEADTOOLS publishes development license pricing on their website:
 
 | Product | Price | Notes |
 |---------|-------|-------|
-| Document Imaging SDK | $1,295-$1,469/developer | Includes barcode |
+| LEADTOOLS Barcode (v23) | from ~$1,469/developer/year | ComponentSource listing |
+| Document Imaging SDK | Higher tiers | Includes barcode + OCR + forms |
 | Medical Imaging SDK | Higher tiers | Specialized pricing |
-| Barcode Module (if separate) | Contact sales | Sometimes bundled |
+| Deployment licenses | Contact sales | Not published |
 
 ### Deployment License Pricing
 
@@ -556,9 +557,10 @@ This opacity makes budgeting difficult without sales engagement.
 
 | Product | Price | Notes |
 |---------|-------|-------|
-| Lite | $749 one-time | 1 developer, perpetual |
-| Professional | $1,499 one-time | 10 developers, perpetual |
-| Enterprise | $2,999 one-time | Unlimited developers, perpetual |
+| Lite | $799 one-time | 1 developer, perpetual |
+| Plus | $1,199 one-time | 3 developers, perpetual |
+| Professional | $2,399 one-time | 10 developers, perpetual |
+| Unlimited | $4,799 one-time | Unlimited developers, perpetual |
 
 No deployment fees. No runtime licenses. Single purchase includes everything.
 
@@ -569,15 +571,15 @@ No deployment fees. No runtime licenses. Single purchase includes everything.
 **LEADTOOLS path:**
 ```
 Year 1:
-  Development licenses: $1,469 × 5 developers = $7,345
-  Deployment licenses: Contact sales (estimate ~$3,000-$5,000)
+  Development licenses: ~$1,469 × 5 developers = ~$7,345
+  Deployment licenses: Contact sales (not published; estimate $3,000-$5,000+)
   ────────────────────────────────────────────
-  Year 1 subtotal: ~$10,345-$12,345
+  Year 1 subtotal: ~$10,345-$12,345+
 
 Years 2-5:
   Maintenance/renewals: ~$2,500-$4,000/year
   ────────────────────────────────────────────
-  5-year total: ~$20,345-$28,345
+  5-year total: ~$20,345-$28,345+
 
 Plus:
   - Sales calls for deployment quotes
@@ -588,14 +590,14 @@ Plus:
 **IronBarcode path:**
 ```
 Year 1:
-  Professional license: $1,499 (covers 10 devs, unlimited servers)
+  Professional license: $2,399 (covers 10 devs, unlimited servers)
   ────────────────────────────────────────────
-  Year 1 subtotal: $1,499
+  Year 1 subtotal: $2,399
 
 Years 2-5:
   $0 (perpetual license)
   ────────────────────────────────────────────
-  5-year total: $1,499
+  5-year total: $2,399
 
 Plus:
   - No sales calls required
@@ -603,7 +605,7 @@ Plus:
   - No deployment tracking
 ```
 
-**5-Year savings with IronBarcode: $18,000-$27,000+**
+**5-Year savings with IronBarcode: $17,000-$26,000+**
 
 ---
 
@@ -656,7 +658,7 @@ If you're moving from LEADTOOLS Barcode to IronBarcode, this section provides th
 **Add IronBarcode:**
 ```xml
 <!-- Add to .csproj -->
-<PackageReference Include="IronBarcode" Version="2024.x.x" />
+<PackageReference Include="BarCode" Version="2025.x.x" />
 ```
 
 Or via CLI:
@@ -664,7 +666,7 @@ Or via CLI:
 dotnet remove package Leadtools.Barcode
 dotnet remove package Leadtools
 dotnet remove package Leadtools.Codecs
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Namespace Changes
@@ -707,7 +709,7 @@ IronBarCode.License.LicenseKey = Environment.GetEnvironmentVariable("IRONBARCODE
 |-----------|-------------|-------|
 | `BarcodeEngine.Reader` | `BarcodeReader` | Static class in IronBarcode |
 | `reader.ReadBarcodes(image, rect, max, symbologies)` | `BarcodeReader.Read(path)` | IronBarcode auto-detects |
-| `BarcodeData.Value` | `BarcodeResult.Text` | Property name change |
+| `BarcodeData.Value` | `BarcodeResult.Value` | Same property name |
 | `BarcodeData.Symbology` | `BarcodeResult.BarcodeType` | Property name change |
 
 #### Generating Barcodes
@@ -766,7 +768,7 @@ var results = BarcodeReader.Read("barcode.png");
 
 foreach (var barcode in results)
 {
-    Console.WriteLine(barcode.Text);
+    Console.WriteLine(barcode.Value);
 }
 ```
 
@@ -815,7 +817,7 @@ for (int page = 1; page <= pageCount; page++)
 **After (IronBarcode):**
 ```csharp
 var results = BarcodeReader.Read("document.pdf");
-// All pages processed, results include PageNumber property
+// All pages processed, results include PageNumber and .Value
 ```
 
 ### Deployment Migration
@@ -869,7 +871,7 @@ ENV IRONBARCODE_LICENSE=your-key
 ### Documentation Links
 
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/docs/) - Official IronBarcode guides
-- [IronBarcode on NuGet](https://www.nuget.org/packages/BarCode) - Package download
+- [IronBarcode on NuGet](https://www.nuget.org/packages/BarCode) - Package download (package id: `BarCode`)
 - [LEADTOOLS Barcode Documentation](https://www.leadtools.com/sdk/barcode) - Official LEADTOOLS documentation
 
 ### Code Example Files

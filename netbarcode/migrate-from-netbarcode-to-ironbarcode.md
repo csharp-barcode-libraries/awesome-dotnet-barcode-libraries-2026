@@ -4,7 +4,7 @@ This guide covers the complete migration path from NetBarcode to [IronBarcode](h
 
 ## Why Migrate from NetBarcode
 
-**Format Ceiling:** NetBarcode's `Type` enum defines exactly 14 barcode formats, all linear. There is no entry for QR Code, DataMatrix, PDF417, or Aztec. When a project adds a QR code requirement — for contactless delivery links, mobile deep links, or a pharmaceutical DataMatrix mandate — NetBarcode cannot satisfy it. The only path within the library's design is to stop using it for that format and introduce a separate package. Each additional format requirement that falls outside the 14-entry enum adds another library to the dependency tree.
+**Format Ceiling:** NetBarcode's `Type` enum defines exactly 11 values across 8 symbology families (Code128 plus its A/B/C subsets, Code39, Code39E, Code93, Code11, EAN13, EAN8, Codabar), all linear. There is no entry for UPC-A, UPC-E, ITF, MSI, GS1-128, any postal format, QR Code, DataMatrix, PDF417, or Aztec. When a project adds a QR code requirement — for contactless delivery links, mobile deep links, or a pharmaceutical DataMatrix mandate — or simply needs UPC-A for the US market, NetBarcode cannot satisfy it. The only path within the library's design is to stop using it for that format and introduce a separate package. Each additional format requirement that falls outside the 11-entry enum adds another library to the dependency tree.
 
 **No Reading API:** NetBarcode generates barcode images and provides no method to decode them. A project that needs to scan return shipment labels, extract barcode values from supplier invoices, or validate that a printed barcode matches its source data must add a separate reading library. ZXing.Net is the most common choice, introducing a third API surface in a codebase that already holds NetBarcode and, typically, a QR-specific library.
 
@@ -46,20 +46,22 @@ BarcodeWriter.CreateBarcode("https://example.com", BarcodeEncoding.QRCode)
 
 | Feature | NetBarcode | IronBarcode |
 |---|---|---|
-| 1D barcode generation | Yes | Yes |
+| 1D barcode generation | Yes (8 symbology families, 11 enum values) | Yes |
 | 2D barcode generation (QR, DataMatrix, PDF417, Aztec) | No | Yes |
 | Barcode reading from images | No | Yes |
 | Barcode reading from PDF documents | No | Yes |
-| 1D format count | 14 | 30+ |
+| 1D format count | 11 enum values / 8 families | 30+ |
 | 2D format count | 0 | 8+ |
-| Total symbologies | 14 | 50+ |
+| Total symbologies | 11 | 50+ |
+| UPC-A, UPC-E | No | Yes |
+| ITF / Interleaved 2 of 5, MSI | No | Yes |
 | GS1-128, GS1 DataBar | No | Yes |
 | Postal formats | No | Yes |
 | SVG output | No | Yes |
 | Batch processing | Manual | Built-in |
 | ImageSharp dependency | Yes (split licence) | No |
 | Commercial support | Community | Professional |
-| License model | MIT (+ ImageSharp conditions) | Commercial |
+| License model | MIT (+ ImageSharp conditions) | Commercial (perpetual, from $799) |
 
 ## Quick Start: NetBarcode to IronBarcode Migration
 
@@ -77,10 +79,10 @@ Note that `SixLabors.ImageSharp` may reappear in the restored package list if ot
 ### Step 2: Add IronBarcode
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
-The NuGet package name is `IronBarcode`; the namespace used in code is `IronBarCode` (note the capital C).
+The IronBarcode NuGet package id is `BarCode`; the namespace used in code is `IronBarCode` (note the capital C — the namespace casing does not match the package id casing).
 
 ### Step 3: Update Namespaces and Initialize License
 
@@ -131,9 +133,9 @@ BarcodeWriter.CreateBarcode("12345678901234", BarcodeEncoding.Code128)
 
 The `new Barcode(data, Type.X)` constructor becomes `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.X)`. The `SaveImageFile()` method becomes `SaveAsPng()`, `SaveAsJpeg()`, or `SaveAsBitmap()` depending on the output format required. All available [1D barcode generation](https://ironsoftware.com/csharp/barcode/how-to/create-1d-barcodes/) options are documented in the IronBarcode how-to guides.
 
-### EAN-13 and UPC-A
+### EAN-13 and EAN-8 (and the UPC Gap)
 
-Retail product barcode types map directly between libraries with a constant rename and a method rename.
+Retail product barcode types map directly between libraries with a constant rename and a method rename — but only for the formats NetBarcode actually exposes. UPC-A and UPC-E are absent from the NetBarcode `Type` enum, so any project that needs them is already using a second library or has been emitting EAN-13 in their place. The migration to IronBarcode lets that workaround be removed.
 
 **NetBarcode Approach:**
 
@@ -143,8 +145,11 @@ using NetBarcode;
 var ean13 = new Barcode("5901234123457", Type.EAN13);
 ean13.SaveImageFile("product-ean.png");
 
-var upca = new Barcode("012345678905", Type.UPCA);
-upca.SaveImageFile("product-upc.png");
+var ean8 = new Barcode("96385074", Type.EAN8);
+ean8.SaveImageFile("product-ean8.png");
+
+// UPC-A and UPC-E are not in NetBarcode's Type enum:
+// var upca = new Barcode("012345678905", Type.UPCA); // does not compile
 ```
 
 **IronBarcode Approach:**
@@ -155,6 +160,10 @@ using IronBarCode;
 BarcodeWriter.CreateBarcode("5901234123457", BarcodeEncoding.EAN13)
     .SaveAsPng("product-ean.png");
 
+BarcodeWriter.CreateBarcode("96385074", BarcodeEncoding.EAN8)
+    .SaveAsPng("product-ean8.png");
+
+// UPC-A and UPC-E become available
 BarcodeWriter.CreateBarcode("012345678905", BarcodeEncoding.UPCA)
     .SaveAsPng("product-upc.png");
 ```
@@ -280,18 +289,20 @@ Full documentation for reading options is available in the [read barcodes from i
 | NetBarcode | IronBarcode | Notes |
 |---|---|---|
 | `new Barcode(data, Type.Code128)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code128)` | Constructor → static method |
+| `new Barcode(data, Type.Code128A/B/C)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code128)` | IronBarcode auto-selects subset |
 | `new Barcode(data, Type.EAN13)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.EAN13)` | Direct mapping |
-| `new Barcode(data, Type.UPCA)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.UPCA)` | Direct mapping |
-| `new Barcode(data, Type.Code39)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code39)` | Direct mapping |
 | `new Barcode(data, Type.EAN8)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.EAN8)` | Direct mapping |
-| `new Barcode(data, Type.UPCE)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.UPCE)` | Direct mapping |
-| `new Barcode(data, Type.ITF)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.ITF)` | Direct mapping |
-| `new Barcode(data, Type.Codabar)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Codabar)` | Direct mapping |
-| `new Barcode(data, Type.MSI)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.MSI)` | Direct mapping |
+| `new Barcode(data, Type.Code39)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code39)` | Direct mapping |
+| `new Barcode(data, Type.Code39E)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code39Extended)` | Direct mapping |
 | `new Barcode(data, Type.Code93)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code93)` | Direct mapping |
+| `new Barcode(data, Type.Code11)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Code11)` | Direct mapping |
+| `new Barcode(data, Type.Codabar)` | `BarcodeWriter.CreateBarcode(data, BarcodeEncoding.Codabar)` | Direct mapping |
 | `barcode.SaveImageFile("x.png")` | `.SaveAsPng("x.png")` | Method rename |
 | `barcode.SaveImageFile("x.jpg")` | `.SaveAsJpeg("x.jpg")` | Method rename |
 | `barcode.GetImage()` → `Image<Rgba32>` | `.ToPngBinaryData()` or `.SaveAsPng()` | No ImageSharp type exposed |
+| No `Type.UPCA` / `Type.UPCE` | `BarcodeEncoding.UPCA` / `UPCE` | New capability |
+| No `Type.ITF` | `BarcodeEncoding.ITF` | New capability |
+| No `Type.MSI` | `BarcodeEncoding.MSI` | New capability |
 | No `Type.QRCode` | `BarcodeEncoding.QRCode` | New capability |
 | No `Type.DataMatrix` | `BarcodeEncoding.DataMatrix` | New capability |
 | No `Type.PDF417` | `BarcodeEncoding.PDF417` | New capability |
@@ -346,8 +357,9 @@ Audit all NetBarcode usage before making any changes:
 ```bash
 grep -r "using NetBarcode" ./src
 grep -r "new Barcode(" ./src
-grep -r "Type\.Code128\|Type\.EAN13\|Type\.UPCA\|Type\.Code39" ./src
-grep -r "Type\.EAN8\|Type\.UPCE\|Type\.ITF\|Type\.Codabar\|Type\.MSI" ./src
+grep -r "Type\.Code128\|Type\.Code128A\|Type\.Code128B\|Type\.Code128C" ./src
+grep -r "Type\.Code39\|Type\.Code39E\|Type\.Code93\|Type\.Code11" ./src
+grep -r "Type\.EAN13\|Type\.EAN8\|Type\.Codabar" ./src
 grep -r "SaveImageFile(" ./src
 grep -r "GetImage(" ./src
 grep -r "using SixLabors\.ImageSharp" ./src

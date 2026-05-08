@@ -21,11 +21,11 @@ using System.IO;
 
 // OnBarcode Generator
 // Install: dotnet add package OnBarcode.Barcode.Generator
-// Note: Reading requires SEPARATE OnBarcode.Barcode.Reader package
+// Note: Reading requires SEPARATE OnBarcode.Barcode.Reader package and license
 using OnBarcode.Barcode;
 
-// IronBarcode (includes BOTH generation and reading)
-// Install: dotnet add package IronBarcode
+// IronBarcode (includes BOTH generation and reading; NuGet package id is "BarCode")
+// Install: dotnet add package BarCode
 using IronBarCode;
 
 namespace BarcodeComparison
@@ -47,12 +47,12 @@ namespace BarcodeComparison
             // Basic generation with OnBarcode
             try
             {
-                Barcode barcode = new Barcode();
-                barcode.Symbology = Symbology.Code128Auto;
+                Linear barcode = new Linear();
+                barcode.Type = BarcodeType.CODE128;
                 barcode.Data = "PRODUCT-12345";
                 barcode.Resolution = 96;
-                barcode.BarWidth = 1;
-                barcode.BarHeight = 60;
+                barcode.X = 1;
+                barcode.BarcodeHeight = 60;
                 barcode.ShowText = true;
 
                 barcode.drawBarcode("onbarcode-generated.png");
@@ -91,23 +91,20 @@ namespace BarcodeComparison
 
             Console.WriteLine("3. Configure separate license:");
             Console.WriteLine(@"
-    // OnBarcode requires TWO licenses
-    // License for Generator
-    OnBarcode.Barcode.License.SetLicense(""GENERATOR-LICENSE"");
+    // OnBarcode requires TWO licenses (Generator and Reader purchased separately)
+    using OnBarcode.Barcode;
 
-    // Separate license for Reader
-    OnBarcode.Barcode.Reader.License.SetLicense(""READER-LICENSE"");
+    License.RegisterLicense(""GENERATOR-LICENSE""); // from Generator purchase
+    License.RegisterLicense(""READER-LICENSE"");    // from Reader purchase
 ");
 
-            Console.WriteLine("4. Use different API for reading:");
+            Console.WriteLine("4. Use the static Reader API:");
             Console.WriteLine(@"
-    // Different namespace
-    using OnBarcode.Barcode.Reader;
+    // Same root namespace, but BarcodeScanner ships only with the Reader package
+    using OnBarcode.Barcode;
 
-    // Different class
-    BarcodeReader reader = new BarcodeReader();
-    reader.BarcodeTypes = new BarcodeType[] { BarcodeType.Code128 };
-    string[] results = reader.Scan(""barcode.png"");
+    // Static API; format must be specified up front
+    string[] results = BarcodeScanner.Scan(""barcode.png"", BarcodeType.CODE128);
 ");
 
             Console.WriteLine("\nProblems with this approach:");
@@ -147,7 +144,7 @@ namespace BarcodeComparison
                 var results = BarcodeReader.Read("iron-generated.png");
                 foreach (var result in results)
                 {
-                    Console.WriteLine($"Read: {result.BarcodeType} = {result.Text}");
+                    Console.WriteLine($"Read: {result.BarcodeType} = {result.Value}");
                 }
                 Console.WriteLine();
             }
@@ -176,30 +173,27 @@ namespace BarcodeComparison
             // OnBarcode approach (two products)
             Console.WriteLine("OnBarcode approach (requires two products):\n");
             Console.WriteLine(@"
-    // Product 1: OnBarcode Generator
+    // Two NuGet packages required:
+    //   dotnet add package OnBarcode.Barcode.Generator
+    //   dotnet add package OnBarcode.Barcode.Reader   (separate purchase!)
     using OnBarcode.Barcode;
 
-    // Product 2: OnBarcode Reader (separate purchase!)
-    using OnBarcode.Barcode.Reader;
-
     // Two separate licenses required
-    OnBarcode.Barcode.License.SetLicense(""GENERATOR-KEY"");
-    OnBarcode.Barcode.Reader.License.SetLicense(""READER-KEY"");
+    License.RegisterLicense(""GENERATOR-KEY"");
+    License.RegisterLicense(""READER-KEY"");
 
     public class LabelVerifier
     {
         public void CreateAndVerify(string data, string outputPath)
         {
             // Generate with Generator SDK
-            Barcode barcode = new Barcode();
-            barcode.Symbology = Symbology.Code128Auto;
+            Linear barcode = new Linear();
+            barcode.Type = BarcodeType.CODE128;
             barcode.Data = data;
             barcode.drawBarcode(outputPath);
 
-            // Verify with Reader SDK (different API)
-            BarcodeReader reader = new BarcodeReader();
-            reader.BarcodeTypes = new BarcodeType[] { BarcodeType.Code128 };
-            string[] results = reader.Scan(outputPath);
+            // Verify with Reader SDK (static API; explicit BarcodeType)
+            string[] results = BarcodeScanner.Scan(outputPath, BarcodeType.CODE128);
 
             if (results.Length == 0 || results[0] != data)
             {
@@ -229,7 +223,7 @@ namespace BarcodeComparison
             // Verify (same API family)
             var results = BarcodeReader.Read(outputPath);
 
-            if (!results.Any() || results.First().Text != data)
+            if (!results.Any() || results.First().Value != data)
             {
                 throw new Exception(""Verification failed"");
             }
@@ -249,28 +243,33 @@ namespace BarcodeComparison
         {
             Console.WriteLine("=== Cost Comparison: Split vs Unified Model ===\n");
 
-            Console.WriteLine("OnBarcode cost structure:\n");
-            Console.WriteLine("  Generator SDK: Contact sales (unknown price)");
-            Console.WriteLine("  Reader SDK:    Contact sales (unknown price, separate)");
-            Console.WriteLine("  Total cost:    Unknown until both quotes received\n");
+            Console.WriteLine("OnBarcode cost structure (per-product, perpetual):\n");
+            Console.WriteLine("  .NET Generator Suite Linear (1D only):");
+            Console.WriteLine("    Single Developer:    $990");
+            Console.WriteLine("    Five Developer:      $1,990");
+            Console.WriteLine("    Unlimited Developer: $2,990");
+            Console.WriteLine("  .NET Generator Suite Linear + 2D:");
+            Console.WriteLine("    Single Developer:    $1,690");
+            Console.WriteLine("    Five Developer:      $2,690");
+            Console.WriteLine("    Unlimited Developer: $3,990");
+            Console.WriteLine("  .NET Barcode Reader SDK (sold separately): from $990\n");
 
-            Console.WriteLine("IronBarcode cost structure:\n");
-            Console.WriteLine("  Lite (1 dev):       $749  - includes generation AND reading");
-            Console.WriteLine("  Professional:       $1,499 - includes generation AND reading");
-            Console.WriteLine("  Unlimited:          $2,999 - includes generation AND reading\n");
+            Console.WriteLine("IronBarcode cost structure (single product, perpetual):\n");
+            Console.WriteLine("  Lite (1 dev):           $799   - generation + reading + PDF");
+            Console.WriteLine("  Plus (3 devs):          $1,199 - generation + reading + PDF");
+            Console.WriteLine("  Professional (10 devs): $2,399 - generation + reading + PDF");
+            Console.WriteLine("  Unlimited:              $4,799 - generation + reading + PDF\n");
 
-            Console.WriteLine("Scenario: 5-developer team needs both generation and reading\n");
+            Console.WriteLine("Scenario: 5-developer team needs 2D generation and reading\n");
 
             Console.WriteLine("OnBarcode:");
-            Console.WriteLine("  Generator SDK (5 devs):  $X (unknown)");
-            Console.WriteLine("  Reader SDK (5 devs):     $Y (unknown)");
-            Console.WriteLine("  Total:                   $X + $Y");
-            Console.WriteLine("  Budget planning:         Impossible without quotes\n");
+            Console.WriteLine("  Generator Suite Linear+2D (5 devs):  $2,690");
+            Console.WriteLine("  Reader SDK (5 devs, from):           $1,690+");
+            Console.WriteLine("  Total:                               $4,380+\n");
 
             Console.WriteLine("IronBarcode:");
-            Console.WriteLine("  Professional (10 devs):  $1,499");
-            Console.WriteLine("  Includes everything:     Yes");
-            Console.WriteLine("  Budget planning:         Clear from day one\n");
+            Console.WriteLine("  Professional (10 devs):  $2,399");
+            Console.WriteLine("  Includes everything:     Yes\n");
 
             Console.WriteLine("Additional OnBarcode considerations:");
             Console.WriteLine("- Price may vary by negotiation");
@@ -287,24 +286,18 @@ namespace BarcodeComparison
 
             Console.WriteLine("OnBarcode API differences between Generator and Reader:\n");
             Console.WriteLine(@"
-    // Generator namespace
     using OnBarcode.Barcode;
 
-    // Generator pattern
-    Barcode barcode = new Barcode();
-    barcode.Symbology = Symbology.Code128Auto;
+    // Generator pattern (one class per symbology family)
+    Linear barcode = new Linear();
+    barcode.Type = BarcodeType.CODE128;
     barcode.Data = ""data"";
     barcode.drawBarcode(""output.png"");
 
     // ---------------------------------
 
-    // Reader namespace (different!)
-    using OnBarcode.Barcode.Reader;
-
-    // Reader pattern (different!)
-    BarcodeReader reader = new BarcodeReader();
-    reader.BarcodeTypes = new BarcodeType[] { ... };
-    string[] results = reader.Scan(""input.png"");
+    // Reader pattern (static; explicit BarcodeType per scan)
+    string[] results = BarcodeScanner.Scan(""input.png"", BarcodeType.CODE128);
 ");
 
             Console.WriteLine("\nIronBarcode consistent API:\n");
@@ -318,7 +311,7 @@ namespace BarcodeComparison
 
     // Consistent reading pattern
     var results = BarcodeReader.Read(""input.png"");
-    // Returns BarcodeResult with .BarcodeType and .Text
+    // Returns BarcodeResults with .BarcodeType and .Value per result
 ");
 
             Console.WriteLine("\nBenefits of consistent API:");

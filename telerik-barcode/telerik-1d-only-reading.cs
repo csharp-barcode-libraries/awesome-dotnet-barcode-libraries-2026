@@ -1,19 +1,35 @@
 /**
- * Telerik RadBarcodeReader 1D-Only Limitation
+ * Telerik RadBarcodeReader Symbology Limitation
  *
- * This example demonstrates the format limitation of Telerik RadBarcodeReader:
- * - RadBarcodeReader ONLY supports 1D linear barcode formats
- * - QR codes, DataMatrix, PDF417, Aztec codes CANNOT be read
- * - These 2D formats CAN be generated but NOT recognized
+ * This example demonstrates the format coverage of Telerik's RadBarcodeReader
+ * on the two desktop platforms where it ships:
  *
- * IronBarcode reads ALL formats (50+) with automatic detection.
+ *   - WPF (namespace Telerik.Windows.Controls.Barcode):
+ *       1D linear formats PLUS QR, PDF417, DataMatrix.
+ *       Aztec, MaxiCode, MicroQR, DotCode are NOT in the DecodeType enum
+ *       and cannot be read.
+ *
+ *   - WinForms (namespace Telerik.WinControls.UI.Barcode):
+ *       1D linear formats only. Telerik's documentation states:
+ *       "Currently, all of the 1D barcodes, offered by Telerik, are
+ *        supported." There are no 2D entries at all.
+ *
+ * Telerik UI for Blazor, ASP.NET AJAX, ASP.NET Core, and ASP.NET MVC
+ * have NO barcode reading component.
+ *
+ * IronBarcode reads all of these formats with one API call and no
+ * format specification.
  *
  * Author: Jacob Mellor, CTO of Iron Software
  * Comparison: Telerik RadBarcode vs IronBarcode
+ *
+ * Distribution note: Telerik UI packages are not on public nuget.org;
+ * they are distributed via the licensed feed at
+ * https://nuget.telerik.com/v3/index.json with API-key authentication.
  */
 
 // ============================================================================
-// TELERIK APPROACH: 1D Barcodes Only
+// TELERIK APPROACH: Reader symbology coverage varies by platform
 // ============================================================================
 
 namespace TelerikFormatLimitation
@@ -23,13 +39,15 @@ namespace TelerikFormatLimitation
 
     /// <summary>
     /// Telerik RadBarcodeReader Format Support (WPF version)
-    /// Only 1D linear barcodes can be read
+    /// 1D linear barcodes PLUS three 2D formats — QR, PDF417, DataMatrix.
+    /// Aztec, MaxiCode, MicroQR, DotCode are NOT supported.
     /// </summary>
-    public class TelerikBarcodeReader
+    public class TelerikWpfBarcodeReader
     {
-        // These are the ONLY formats RadBarcodeReader supports:
-        public static readonly string[] SupportedFormats = new[]
+        // RadBarcodeReader (WPF) DecodeType flags include these:
+        public static readonly string[] WpfSupportedFormats = new[]
         {
+            // 1D linear
             "Code128",
             "Code39",
             "Code39Extended",
@@ -39,158 +57,185 @@ namespace TelerikFormatLimitation
             "Code25Standard",
             "Code25Interleaved",
             "EAN13",
+            "EAN128",
             "EAN8",
             "UPCA",
             "UPCE",
+            "UPCSupplement2",
+            "UPCSupplement5",
             "Codabar",
-            "ITF",
-            "MSI"
+            "CodeMSI",
+            "Postnet",
+            "Planet",
+            "IntelligentMail",
+
+            // 2D — covered by the WPF reader
+            "QR",
+            "PDF417",
+            "DataMatrix"
         };
 
-        // These formats CANNOT be read (only generated):
-        public static readonly string[] UnsupportedFormats = new[]
+        // These 2D formats are NOT in the WPF DecodeType enum:
+        public static readonly string[] WpfUnsupportedFormats = new[]
         {
-            "QRCode",           // Very common - not readable
-            "DataMatrix",       // Industrial standard - not readable
-            "PDF417",           // Documents/IDs - not readable
-            "MicroQR",          // Compact QR - not readable
-            "Aztec",            // Tickets/boarding passes - not readable
-            "MaxiCode"          // Shipping - not readable
+            "Aztec",            // Boarding passes, tickets — not readable
+            "MaxiCode",         // UPS shipping labels — not readable
+            "MicroQR",          // Compact QR — not readable
+            "DotCode"           // Tobacco/pharmaceutical traceability — not readable
         };
 
         /*
         using Telerik.Windows.Controls.Barcode;
         using System.Windows.Media.Imaging;
 
-        public string TryReadQrCode(string imagePath)
+        public string TryReadAztecCode(string imagePath)
         {
-            var bitmap = new BitmapImage(new Uri(imagePath));
+            var bitmap = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
             var reader = new RadBarcodeReader();
 
-            // You MUST specify DecodeTypes, but QR is not an option
-            reader.DecodeTypes = new DecodeType[]
-            {
-                DecodeType.Code128,
-                DecodeType.Code39,
-                DecodeType.EAN13
-                // DecodeType.QR - DOES NOT EXIST
-                // DecodeType.DataMatrix - DOES NOT EXIST
-                // DecodeType.PDF417 - DOES NOT EXIST
-            };
+            // The WPF DecodeType is a [Flags] enum — combine with bitwise OR.
+            // QR, PDF417, and DataMatrix are valid; Aztec is not.
+            reader.DecodeTypes = DecodeType.Code128
+                               | DecodeType.QR
+                               | DecodeType.PDF417
+                               | DecodeType.DataMatrix;
+                               // DecodeType.Aztec  -- DOES NOT EXIST on WPF
+                               // DecodeType.MaxiCode -- DOES NOT EXIST on WPF
 
             var result = reader.Decode(bitmap);
-
-            // If the image contains a QR code, result will be null
-            // because RadBarcodeReader cannot read 2D formats
-            return result?.Text; // Returns null for QR codes
+            // result is null for Aztec, MaxiCode, MicroQR, DotCode images.
+            return result?.Text;
         }
 
-        public string Read1DBarcode(string imagePath)
+        public string ReadStandardBarcode(string imagePath)
         {
-            var bitmap = new BitmapImage(new Uri(imagePath));
+            var bitmap = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
             var reader = new RadBarcodeReader();
 
-            // Only these 1D types work
-            reader.DecodeTypes = new DecodeType[]
-            {
-                DecodeType.Code128,
-                DecodeType.Code39,
-                DecodeType.EAN13,
-                DecodeType.EAN8,
-                DecodeType.UPCA,
-                DecodeType.UPCE,
-                DecodeType.Codabar,
-                DecodeType.ITF
-            };
+            // Combine 1D + the three supported 2D types
+            reader.DecodeTypes = DecodeType.Code128
+                               | DecodeType.EAN13
+                               | DecodeType.UPCA
+                               | DecodeType.QR
+                               | DecodeType.PDF417
+                               | DecodeType.DataMatrix;
 
             var result = reader.Decode(bitmap);
             return result?.Text;
         }
         */
 
-        public void ShowFormatLimitation()
+        public void ShowFormatCoverage()
         {
-            Console.WriteLine("Telerik RadBarcodeReader Format Support:");
+            Console.WriteLine("Telerik RadBarcodeReader (WPF) Format Coverage:");
             Console.WriteLine();
 
             Console.WriteLine("SUPPORTED (Can Read):");
-            foreach (var format in SupportedFormats)
+            foreach (var format in WpfSupportedFormats)
             {
                 Console.WriteLine($"  [OK] {format}");
             }
 
             Console.WriteLine();
-            Console.WriteLine("NOT SUPPORTED (Can Generate, Cannot Read):");
-            foreach (var format in UnsupportedFormats)
+            Console.WriteLine("NOT IN DecodeType ENUM (Cannot Read):");
+            foreach (var format in WpfUnsupportedFormats)
             {
                 Console.WriteLine($"  [!!] {format}");
             }
-
-            Console.WriteLine();
-            Console.WriteLine("This means:");
-            Console.WriteLine("  - If someone sends you a QR code, you cannot decode it");
-            Console.WriteLine("  - If you generate a QR code, you cannot verify it");
-            Console.WriteLine("  - DataMatrix codes on products cannot be scanned");
-            Console.WriteLine("  - PDF417 on IDs/licenses cannot be read");
         }
     }
 
     /// <summary>
-    /// Demonstrates the problem: You can generate QR codes but not read them
+    /// Telerik RadBarcodeReader (WinForms) — 1D ONLY.
+    /// No 2D formats are supported at all on this platform.
     /// </summary>
-    public class QrCodeParadox
+    public class TelerikWinFormsBarcodeReader
     {
+        public static readonly string[] WinFormsSupportedFormats = new[]
+        {
+            "Code128", "Code93", "Code93Extended",
+            "CodeMSI",
+            "EAN13", "EAN128", "EAN8",
+            "Postnet", "Planet", "IntelligentMail",
+            "UPCA", "UPCE",
+            "UPCSupplement2", "UPCSupplement5"
+        };
+
+        public static readonly string[] WinFormsUnsupportedFormats = new[]
+        {
+            "QRCode",           // Not in WinForms DecodeType enum
+            "DataMatrix",       // Not in WinForms DecodeType enum
+            "PDF417",           // Not in WinForms DecodeType enum
+            "MicroQR",
+            "Aztec",
+            "MaxiCode",
+            "DotCode"
+        };
+
         /*
-        using Telerik.Windows.Controls.Barcode;
+        using Telerik.WinControls.UI.Barcode;
+        using System.Drawing;
 
-        public void GenerateQrCode(string value)
+        public string TryReadQrCode(string imagePath)
         {
-            // This WORKS - QR generation is supported
-            var barcode = new RadBarcode();
-            barcode.Value = value;
-            barcode.Symbology = new QRCode()
-            {
-                ErrorCorrectionLevel = ErrorCorrectionLevel.H
-            };
-
-            // Save the QR code...
-            Console.WriteLine("QR code generated successfully!");
-        }
-
-        public string ReadQrCode(string imagePath)
-        {
-            // This FAILS - QR reading is NOT supported
-            var bitmap = new BitmapImage(new Uri(imagePath));
+            using var image = Image.FromFile(imagePath);
             var reader = new RadBarcodeReader();
 
-            // There is no DecodeType.QR option
-            // reader.DecodeTypes = new[] { DecodeType.QR }; // DOES NOT EXIST
+            // The WinForms DecodeType has NO QR / DataMatrix / PDF417 entries.
+            reader.DecodeType = DecodeType.Code128
+                              | DecodeType.EAN13;
+                              // DecodeType.QR -- DOES NOT EXIST on WinForms
 
-            var result = reader.Decode(bitmap);
-            // Result is always null for QR codes
-
-            throw new NotSupportedException(
-                "Telerik RadBarcodeReader cannot read QR codes. " +
-                "You can generate them, but you cannot decode them.");
+            var result = reader.Read(image);
+            // Always null for any 2D barcode image.
+            return result?.Text;
         }
         */
 
-        public void DemonstrateParadox()
+        public void ShowFormatCoverage()
         {
-            Console.WriteLine("The Telerik QR Code Paradox:");
+            Console.WriteLine("Telerik RadBarcodeReader (WinForms) Format Coverage:");
             Console.WriteLine();
-            Console.WriteLine("  1. You create a QR code with RadBarcode");
-            Console.WriteLine("     - RadBarcode supports QR code generation");
-            Console.WriteLine("     - QR code is saved to file");
-            Console.WriteLine("     - Works perfectly!");
+            Console.WriteLine("(Telerik docs: \"Currently, all of the 1D barcodes, " +
+                              "offered by Telerik, are supported.\")");
             Console.WriteLine();
-            Console.WriteLine("  2. User sends you back the same QR code image");
-            Console.WriteLine("     - You need to read the value");
-            Console.WriteLine("     - RadBarcodeReader does not support QR codes");
-            Console.WriteLine("     - You cannot decode the QR code you created");
+
+            Console.WriteLine("SUPPORTED (Can Read):");
+            foreach (var format in WinFormsSupportedFormats)
+            {
+                Console.WriteLine($"  [OK] {format}");
+            }
+
             Console.WriteLine();
-            Console.WriteLine("  This is a fundamental product limitation.");
-            Console.WriteLine("  You would need a different library for QR reading.");
+            Console.WriteLine("NOT SUPPORTED (No 2D formats decodable on WinForms):");
+            foreach (var format in WinFormsUnsupportedFormats)
+            {
+                Console.WriteLine($"  [!!] {format}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Demonstrates a real round-trip gap: generate Aztec on WPF,
+    /// cannot decode it back. On WinForms, even QR cannot be decoded.
+    /// </summary>
+    public class RoundTripGap
+    {
+        public void Demonstrate()
+        {
+            Console.WriteLine("The Telerik Reader Round-Trip Gap:");
+            Console.WriteLine();
+            Console.WriteLine("  WPF:");
+            Console.WriteLine("    QR / PDF417 / DataMatrix round-trip = OK");
+            Console.WriteLine("    Aztec / MaxiCode / MicroQR / DotCode = NOT READABLE");
+            Console.WriteLine();
+            Console.WriteLine("  WinForms:");
+            Console.WriteLine("    Any 2D barcode generated by RadBarcode (including QR, ");
+            Console.WriteLine("    DataMatrix, PDF417) cannot be decoded by the WinForms ");
+            Console.WriteLine("    RadBarcodeReader. 1D only on the reader side.");
+            Console.WriteLine();
+            Console.WriteLine("  Blazor / ASP.NET AJAX / ASP.NET Core:");
+            Console.WriteLine("    No reader exists at all — generation only.");
         }
     }
 
@@ -209,15 +254,24 @@ namespace TelerikFormatLimitation
             Console.WriteLine("  [Product B] Code 128: PROD-2024-001");
             Console.WriteLine("  [Product C] QR Code: {\"sku\":\"SKU123\",\"batch\":\"B001\"}");
             Console.WriteLine("  [Product D] DataMatrix: 01034567890123451721...");
+            Console.WriteLine("  [Product E] Aztec on a returns label");
+            Console.WriteLine("  [Product F] MaxiCode on inbound UPS shipment");
             Console.WriteLine();
-            Console.WriteLine("  With Telerik RadBarcodeReader:");
-            Console.WriteLine("    [OK] Product A - EAN-13 works");
-            Console.WriteLine("    [OK] Product B - Code 128 works");
+            Console.WriteLine("  With Telerik RadBarcodeReader (WPF):");
+            Console.WriteLine("    [OK] Product A - EAN-13");
+            Console.WriteLine("    [OK] Product B - Code 128");
+            Console.WriteLine("    [OK] Product C - QR Code");
+            Console.WriteLine("    [OK] Product D - DataMatrix");
+            Console.WriteLine("    [!!] Product E - Aztec FAILS");
+            Console.WriteLine("    [!!] Product F - MaxiCode FAILS");
+            Console.WriteLine();
+            Console.WriteLine("  With Telerik RadBarcodeReader (WinForms):");
+            Console.WriteLine("    [OK] Product A - EAN-13");
+            Console.WriteLine("    [OK] Product B - Code 128");
             Console.WriteLine("    [!!] Product C - QR Code FAILS");
             Console.WriteLine("    [!!] Product D - DataMatrix FAILS");
-            Console.WriteLine();
-            Console.WriteLine("  You can only scan 50% of your inventory!");
-            Console.WriteLine("  Modern warehouses increasingly use 2D codes for more data.");
+            Console.WriteLine("    [!!] Product E - Aztec FAILS");
+            Console.WriteLine("    [!!] Product F - MaxiCode FAILS");
         }
     }
 }
@@ -238,7 +292,7 @@ namespace IronBarcodeAllFormats
     /// </summary>
     public class UniversalBarcodeReader
     {
-        // Install: dotnet add package IronBarcode
+        // Install: dotnet add package BarCode
         // License: IronBarCode.License.LicenseKey = "YOUR-KEY";
 
         /// <summary>
@@ -246,13 +300,13 @@ namespace IronBarcodeAllFormats
         /// </summary>
         public List<BarcodeResult> ReadAnyBarcode(string imagePath)
         {
-            // One line - reads any of 50+ formats
+            // One line - reads any supported format
             // No need to specify format type
             var results = BarcodeReader.Read(imagePath);
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Found: {barcode.BarcodeType} = {barcode.Text}");
+                Console.WriteLine($"Found: {barcode.BarcodeType} = {barcode.Value}");
             }
 
             return results.ToList();
@@ -268,7 +322,7 @@ namespace IronBarcodeAllFormats
             var qrCode = results.FirstOrDefault(r =>
                 r.BarcodeType == BarcodeEncoding.QRCode);
 
-            return qrCode?.Text ?? "No QR code found";
+            return qrCode?.Value ?? "No QR code found";
         }
 
         /// <summary>
@@ -281,20 +335,20 @@ namespace IronBarcodeAllFormats
             var dataMatrix = results.FirstOrDefault(r =>
                 r.BarcodeType == BarcodeEncoding.DataMatrix);
 
-            return dataMatrix?.Text ?? "No DataMatrix found";
+            return dataMatrix?.Value ?? "No DataMatrix found";
         }
 
         /// <summary>
-        /// Read PDF417 codes (commonly used on IDs/licenses)
+        /// Read Aztec codes (boarding passes, tickets) — not in Telerik's reader.
         /// </summary>
-        public string ReadPdf417(string imagePath)
+        public string ReadAztec(string imagePath)
         {
             var results = BarcodeReader.Read(imagePath);
 
-            var pdf417 = results.FirstOrDefault(r =>
-                r.BarcodeType == BarcodeEncoding.PDF417);
+            var aztec = results.FirstOrDefault(r =>
+                r.BarcodeType == BarcodeEncoding.Aztec);
 
-            return pdf417?.Text ?? "No PDF417 found";
+            return aztec?.Value ?? "No Aztec code found";
         }
 
         /// <summary>
@@ -306,20 +360,20 @@ namespace IronBarcodeAllFormats
 
             return results.ToDictionary(
                 r => r.BarcodeType.ToString(),
-                r => r.Text
+                r => r.Value
             );
         }
 
         public void ShowFullSupport()
         {
-            Console.WriteLine("IronBarcode Format Support (50+ formats):");
+            Console.WriteLine("IronBarcode Format Support:");
             Console.WriteLine();
 
             Console.WriteLine("1D LINEAR BARCODES:");
             var linear1D = new[] {
                 "Code128", "Code39", "Code93", "EAN13", "EAN8",
                 "UPCA", "UPCE", "Codabar", "ITF", "MSI",
-                "Code11", "Code25", "Pharmacode", "PZN"
+                "Code11", "Code25"
             };
             foreach (var f in linear1D)
             {
@@ -329,20 +383,10 @@ namespace IronBarcodeAllFormats
             Console.WriteLine();
             Console.WriteLine("2D MATRIX BARCODES:");
             var matrix2D = new[] {
-                "QRCode", "MicroQR", "DataMatrix", "PDF417",
-                "MicroPDF417", "Aztec", "MaxiCode", "DotCode"
+                "QRCode", "DataMatrix", "PDF417",
+                "Aztec", "MicroQR"
             };
             foreach (var f in matrix2D)
-            {
-                Console.WriteLine($"  [OK] {f}");
-            }
-
-            Console.WriteLine();
-            Console.WriteLine("POSTAL CODES:");
-            var postal = new[] {
-                "USPS", "RoyalMail", "AustraliaPost", "PostNet"
-            };
-            foreach (var f in postal)
             {
                 Console.WriteLine($"  [OK] {f}");
             }
@@ -368,14 +412,16 @@ namespace IronBarcodeAllFormats
             Console.WriteLine("  [Product B] Code 128: PROD-2024-001");
             Console.WriteLine("  [Product C] QR Code: {\"sku\":\"SKU123\",\"batch\":\"B001\"}");
             Console.WriteLine("  [Product D] DataMatrix: 01034567890123451721...");
+            Console.WriteLine("  [Product E] Aztec on a returns label");
+            Console.WriteLine("  [Product F] MaxiCode on inbound UPS shipment");
             Console.WriteLine();
-            Console.WriteLine("  With IronBarcode:");
-            Console.WriteLine("    [OK] Product A - EAN-13 works");
-            Console.WriteLine("    [OK] Product B - Code 128 works");
-            Console.WriteLine("    [OK] Product C - QR Code works");
-            Console.WriteLine("    [OK] Product D - DataMatrix works");
-            Console.WriteLine();
-            Console.WriteLine("  100% of your inventory is scannable!");
+            Console.WriteLine("  With IronBarcode (any platform — desktop, web, Docker):");
+            Console.WriteLine("    [OK] Product A - EAN-13");
+            Console.WriteLine("    [OK] Product B - Code 128");
+            Console.WriteLine("    [OK] Product C - QR Code");
+            Console.WriteLine("    [OK] Product D - DataMatrix");
+            Console.WriteLine("    [OK] Product E - Aztec");
+            Console.WriteLine("    [OK] Product F - MaxiCode");
 
             // Example implementation
             var code = @"
@@ -395,11 +441,15 @@ namespace IronBarcodeAllFormats
                     break;
 
                 case BarcodeEncoding.QRCode:
-                    ProcessQrData(JsonConvert.Deserialize(barcode.Text));
+                    ProcessQrData(JsonConvert.Deserialize(barcode.Value));
                     break;
 
                 case BarcodeEncoding.DataMatrix:
-                    ProcessGS1DataMatrix(barcode.Text);
+                    ProcessGS1DataMatrix(barcode.Value);
+                    break;
+
+                case BarcodeEncoding.Aztec:
+                    ProcessReturnsLabel(barcode.Value);
                     break;
 
                 default:
@@ -426,91 +476,80 @@ namespace CodeComparison
 
     public class SideBySideComparison
     {
-        public void CompareQrCodeReading()
+        public void CompareAztecReading()
         {
-            Console.WriteLine("╔═══════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║            QR CODE READING: TELERIK vs IRONBARCODE            ║");
-            Console.WriteLine("╠═══════════════════════════════════════════════════════════════╣");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║  TELERIK RADBARCODE                                           ║");
-            Console.WriteLine("║  ───────────────────                                          ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║    // Attempt to read QR code                                 ║");
-            Console.WriteLine("║    var reader = new RadBarcodeReader();                       ║");
-            Console.WriteLine("║    reader.DecodeTypes = new[] {                               ║");
-            Console.WriteLine("║        // DecodeType.QR  <-- DOES NOT EXIST                   ║");
-            Console.WriteLine("║        DecodeType.Code128,  // Only 1D types available        ║");
-            Console.WriteLine("║        DecodeType.EAN13                                       ║");
-            Console.WriteLine("║    };                                                         ║");
-            Console.WriteLine("║    var result = reader.Decode(qrCodeImage);                   ║");
-            Console.WriteLine("║    // result = null  (QR codes not supported)                 ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║    RESULT: FAILURE - Cannot read QR codes                     ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("╠═══════════════════════════════════════════════════════════════╣");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║  IRONBARCODE                                                  ║");
-            Console.WriteLine("║  ──────────                                                   ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║    // Read QR code (or any other format)                      ║");
-            Console.WriteLine("║    var results = BarcodeReader.Read(\"qrcode.png\");            ║");
-            Console.WriteLine("║    var qrValue = results.First().Text;                        ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║    // That's it - format detected automatically               ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║    RESULT: SUCCESS - QR code decoded                          ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("╚═══════════════════════════════════════════════════════════════╝");
+            Console.WriteLine("===============================================================");
+            Console.WriteLine("        AZTEC CODE READING: TELERIK vs IRONBARCODE");
+            Console.WriteLine("===============================================================");
+            Console.WriteLine();
+            Console.WriteLine("  TELERIK RADBARCODE (WPF or WinForms)");
+            Console.WriteLine("  -------------------------------------");
+            Console.WriteLine("    var reader = new RadBarcodeReader();");
+            Console.WriteLine("    reader.DecodeTypes = DecodeType.QR | DecodeType.PDF417;");
+            Console.WriteLine("        // DecodeType.Aztec  <-- DOES NOT EXIST on either platform");
+            Console.WriteLine("    var result = reader.Decode(aztecImage);");
+            Console.WriteLine("    // result == null  (Aztec not in DecodeType enum)");
+            Console.WriteLine();
+            Console.WriteLine("    RESULT: FAILURE - Cannot read Aztec codes");
+            Console.WriteLine();
+            Console.WriteLine("---------------------------------------------------------------");
+            Console.WriteLine();
+            Console.WriteLine("  IRONBARCODE");
+            Console.WriteLine("  -----------");
+            Console.WriteLine("    var results = BarcodeReader.Read(\"aztec.png\");");
+            Console.WriteLine("    var value = results.First().Value;");
+            Console.WriteLine();
+            Console.WriteLine("    RESULT: SUCCESS - Aztec decoded automatically");
+            Console.WriteLine();
+        }
+
+        public void CompareWinFormsQrReading()
+        {
+            Console.WriteLine();
+            Console.WriteLine("===============================================================");
+            Console.WriteLine("    WINFORMS QR READING: TELERIK vs IRONBARCODE");
+            Console.WriteLine("===============================================================");
+            Console.WriteLine();
+            Console.WriteLine("  Use Case: Reading a QR code in a WinForms inventory app");
+            Console.WriteLine();
+            Console.WriteLine("  TELERIK (Telerik.WinControls.UI.Barcode.RadBarcodeReader):");
+            Console.WriteLine("    // The WinForms DecodeType enum has no QR entry.");
+            Console.WriteLine("    // Telerik docs: \"Currently, all of the 1D barcodes,");
+            Console.WriteLine("    //               offered by Telerik, are supported.\"");
+            Console.WriteLine();
+            Console.WriteLine("  IRONBARCODE:");
+            Console.WriteLine("    var results = BarcodeReader.Read(productImage);");
+            Console.WriteLine("    var qr = results");
+            Console.WriteLine("        .Where(r => r.BarcodeType == BarcodeEncoding.QRCode)");
+            Console.WriteLine("        .FirstOrDefault()?.Value;");
+            Console.WriteLine();
         }
 
         public void CompareDataMatrixReading()
         {
             Console.WriteLine();
-            Console.WriteLine("╔═══════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║         DATAMATRIX READING: TELERIK vs IRONBARCODE            ║");
-            Console.WriteLine("╠═══════════════════════════════════════════════════════════════╣");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║  Use Case: GS1 DataMatrix on pharmaceutical products          ║");
-            Console.WriteLine("║  (Required by FDA for drug serialization)                     ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║  TELERIK:                                                     ║");
-            Console.WriteLine("║    // NOT POSSIBLE                                            ║");
-            Console.WriteLine("║    // RadBarcodeReader has no DataMatrix support              ║");
-            Console.WriteLine("║    // You cannot comply with FDA drug tracing requirements    ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║  IRONBARCODE:                                                 ║");
-            Console.WriteLine("║    var results = BarcodeReader.Read(productImage);            ║");
-            Console.WriteLine("║    var gs1Data = results                                      ║");
-            Console.WriteLine("║        .Where(r => r.BarcodeType == BarcodeEncoding.DataMatrix)║");
-            Console.WriteLine("║        .FirstOrDefault()?.Text;                               ║");
-            Console.WriteLine("║    // Parse GTIN, lot number, expiry from GS1 string          ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("╚═══════════════════════════════════════════════════════════════╝");
-        }
-
-        public void ComparePdf417Reading()
-        {
+            Console.WriteLine("===============================================================");
+            Console.WriteLine("     DATAMATRIX READING: TELERIK vs IRONBARCODE");
+            Console.WriteLine("===============================================================");
             Console.WriteLine();
-            Console.WriteLine("╔═══════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║            PDF417 READING: TELERIK vs IRONBARCODE             ║");
-            Console.WriteLine("╠═══════════════════════════════════════════════════════════════╣");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║  Use Case: Reading PDF417 on driver's licenses                ║");
-            Console.WriteLine("║  (Required for age verification, identity checking)           ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║  TELERIK:                                                     ║");
-            Console.WriteLine("║    // NOT POSSIBLE                                            ║");
-            Console.WriteLine("║    // RadBarcodeReader has no PDF417 support                  ║");
-            Console.WriteLine("║    // Cannot read AAMVA-compliant driver's licenses           ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║  IRONBARCODE:                                                 ║");
-            Console.WriteLine("║    var results = BarcodeReader.Read(licenseImage);            ║");
-            Console.WriteLine("║    var pdf417 = results                                       ║");
-            Console.WriteLine("║        .Where(r => r.BarcodeType == BarcodeEncoding.PDF417)   ║");
-            Console.WriteLine("║        .FirstOrDefault()?.Text;                               ║");
-            Console.WriteLine("║    // Parse AAMVA data: name, DOB, address, etc.              ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("╚═══════════════════════════════════════════════════════════════╝");
+            Console.WriteLine("  Use Case: GS1 DataMatrix on pharmaceutical products");
+            Console.WriteLine("  (Required by FDA for drug serialization)");
+            Console.WriteLine();
+            Console.WriteLine("  TELERIK (WPF):");
+            Console.WriteLine("    DecodeType.DataMatrix is supported.");
+            Console.WriteLine("    var reader = new RadBarcodeReader();");
+            Console.WriteLine("    reader.DecodeTypes = DecodeType.DataMatrix;");
+            Console.WriteLine("    var result = reader.Decode(productImage);");
+            Console.WriteLine();
+            Console.WriteLine("  TELERIK (WinForms):");
+            Console.WriteLine("    NOT POSSIBLE — DecodeType.DataMatrix not in WinForms enum.");
+            Console.WriteLine();
+            Console.WriteLine("  IRONBARCODE (WPF, WinForms, web, Docker — same call):");
+            Console.WriteLine("    var results = BarcodeReader.Read(productImage);");
+            Console.WriteLine("    var gs1Data = results");
+            Console.WriteLine("        .Where(r => r.BarcodeType == BarcodeEncoding.DataMatrix)");
+            Console.WriteLine("        .FirstOrDefault()?.Value;");
+            Console.WriteLine();
         }
     }
 
@@ -522,32 +561,30 @@ namespace CodeComparison
         public void ShowTable()
         {
             Console.WriteLine();
-            Console.WriteLine("╔═══════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║              FORMAT SUPPORT COMPARISON TABLE                  ║");
-            Console.WriteLine("╠═══════════════════════════════════════════════════════════════╣");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║  Format          │ Telerik Read │ Telerik Write │ IronBarcode ║");
-            Console.WriteLine("║  ────────────────┼──────────────┼───────────────┼─────────────║");
-            Console.WriteLine("║  Code 128        │      ✓       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  Code 39         │      ✓       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  EAN-13          │      ✓       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  UPC-A           │      ✓       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  ITF             │      ✓       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  ────────────────┼──────────────┼───────────────┼─────────────║");
-            Console.WriteLine("║  QR Code         │      ✗       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  Micro QR        │      ✗       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  DataMatrix      │      ✗       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  PDF417          │      ✗       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  Aztec           │      ✗       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  MaxiCode        │      ✗       │       ✓       │      ✓      ║");
-            Console.WriteLine("║  ────────────────┼──────────────┼───────────────┼─────────────║");
-            Console.WriteLine("║  Total Read      │     ~15      │      N/A      │     50+     ║");
-            Console.WriteLine("║  Total Write     │     ~20      │      ~20      │     50+     ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("╚═══════════════════════════════════════════════════════════════╝");
+            Console.WriteLine("===============================================================");
+            Console.WriteLine("                FORMAT SUPPORT COMPARISON TABLE");
+            Console.WriteLine("===============================================================");
             Console.WriteLine();
-            Console.WriteLine("Key insight: Telerik can GENERATE 2D barcodes but cannot READ them.");
-            Console.WriteLine("IronBarcode has symmetric read/write support for ALL formats.");
+            Console.WriteLine("  Format          | Telerik WPF Read | Telerik WinForms Read | IronBarcode");
+            Console.WriteLine("  ----------------+------------------+-----------------------+------------");
+            Console.WriteLine("  Code 128        |       YES        |          YES          |    YES");
+            Console.WriteLine("  Code 39         |       YES        |          YES          |    YES");
+            Console.WriteLine("  EAN-13          |       YES        |          YES          |    YES");
+            Console.WriteLine("  UPC-A           |       YES        |          YES          |    YES");
+            Console.WriteLine("  ITF             |       YES        |          YES          |    YES");
+            Console.WriteLine("  ----------------+------------------+-----------------------+------------");
+            Console.WriteLine("  QR Code         |       YES        |           no          |    YES");
+            Console.WriteLine("  DataMatrix      |       YES        |           no          |    YES");
+            Console.WriteLine("  PDF417          |       YES        |           no          |    YES");
+            Console.WriteLine("  ----------------+------------------+-----------------------+------------");
+            Console.WriteLine("  Aztec           |        no        |           no          |    YES");
+            Console.WriteLine("  MaxiCode        |        no        |           no          |    YES");
+            Console.WriteLine("  MicroQR         |        no        |           no          |    YES");
+            Console.WriteLine("  DotCode         |        no        |           no          |    YES");
+            Console.WriteLine();
+            Console.WriteLine("Key insight: Telerik's reader coverage differs WPF vs WinForms,");
+            Console.WriteLine("and neither covers Aztec, MaxiCode, MicroQR, or DotCode.");
+            Console.WriteLine("IronBarcode's API is identical across platforms with broader format coverage.");
         }
     }
 }
@@ -560,23 +597,31 @@ public class Program
 {
     public static void Main()
     {
-        Console.WriteLine("=== Telerik RadBarcode 1D-Only Reading Limitation ===");
+        Console.WriteLine("=== Telerik RadBarcodeReader Format Limitations ===");
         Console.WriteLine();
 
-        // Show Telerik limitations
-        var telerikReader = new TelerikFormatLimitation.TelerikBarcodeReader();
-        telerikReader.ShowFormatLimitation();
+        // Show Telerik WPF reader coverage
+        var telerikWpf = new TelerikFormatLimitation.TelerikWpfBarcodeReader();
+        telerikWpf.ShowFormatCoverage();
         Console.WriteLine();
 
-        Console.WriteLine("────────────────────────────────────────────────────────────");
+        Console.WriteLine("------------------------------------------------------------");
         Console.WriteLine();
 
-        // Show the QR code paradox
-        var paradox = new TelerikFormatLimitation.QrCodeParadox();
-        paradox.DemonstrateParadox();
+        // Show Telerik WinForms reader coverage
+        var telerikWinForms = new TelerikFormatLimitation.TelerikWinFormsBarcodeReader();
+        telerikWinForms.ShowFormatCoverage();
         Console.WriteLine();
 
-        Console.WriteLine("────────────────────────────────────────────────────────────");
+        Console.WriteLine("------------------------------------------------------------");
+        Console.WriteLine();
+
+        // Show round-trip gap
+        var gap = new TelerikFormatLimitation.RoundTripGap();
+        gap.Demonstrate();
+        Console.WriteLine();
+
+        Console.WriteLine("------------------------------------------------------------");
         Console.WriteLine();
 
         // Inventory scenario problem
@@ -584,7 +629,7 @@ public class Program
         inventoryProblem.ShowProblem();
         Console.WriteLine();
 
-        Console.WriteLine("════════════════════════════════════════════════════════════");
+        Console.WriteLine("============================================================");
         Console.WriteLine();
 
         // IronBarcode solution
@@ -592,7 +637,7 @@ public class Program
         ironReader.ShowFullSupport();
         Console.WriteLine();
 
-        Console.WriteLine("────────────────────────────────────────────────────────────");
+        Console.WriteLine("------------------------------------------------------------");
         Console.WriteLine();
 
         // Inventory scenario solved
@@ -600,14 +645,14 @@ public class Program
         inventorySolution.ShowSolution();
         Console.WriteLine();
 
-        Console.WriteLine("════════════════════════════════════════════════════════════");
+        Console.WriteLine("============================================================");
         Console.WriteLine();
 
         // Side-by-side comparisons
         var comparison = new CodeComparison.SideBySideComparison();
-        comparison.CompareQrCodeReading();
+        comparison.CompareAztecReading();
+        comparison.CompareWinFormsQrReading();
         comparison.CompareDataMatrixReading();
-        comparison.ComparePdf417Reading();
 
         // Summary table
         var summary = new CodeComparison.FormatSummary();

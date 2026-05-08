@@ -54,14 +54,14 @@ foreach (var result in results)
 | Format metadata in result | No | Yes |
 | Native PDF reading | No (requires Spire.PDF) | Yes |
 | Additional library for PDF | Spire.PDF (separate license) | None |
-| Free tier reading performance | Intentionally degraded | Full speed |
-| Free tier watermarks | Large, covers barcode | Small, edge only |
-| Free tier symbologies | ~20 types | 50+ types |
-| Registration for free tier | Yes | No |
+| Free tier reading performance | Slower than paid (per E-iceblue) | Full speed |
+| Free tier evaluation notice | On output until key applied | Small edge watermark |
+| Free tier symbologies | Subset of paid (~38 in paid) | 30+ types |
+| Registration for free tier | Free key required to suppress notice | No |
 | Generation API model | Settings object + generator | Static factory with fluent chain |
 | QR code with custom logo | Commercial tier only | All tiers |
 | Return type from read | `string[]` | `BarcodeResults` (with type metadata) |
-| Symbology count | 39+ (commercial) | 50+ |
+| Symbology count | ~38 (commercial) | 30+ |
 | License model | Per-seat perpetual + subscription | Perpetual with optional renewal |
 
 ## Quick Start
@@ -85,7 +85,7 @@ If `Spire.PDF` is used for other document operations beyond barcode extraction, 
 Install IronBarcode:
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
 
 ### Step 2: Update Namespaces
@@ -106,11 +106,8 @@ using IronBarCode;
 Replace the Spire license initialization with a single IronBarcode property assignment at application startup. See the [IronBarcode licensing page](https://ironsoftware.com/csharp/barcode/licensing/) for key formats and deployment options:
 
 ```csharp
-// Remove (FreeSpire registration):
-Spire.Barcode.BarcodeSettings.ApplyKey("your-free-key");
-
-// Remove (commercial Spire license):
-Spire.License.LicenseProvider.SetLicenseKey("your-commercial-key");
+// Remove (Spire license — same call for both free community key and commercial key):
+Spire.License.LicenseProvider.SetLicenseKey("your-spire-key");
 
 // Add (IronBarcode):
 IronBarCode.License.LicenseKey = "YOUR-IRONBARCODE-LICENSE-KEY";
@@ -190,7 +187,7 @@ var results = BarcodeReader.Read("document-scan.png");
 List<string> allValues = results.Select(r => r.Value).ToList();
 ```
 
-[IronBarcode's image reading](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) handles all 50+ symbologies in a single pass. When reading speed needs to be tuned for high-volume batch processing, `BarcodeReaderOptions` provides that control without adding format-specific branches:
+[IronBarcode's image reading](https://ironsoftware.com/csharp/barcode/how-to/read-barcodes-from-images/) handles its full supported symbology set in a single pass. When reading speed needs to be tuned for high-volume batch processing, `BarcodeReaderOptions` provides that control without adding format-specific branches:
 
 ```csharp
 var options = new BarcodeReaderOptions
@@ -291,8 +288,7 @@ foreach (var barcode in results)
 | `settings.Data = "value"` | First parameter of `CreateBarcode()` | |
 | `new BarCodeGenerator(settings)` | Not needed | Static factory replaces it |
 | `generator.GenerateImage()` | `.SaveAsPng()` / `.SaveAsJpeg()` | Format-specific output methods |
-| `BarcodeSettings.ApplyKey("key")` | `IronBarCode.License.LicenseKey = "key"` | Set once at startup |
-| `Spire.License.LicenseProvider.SetLicenseKey("key")` | `IronBarCode.License.LicenseKey = "key"` | Same single-line replacement |
+| `Spire.License.LicenseProvider.SetLicenseKey("key")` | `IronBarCode.License.LicenseKey = "key"` | Set once at startup |
 | `Spire.PDF` (for PDF reading) | Not needed | Native PDF support built in |
 
 ## Common Migration Issues and Solutions
@@ -352,7 +348,7 @@ Audit the codebase to identify all Spire.Barcode usage before making changes:
 grep -r "using Spire.Barcode" --include="*.cs" .
 grep -r "using Spire.Pdf" --include="*.cs" .
 grep -r "BarcodeScanner\|BarcodeSettings\|BarCodeGenerator\|BarCodeType\." --include="*.cs" .
-grep -r "ApplyKey\|SetLicenseKey" --include="*.cs" .
+grep -r "SetLicenseKey" --include="*.cs" .
 grep -r "ExtractImages\|PdfPageBase" --include="*.cs" .
 ```
 
@@ -367,7 +363,7 @@ grep -r "ExtractImages\|PdfPageBase" --include="*.cs" .
 3. Install `IronBarcode` NuGet package
 4. Replace all `using Spire.Barcode;` with `using IronBarCode;`
 5. Remove all `using Spire.Pdf;` imports where no longer needed
-6. Replace license initialization: `ApplyKey()` or `SetLicenseKey()` with `IronBarCode.License.LicenseKey = "key"`
+6. Replace license initialization: `Spire.License.LicenseProvider.SetLicenseKey()` with `IronBarCode.License.LicenseKey = "key"`
 7. Remove all `new BarcodeScanner()` instantiations
 8. Replace all `scanner.Scan(path, BarCodeType.X)` calls with `BarcodeReader.Read(path)`
 9. Delete type-guessing foreach loops; replace each with a single `BarcodeReader.Read()` call

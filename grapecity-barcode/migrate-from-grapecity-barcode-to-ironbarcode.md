@@ -1,6 +1,8 @@
-# Migrating from GrapeCity ComponentOne Barcode to IronBarcode
+# Migrating from MESCIUS ComponentOne Barcode (formerly GrapeCity) to IronBarcode
 
 The migration removes two constraints at once: Windows-only deployment and generation-only capability. The API change is manageable — C1BarCode's property-setter model maps cleanly to IronBarcode's fluent chain, and the concept translations are direct. What you gain is the ability to deploy to Linux and Docker, run in ASP.NET Core on any platform, add barcode reading without a second library, and drop the ComponentOne Studio Enterprise subscription if the barcode control is the primary reason you are paying for it.
+
+> **Vendor name note:** GrapeCity rebranded its developer-tools division to MESCIUS in 2023. The product is now sold as MESCIUS ComponentOne, and current docs and pricing live at developer.mescius.com. The class name `C1BarCode` and the `C1.*` package prefix did not change in the rebrand.
 
 This guide covers the package swap, namespace changes, code translation patterns, and the cross-platform target framework change that unlocks Linux/Docker deployment.
 
@@ -11,7 +13,7 @@ Four steps get the basic migration done:
 **Step 1: Remove the ComponentOne package.**
 
 ```bash
-dotnet remove package C1.Win.C1BarCode
+dotnet remove package C1.Win.BarCode
 ```
 
 If your project references other ComponentOne packages you are keeping, remove only the barcode-related reference. If C1BarCode was your only reason for having ComponentOne Studio installed, also clean up the ComponentOne license configuration from your startup code.
@@ -19,14 +21,17 @@ If your project references other ComponentOne packages you are keeping, remove o
 **Step 2: Install IronBarcode.**
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
+
+The IronBarcode NuGet package id is `BarCode`; the namespace you import in code is `IronBarCode` (with a capital `C` in the middle).
 
 **Step 3: Update namespaces and license initialization.**
 
 ```csharp
 // Before
-using C1.Win.C1BarCode;
+using C1.Win.Barcode;
+using C1.BarCode;
 // C1.C1License.Key = "YOUR-COMPONENTONE-KEY"; // remove this
 
 // After
@@ -58,7 +63,8 @@ The most common C1BarCode usage — generating a 1D barcode and saving it to a f
 **Before (ComponentOne C1BarCode):**
 
 ```csharp
-using C1.Win.C1BarCode;
+using C1.Win.Barcode;
+using C1.BarCode;
 using System.Drawing;
 using System.Drawing.Imaging;
 
@@ -79,7 +85,7 @@ image.Save("shipping-label.png", ImageFormat.Png);
 **After (IronBarcode):**
 
 ```csharp
-// NuGet: dotnet add package IronBarcode
+// NuGet: dotnet add package BarCode
 using IronBarCode;
 
 IronBarCode.License.LicenseKey = "YOUR-IRONBARCODE-KEY";
@@ -96,7 +102,8 @@ The `C1BarCode` instance is gone. `BarcodeWriter.CreateBarcode()` is a static ca
 **Before (ComponentOne C1BarCode):**
 
 ```csharp
-using C1.Win.C1BarCode;
+using C1.Win.Barcode;
+using C1.BarCode;
 using System.Drawing;
 using System.Drawing.Imaging;
 
@@ -133,7 +140,8 @@ QRCodeWriter.CreateQrCode(
 **Before (ComponentOne C1BarCode):**
 
 ```csharp
-using C1.Win.C1BarCode;
+using C1.Win.Barcode;
+using C1.BarCode;
 using System.Drawing;
 
 C1.C1License.Key = "YOUR-COMPONENTONE-KEY";
@@ -206,7 +214,8 @@ C1BarCode's `GetImage()` returns a `System.Drawing.Image`, which you then call `
 **Before:**
 
 ```csharp
-using C1.Win.C1BarCode;
+using C1.Win.Barcode;
+using C1.BarCode;
 using System.Drawing;
 using System.IO;
 
@@ -245,7 +254,7 @@ using IronBarCode;
 var results = BarcodeReader.Read("scanned-label.png");
 foreach (var barcode in results)
 {
-    Console.WriteLine($"Format: {barcode.Format}");
+    Console.WriteLine($"Format: {barcode.BarcodeType}");
     Console.WriteLine($"Value: {barcode.Value}");
 }
 ```
@@ -265,7 +274,7 @@ var options = new BarcodeReaderOptions
 var results = BarcodeReader.Read("warehouse-shelf-photo.jpg", options);
 foreach (var barcode in results)
 {
-    Console.WriteLine($"{barcode.Format}: {barcode.Value}");
+    Console.WriteLine($"{barcode.BarcodeType}: {barcode.Value}");
 }
 ```
 
@@ -295,7 +304,7 @@ If your project was `net8.0-windows` because C1BarCode required it, and you are 
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="C1.Win.C1BarCode" Version="..." />
+    <PackageReference Include="C1.Win.BarCode" Version="..." />
   </ItemGroup>
 </Project>
 ```
@@ -309,7 +318,7 @@ If your project was `net8.0-windows` because C1BarCode required it, and you are 
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="IronBarcode" Version="..." />
+    <PackageReference Include="BarCode" Version="..." />
   </ItemGroup>
 </Project>
 ```
@@ -403,7 +412,8 @@ Search your codebase for these patterns and apply the translations from the sect
 
 ```bash
 # Find all C1BarCode usage
-grep -r "using C1.Win.C1BarCode" --include="*.cs" .
+grep -r "using C1.Win.Barcode" --include="*.cs" .
+grep -r "using C1.BarCode" --include="*.cs" .
 grep -r "new C1BarCode()" --include="*.cs" .
 grep -r "CodeType\." --include="*.cs" .
 grep -r "barcode\.BarHeight" --include="*.cs" .
@@ -423,8 +433,8 @@ grep -r "UseWindowsForms" --include="*.csproj" .
 
 Prioritized migration sequence:
 
-1. Replace `C1.Win.C1BarCode` package reference with `IronBarcode`
-2. Replace `using C1.Win.C1BarCode;` with `using IronBarCode;`
+1. Replace `C1.Win.BarCode` package reference with `BarCode` (NuGet id; namespace is `IronBarCode`)
+2. Replace `using C1.Win.Barcode;` and `using C1.BarCode;` with `using IronBarCode;`
 3. Replace `C1.C1License.Key = "..."` with `IronBarCode.License.LicenseKey = "..."`
 4. Replace each `new C1BarCode()` + property-setter block + `GetImage()` with `BarcodeWriter.CreateBarcode()` chain
 5. Replace QR code generation blocks with `QRCodeWriter.CreateQrCode()` chains

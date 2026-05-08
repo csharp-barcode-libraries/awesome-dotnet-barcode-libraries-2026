@@ -2,7 +2,7 @@
 
 *By [Jacob Mellor](https://ironsoftware.com/about-us/authors/jacobmellor/), CTO of Iron Software*
 
-NetBarcode is a lightweight open-source library for generating 1D barcodes in .NET. While the library excels at creating common linear barcode formats like Code128, EAN, and UPC, it has a fundamental limitation: NetBarcode supports only 1D barcodes—no QR codes, DataMatrix, or any other 2D formats. Additionally, like other open-source generators, NetBarcode is generation-only with no reading capability. This guide examines NetBarcode's strengths within its niche, its format limitations, and how it compares to [IronBarcode](https://ironsoftware.com/csharp/barcode/) for developers who need flexibility beyond 1D formats.
+NetBarcode is a lightweight open-source library for generating 1D barcodes in .NET. While the library handles common linear barcode formats like Code128, EAN-13, and Code39, it has a fundamental limitation: NetBarcode supports only 1D barcodes — no QR codes, DataMatrix, or any other 2D formats — and even within 1D it omits UPC-A, UPC-E, ITF, and MSI. Additionally, like other open-source generators, NetBarcode is generation-only with no reading capability. This guide examines NetBarcode's strengths within its niche, its format limitations, and how it compares to [IronBarcode](https://ironsoftware.com/csharp/barcode/) for developers who need flexibility beyond 1D formats.
 
 ## Table of Contents
 
@@ -19,36 +19,41 @@ NetBarcode is a lightweight open-source library for generating 1D barcodes in .N
 
 ## What is NetBarcode?
 
-NetBarcode is an open-source 1D barcode generation library for .NET Standard 2.0+, created and maintained by Mauricio Tagliatti. The library focuses on simplicity, providing a clean API for generating the most common linear barcode formats.
+NetBarcode is an open-source 1D barcode generation library for .NET Standard 2.0+, created and maintained by Tagliatti. The library focuses on simplicity, providing a clean API for generating a small set of common linear barcode formats.
 
 ### Core Characteristics
 
 | Attribute | Details |
 |-----------|---------|
 | **GitHub Repository** | [Tagliatti/NetBarcode](https://github.com/Tagliatti/NetBarcode) |
-| **NuGet Package** | NetBarcode 1.8.2 |
+| **NuGet Package** | NetBarcode 1.8.3 (released August 2025) |
 | **License** | MIT (Free for commercial use) |
 | **Primary Function** | 1D barcode image generation |
-| **Target Framework** | .NET Standard 2.0+ |
-| **Dependency** | SixLabors.ImageSharp |
+| **Target Framework** | .NET Standard 2.0+ (works on .NET Framework 4.6.1+, .NET Core, .NET 5–10) |
+| **Dependencies** | SixLabors.ImageSharp, SixLabors.ImageSharp.Drawing, SixLabors.Fonts |
 
 ### Supported Formats
 
-NetBarcode supports approximately 15 1D barcode formats:
+NetBarcode's `Type` enum exposes 11 values covering 8 distinct symbology families:
 
 **Linear Barcode Formats:**
-- Code 128 (with auto-switching)
-- Code 39 (Standard and Extended)
-- Code 93
-- EAN-8
-- EAN-13
-- UPC-A
-- UPC-E
-- Codabar
-- ITF (Interleaved 2 of 5)
-- MSI (Mod 10)
+- Code 128 (`Code128`, with auto-switching) plus explicit `Code128A`, `Code128B`, `Code128C` subsets
+- Code 39 (`Code39`)
+- Code 39 Extended (`Code39E`)
+- Code 93 (`Code93`)
+- Code 11 (`Code11`)
+- EAN-13 (`EAN13`)
+- EAN-8 (`EAN8`)
+- Codabar (`Codabar`)
 
-**NOT Supported (2D Formats):**
+**NOT Supported — 1D omissions:**
+- UPC-A, UPC-E
+- ITF / Interleaved 2 of 5
+- MSI / Plessey
+- GS1-128, GS1 DataBar
+- Postal formats (Intelligent Mail, Royal Mail, Australia Post)
+
+**NOT Supported — 2D Formats:**
 - QR Code
 - DataMatrix
 - PDF417
@@ -69,9 +74,9 @@ The most significant constraint of NetBarcode is its exclusive focus on 1D (line
 ### What This Means for Projects
 
 **Projects That Fit NetBarcode:**
-- Retail point-of-sale (UPC/EAN only)
+- European retail using EAN-13 / EAN-8 (NetBarcode does not implement UPC-A or UPC-E directly)
 - Basic shipping labels (Code128 only)
-- Internal inventory tags (1D sufficient)
+- Internal inventory tags (1D sufficient, Code128 / Code39 sufficient)
 - Legacy integrations with 1D-only scanners
 
 **Projects That Don't Fit:**
@@ -127,32 +132,33 @@ Replace NetBarcode with a library that supports both 1D and 2D formats.
 
 | Feature | NetBarcode | IronBarcode |
 |---------|------------|-------------|
-| **1D Barcode Generation** | Yes | Yes |
+| **1D Barcode Generation** | Yes (8 symbology families) | Yes |
 | **2D Barcode Generation** | No | Yes |
 | **Barcode Reading** | No | Yes |
-| **1D Format Count** | ~15 | 30+ |
+| **1D Format Count** | 11 enum values / 8 families | 30+ |
 | **2D Format Count** | 0 | 8+ |
 | **PDF Generation** | No | Yes |
 | **PDF Extraction** | No | Yes |
 | **Automatic Detection** | N/A | Yes |
 | **Batch Processing** | Manual | Built-in |
-| **Cross-Platform** | Yes | Yes |
+| **Cross-Platform** | Yes (via ImageSharp) | Yes |
 
 ### Format Coverage Deep Dive
 
-**Formats NetBarcode Supports:**
+**Formats NetBarcode Supports (full Type enum):**
 ```
-Code128, Code39, Code39Extended, Code93, EAN8, EAN13,
-UPCA, UPCE, Codabar, ITF, MSI
+Codabar, Code11, Code128, Code128A, Code128B, Code128C,
+Code39, Code39E, Code93, EAN13, EAN8
 ```
 
 **Additional Formats in IronBarcode:**
 
-*1D Additions:*
+*1D Additions (not in NetBarcode):*
 ```
-GS1-128, GS1 DataBar (Omnidirectional, Stacked, Limited, Expanded),
+UPC-A, UPC-E, ITF / ITF-14, MSI, GS1-128,
+GS1 DataBar (Omnidirectional, Stacked, Limited, Expanded),
 Intelligent Mail, Royal Mail, Australia Post, Plessey, Telepen,
-Pharmacode, PostNet, Planet, Japan Post, Swiss QR
+Pharmacode, PostNet, Planet, Japan Post
 ```
 
 *2D Formats (unavailable in NetBarcode):*
@@ -179,21 +185,22 @@ Aztec, MaxiCode, Han Xin
 
 ## ImageSharp Migration Issues
 
-NetBarcode uses SixLabors.ImageSharp for image rendering. While this provides good cross-platform support, version 1.8+ introduced breaking changes that affected existing projects.
+NetBarcode uses SixLabors.ImageSharp for image rendering. While this provides good cross-platform support without `System.Drawing.Common`, the migration from `System.Drawing` to ImageSharp (in the 1.5+ line) introduced breaking changes that affected existing projects, and the ImageSharp return type leaks into calling code.
 
 ### The Breaking Change
 
-In NetBarcode 1.8+, the namespace for GetImage() and customization options changed:
+When NetBarcode moved from `System.Drawing` to `SixLabors.ImageSharp`, the type returned by `GetImage()` and the customization options changed:
 
-**Before NetBarcode 1.8:**
+**Before the ImageSharp migration:**
 ```csharp
 using NetBarcode;
+using System.Drawing;
 
 var barcode = new Barcode("12345", Type.Code128);
-var image = barcode.GetImage();
+Bitmap image = barcode.GetImage();
 ```
 
-**After NetBarcode 1.8:**
+**After the ImageSharp migration:**
 ```csharp
 using NetBarcode;
 using SixLabors.ImageSharp;
@@ -217,10 +224,11 @@ This means NetBarcode's "free" status has a hidden commercial license dependency
 ### Dependency Chain
 
 ```xml
-<PackageReference Include="NetBarcode" Version="1.8.2">
-  <!-- Brings in: -->
-  <PackageReference Include="SixLabors.ImageSharp" Version="3.x" />
-  <PackageReference Include="SixLabors.Fonts" Version="2.x" />
+<PackageReference Include="NetBarcode" Version="1.8.3">
+  <!-- Transitive dependencies pulled in by NetBarcode: -->
+  <PackageReference Include="SixLabors.ImageSharp" Version="2.1.11+" />
+  <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0+" />
+  <PackageReference Include="SixLabors.Fonts" Version="1.0.1+" />
 </PackageReference>
 ```
 
@@ -264,8 +272,9 @@ For simple 1D generation, both libraries are straightforward.
 using NetBarcode;
 
 // QR Code is NOT supported in NetBarcode
-// The Type enum does not include QR:
-// Type.Code128, Type.Code39, Type.EAN13, Type.UPCA... (no QR)
+// The Type enum is limited to:
+// Code128 / Code128A / Code128B / Code128C, Code39, Code39E, Code93,
+// Code11, EAN13, EAN8, Codabar — no QR, DataMatrix, PDF417, or Aztec
 
 // This would require a second library like QRCoder:
 // dotnet add package QRCoder
@@ -370,7 +379,7 @@ BarcodeWriter.CreateBarcode("data", BarcodeEncoding.DataMatrix)
 foreach (var file in Directory.GetFiles(".", "*.png"))
 {
     var result = BarcodeReader.Read(file).FirstOrDefault();
-    Console.WriteLine($"{file}: {result?.BarcodeType} = {result?.Text}");
+    Console.WriteLine($"{file}: {result?.BarcodeType} = {result?.Value}");
 }
 ```
 
@@ -384,8 +393,8 @@ For format limitation examples, see [NetBarcode Format Limitations Example](netb
 
 | Cost | NetBarcode | IronBarcode |
 |------|------------|-------------|
-| License | $0 | $749 one-time |
-| ImageSharp license (>$1M company) | Variable | Included |
+| License | $0 | From $799 (Lite) perpetual |
+| ImageSharp license (>$1M company) | Variable | Not applicable (no ImageSharp dependency) |
 | Support | Community only | Professional |
 
 ### Indirect Costs: The QR Code Tax
@@ -396,7 +405,8 @@ The most significant hidden cost with NetBarcode is when you eventually need QR 
 
 | Phase | NetBarcode Path | IronBarcode Path |
 |-------|-----------------|------------------|
-| Initial: Product UPC codes | Works | Works |
+| Initial: EAN-13 product codes | Works | Works |
+| Add UPC-A / UPC-E codes for US retail | Need a different library (NetBarcode has no UPC) | Works (same code) |
 | Month 3: Add QR for mobile payments | Need QRCoder | Works (same code) |
 | Month 6: Read barcodes from supplier docs | Need ZXing.Net | Works (same code) |
 | Month 12: PDF invoice processing | Need PDF library | Works (same code) |
@@ -414,12 +424,12 @@ NetBarcode "Free" Path:
   Total over 2 years:         $5,600
 
 IronBarcode Path:
-  License:                    $749
+  License (Lite, perpetual):  $799
   Integration time:           0 extra hours
   ─────────────────────────────────────────────────────
-  Total over 2 years:         $749
+  Total over 2 years:         $799
 
-Savings: $4,851
+Savings: $4,801
 ```
 
 ### Decision Framework
@@ -442,9 +452,9 @@ Savings: $4,851
 
 ### Choose NetBarcode When:
 
-1. **Exclusively 1D needs** - You generate only Code128, EAN, UPC and will never need 2D formats.
+1. **Exclusively 1D needs** - You generate only Code128, Code39, Code93, EAN-13/EAN-8, Code11, or Codabar and will never need 2D formats, UPC, ITF, MSI, or postal symbologies.
 
-2. **Retail-only application** - Point-of-sale system working with traditional UPC/EAN product codes only.
+2. **European retail application** - Point-of-sale system working with EAN-13 / EAN-8 product codes (US-market UPC-A and UPC-E are not in NetBarcode's `Type` enum).
 
 3. **Legacy integration** - Connecting to systems that only support 1D barcodes.
 
@@ -494,8 +504,10 @@ dotnet remove package SixLabors.ImageSharp  # If no longer needed elsewhere
 **Add IronBarcode:**
 
 ```bash
-dotnet add package IronBarcode
+dotnet add package BarCode
 ```
+
+The IronBarcode NuGet package id is `BarCode`; the namespace used in code is `IronBarCode` (note the capital C).
 
 ### API Mapping Reference
 
@@ -503,11 +515,16 @@ dotnet add package IronBarcode
 |------------|-------------|-------|
 | `new Barcode(data, Type)` | `BarcodeWriter.CreateBarcode(data, encoding)` | Static method |
 | `Type.Code128` | `BarcodeEncoding.Code128` | Direct mapping |
+| `Type.Code128A/B/C` | `BarcodeEncoding.Code128` | IronBarcode auto-selects subset |
 | `Type.EAN13` | `BarcodeEncoding.EAN13` | Direct mapping |
-| `Type.UPCA` | `BarcodeEncoding.UPCA` | Direct mapping |
-| `Type.Code39` | `BarcodeEncoding.Code39` | Direct mapping |
+| `Type.EAN8` | `BarcodeEncoding.EAN8` | Direct mapping |
+| `Type.Code39` / `Code39E` | `BarcodeEncoding.Code39` / `Code39Extended` | Direct mapping |
+| `Type.Code93` | `BarcodeEncoding.Code93` | Direct mapping |
+| `Type.Code11` | `BarcodeEncoding.Code11` | Direct mapping |
+| `Type.Codabar` | `BarcodeEncoding.Codabar` | Direct mapping |
 | `barcode.SaveImageFile("x.png")` | `.SaveAsPng("x.png")` | Method naming |
-| `barcode.GetImage()` | `.ToImage()` or `.ToPngBinaryData()` | Multiple options |
+| `barcode.GetImage()` (returns `Image<Rgba32>`) | `.ToPngBinaryData()` or `.SaveAsPng(stream)` | No ImageSharp type leaked |
+| N/A in NetBarcode | `BarcodeEncoding.UPCA` / `UPCE` / `ITF` / `MSI` | New capability |
 | N/A | `BarcodeEncoding.QRCode` | New capability |
 | N/A | `BarcodeReader.Read()` | New capability |
 
@@ -521,10 +538,10 @@ using SixLabors.ImageSharp;
 
 public class BarcodeService
 {
-    public void GenerateProductBarcode(string upc)
+    public void GenerateProductBarcode(string ean)
     {
-        var barcode = new Barcode(upc, Type.UPCA);
-        barcode.SaveImageFile($"product-{upc}.png");
+        var barcode = new Barcode(ean, Type.EAN13);
+        barcode.SaveImageFile($"product-{ean}.png");
     }
 
     public void GenerateShippingLabel(string code)
@@ -533,7 +550,8 @@ public class BarcodeService
         barcode.SaveImageFile($"shipping-{code}.png");
     }
 
-    // Cannot generate QR codes
+    // Cannot generate UPC-A or UPC-E (not in Type enum)
+    // Cannot generate QR codes or any 2D format
     // Cannot read barcodes
 }
 ```
@@ -545,7 +563,14 @@ using IronBarCode;
 
 public class BarcodeService
 {
-    public void GenerateProductBarcode(string upc)
+    public void GenerateProductBarcodeEAN(string ean)
+    {
+        BarcodeWriter.CreateBarcode(ean, BarcodeEncoding.EAN13)
+            .SaveAsPng($"product-{ean}.png");
+    }
+
+    // NEW: UPC-A is supported in IronBarcode (not in NetBarcode)
+    public void GenerateProductBarcodeUPC(string upc)
     {
         BarcodeWriter.CreateBarcode(upc, BarcodeEncoding.UPCA)
             .SaveAsPng($"product-{upc}.png");
@@ -568,7 +593,7 @@ public class BarcodeService
     public string ReadBarcode(string imagePath)
     {
         var results = BarcodeReader.Read(imagePath);
-        return results.FirstOrDefault()?.Text;
+        return results.FirstOrDefault()?.Value;
     }
 }
 ```
@@ -605,7 +630,8 @@ public class BarcodeService
 
 - [IronBarcode Documentation](https://ironsoftware.com/csharp/barcode/docs/)
 - [IronBarcode Format Reference](https://ironsoftware.com/csharp/barcode/how-to/create-barcode-images/)
-- [IronBarcode on NuGet](https://www.nuget.org/packages/BarCode)
+- [IronBarcode on NuGet (package id: BarCode)](https://www.nuget.org/packages/BarCode)
+- [NetBarcode on NuGet](https://www.nuget.org/packages/NetBarcode)
 
 ### Code Examples
 

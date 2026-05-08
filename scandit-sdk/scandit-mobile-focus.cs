@@ -122,7 +122,7 @@ namespace ScanditVsIronBarcode
          * - Image files, PDFs, or byte arrays as input
          * - No camera or UI requirements
          *
-         * Install: dotnet add package IronBarcode
+         * Install: dotnet add package BarCode
          */
 
         public void ProcessDocumentBarcodes()
@@ -134,14 +134,14 @@ namespace ScanditVsIronBarcode
             var pdfResults = IronBarCode.BarcodeReader.Read("invoice.pdf");
             foreach (var barcode in pdfResults)
             {
-                Console.WriteLine($"PDF Page {barcode.PageNumber}: {barcode.Text}");
+                Console.WriteLine($"PDF Page {barcode.PageNumber}: {barcode.Value}");
             }
 
             // Read barcodes from image
             var imageResults = IronBarCode.BarcodeReader.Read("barcode.png");
             foreach (var barcode in imageResults)
             {
-                Console.WriteLine($"Found: {barcode.BarcodeType} = {barcode.Text}");
+                Console.WriteLine($"Found: {barcode.BarcodeType} = {barcode.Value}");
             }
 
             // Batch process directory of images
@@ -190,7 +190,7 @@ namespace ScanditVsIronBarcode
             Console.WriteLine($"File: {filename}");
             foreach (var barcode in results)
             {
-                Console.WriteLine($"  {barcode.BarcodeType}: {barcode.Text}");
+                Console.WriteLine($"  {barcode.BarcodeType}: {barcode.Value}");
             }
         }
     }
@@ -231,7 +231,7 @@ namespace ScanditVsIronBarcode
             if (results.Any())
             {
                 var barcode = results.First();
-                Console.WriteLine($"Found barcode: {barcode.Text}");
+                Console.WriteLine($"Found barcode: {barcode.Value}");
             }
         }
 
@@ -245,7 +245,7 @@ namespace ScanditVsIronBarcode
 
             foreach (var barcode in results)
             {
-                Console.WriteLine($"Extracted: {barcode.Text}");
+                Console.WriteLine($"Extracted: {barcode.Value}");
             }
         }
 
@@ -297,7 +297,7 @@ namespace ScanditVsIronBarcode
             var results = IronBarCode.BarcodeReader.Read("uploaded-invoice.pdf");
             foreach (var barcode in results)
             {
-                RouteDocument(barcode.Text);
+                RouteDocument(barcode.Value);
             }
         }
 

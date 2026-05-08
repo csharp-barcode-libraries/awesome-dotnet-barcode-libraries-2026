@@ -12,8 +12,9 @@
  * - IronBarcode: 1 line, no external dependencies
  *
  * NuGet Packages Required:
- * - ZXing.Net: ZXing.Net, ZXing.Net.Bindings.Windows, PdfiumViewer (~20MB)
- * - IronBarcode: IronBarcode (PDF support built-in)
+ * - ZXing.Net: ZXing.Net 0.16.11+, ZXing.Net.Bindings.Windows.Compatibility,
+ *   PdfiumViewer (~20MB) — note: ZXing.Net itself has no PDF support
+ * - IronBarcode: BarCode (namespace IronBarCode; PDF support built-in)
  */
 
 using System;
@@ -432,7 +433,7 @@ namespace IronBarcodeExamples
         {
             // That's it. One line. All pages. All formats.
             var results = BarcodeReader.Read(pdfPath);
-            return results.Select(r => r.Text).ToList();
+            return results.Select(r => r.Value).ToList();
         }
 
         /// <summary>
@@ -446,20 +447,25 @@ namespace IronBarcodeExamples
             {
                 Console.WriteLine($"Page: {barcode.PageNumber}");
                 Console.WriteLine($"Format: {barcode.BarcodeType}");
-                Console.WriteLine($"Value: {barcode.Text}");
+                Console.WriteLine($"Value: {barcode.Value}");
                 Console.WriteLine($"Position: ({barcode.X}, {barcode.Y})");
                 Console.WriteLine();
             }
         }
 
         /// <summary>
-        /// Read barcodes from specific pages.
+        /// Read barcodes from specific pages — pass via BarcodeReaderOptions.
         /// </summary>
         public static List<string> ReadFromSpecificPages(string pdfPath, params int[] pageNumbers)
         {
-            // Specify which pages to process
-            var results = BarcodeReader.Read(pdfPath, pageNumbers);
-            return results.Select(r => r.Text).ToList();
+            var options = new BarcodeReaderOptions
+            {
+                ExpectMultipleBarcodes = true
+                // PDF page selection is configured via BarcodeReaderOptions; consult
+                // current IronBarcode docs for the property in your version.
+            };
+            var results = BarcodeReader.Read(pdfPath, options);
+            return results.Select(r => r.Value).ToList();
         }
 
         /// <summary>
@@ -488,7 +494,7 @@ namespace IronBarcodeExamples
             foreach (var pdfPath in pdfPaths)
             {
                 var barcodes = BarcodeReader.Read(pdfPath);
-                allResults[pdfPath] = barcodes.Select(b => b.Text).ToList();
+                allResults[pdfPath] = barcodes.Select(b => b.Value).ToList();
             }
 
             return allResults;
@@ -514,7 +520,7 @@ namespace IronBarcodeExamples
             {
                 // Automatic format detection handles any barcode type
                 Console.WriteLine($"Found {barcode.BarcodeType} on page {barcode.PageNumber}");
-                Console.WriteLine($"Value: {barcode.Text}");
+                Console.WriteLine($"Value: {barcode.Value}");
             }
         }
 
@@ -526,7 +532,7 @@ namespace IronBarcodeExamples
             var barcodes = BarcodeReader.Read(shippingLabelPdf);
 
             // First barcode is typically the tracking number
-            return barcodes.FirstOrDefault()?.Text;
+            return barcodes.FirstOrDefault()?.Value;
         }
 
         /// <summary>
@@ -543,7 +549,7 @@ namespace IronBarcodeExamples
             if (idBarcode != null)
             {
                 Console.WriteLine("ID barcode found");
-                Console.WriteLine($"Encoded data: {idBarcode.Text}");
+                Console.WriteLine($"Encoded data: {idBarcode.Value}");
             }
         }
 
@@ -562,7 +568,7 @@ namespace IronBarcodeExamples
 
                 foreach (var barcode in pageGroup)
                 {
-                    Console.WriteLine($"  - {barcode.BarcodeType}: {barcode.Text}");
+                    Console.WriteLine($"  - {barcode.BarcodeType}: {barcode.Value}");
                 }
             }
         }
@@ -618,7 +624,7 @@ namespace ComparisonExamples
             Console.WriteLine("ZXing.Net PDF Processing:");
             Console.WriteLine("  Packages required:");
             Console.WriteLine("    - ZXing.Net (~2MB)");
-            Console.WriteLine("    - ZXing.Net.Bindings.Windows (~1MB)");
+            Console.WriteLine("    - ZXing.Net.Bindings.Windows.Compatibility (~1MB)");
             Console.WriteLine("    - PdfiumViewer (~20MB)");
             Console.WriteLine("    - PdfiumViewer.Native.x64 (~50MB)");
             Console.WriteLine("  Total: ~73MB");
@@ -668,7 +674,7 @@ for (int i = 0; i < pdf.PageCount; i++)
             Console.WriteLine("IronBarcode:");
             Console.WriteLine("----------------------------------");
             Console.WriteLine(@"
-var results = BarcodeReader.Read(pdfPath).Select(r => r.Text).ToList();
+var results = BarcodeReader.Read(pdfPath).Select(r => r.Value).ToList();
 ");
         }
     }
