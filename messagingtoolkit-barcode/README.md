@@ -22,7 +22,7 @@ MessagingToolkit.Barcode was an open-source .NET library created as a port of th
 **Key Facts:**
 - **Original Project Page:** http://platform.twit88.com/projects/mt-barcode (the maintainer's site; the project page is no longer actively maintained)
 - **NuGet Package:** MessagingToolkit.Barcode 1.7.0.2
-- **License:** Refer to the package's project page; the library is a port derived from ZXing (Apache 2.0 family). The NuGet listing does not specify a SPDX license — verify before redistributing.
+- **License:** The library is a port derived from ZXing (Apache 2.0 family). The NuGet listing does not specify a SPDX license tag.
 - **Last Update:** April 27, 2013 (final NuGet release; no updates since)
 - **Platforms Supported:** .NET Framework 3.5, 4.0, 4.5, 4.8, Silverlight 3-5, Windows Phone 7.x/8.0, Windows 8 Store
 

@@ -223,7 +223,7 @@ namespace ScanditPricingAnalysis
             Console.WriteLine("Requirements: 5 developers, mobile app + server processing");
             Console.WriteLine();
             Console.WriteLine("If use case is CAMERA SCANNING:");
-            Console.WriteLine("  Scandit: Requires quote (typically $X,000+/year)");
+            Console.WriteLine("  Scandit: Requires quote — pricing not published");
             Console.WriteLine("  IronBarcode: Not appropriate for camera scanning");
             Console.WriteLine();
             Console.WriteLine("If use case is DOCUMENT PROCESSING:");
@@ -240,7 +240,7 @@ namespace ScanditPricingAnalysis
             Console.WriteLine("  - 50 device licenses");
             Console.WriteLine("  - MatrixScan for warehouse");
             Console.WriteLine("  - Premium support");
-            Console.WriteLine("  - Estimated: $XX,000+/year (requires quote)");
+            Console.WriteLine("  - Pricing requires direct quote — Scandit publishes no list price");
             Console.WriteLine();
             Console.WriteLine("IronBarcode (document processing):");
             Console.WriteLine("  - Unlimited License: $4,799 one-time");
@@ -257,7 +257,7 @@ namespace ScanditPricingAnalysis
             Console.WriteLine("  - Enterprise licensing agreement");
             Console.WriteLine("  - Custom pricing negotiation");
             Console.WriteLine("  - Multi-year contract terms");
-            Console.WriteLine("  - Estimated: $XXX,000+/year (requires negotiation)");
+            Console.WriteLine("  - Custom enterprise quote required — no published list price");
             Console.WriteLine();
             Console.WriteLine("IronBarcode:");
             Console.WriteLine("  - Unlimited License: $4,799 one-time");
@@ -282,14 +282,11 @@ namespace ScanditPricingAnalysis
             Console.WriteLine($"  5-year without renewals: ${ironBarcode5YearNoRenewal:N0}");
             Console.WriteLine();
 
-            // Scandit is unknown without quote
-            Console.WriteLine("Scandit (50-device deployment, estimated):");
-            Console.WriteLine("  Year 1: $XX,000 (requires quote)");
-            Console.WriteLine("  Year 2: $XX,000 (annual renewal)");
-            Console.WriteLine("  Year 3: $XX,000 (annual renewal)");
-            Console.WriteLine("  Year 4: $XX,000 (annual renewal)");
-            Console.WriteLine("  Year 5: $XX,000 (annual renewal)");
-            Console.WriteLine("  5-year total: $XXX,000+ (requires negotiation)");
+            // Scandit pricing is contact-sales only — no published list price
+            Console.WriteLine("Scandit (50-device deployment):");
+            Console.WriteLine("  Annual subscription with renewal-required terms");
+            Console.WriteLine("  Per-device licensing, multi-year contracts available");
+            Console.WriteLine("  Every deployment is a custom quote");
             Console.WriteLine();
             Console.WriteLine("Note: Scandit pricing not public. Contact Scandit for quotes.");
         }
@@ -337,9 +334,9 @@ namespace ScanditPricingAnalysis
             Console.WriteLine();
 
             Console.WriteLine("With Scandit (if applicable to document processing):");
-            Console.WriteLine("  Budget: 'TBD pending Scandit quote'");
-            Console.WriteLine("  Risk: Quote may exceed budget");
-            Console.WriteLine("  Timeline: Weeks for quote process");
+            Console.WriteLine("  Budget: cannot be set until Scandit quote arrives");
+            Console.WriteLine("  Risk: quote may exceed budget");
+            Console.WriteLine("  Timeline: weeks for quote process");
             Console.WriteLine();
 
             Console.WriteLine("With IronBarcode:");

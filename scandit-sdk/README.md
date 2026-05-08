@@ -161,11 +161,11 @@ IronBarcode uses straightforward perpetual licensing:
 For a concrete comparison, consider processing 100,000 barcodes monthly:
 
 ```
-Scandit (estimated based on industry patterns):
+Scandit (contact-sales pricing):
 - Per-device licensing for 20 mobile devices
 - Base platform fee + usage tier
 - Premium support requirement for enterprise
-- Estimated: $X0,000+ annually (requires quote)
+- Pricing not published — every deployment is a custom quote
 
 IronBarcode:
 - Professional License: $2,399 (one-time)
@@ -531,10 +531,10 @@ This hybrid approach leverages each SDK's strengths.
 If you're evaluating migration purely for cost reasons:
 
 ```
-Current Scandit Cost (annual, estimated):
-- Enterprise license: $X0,000/year
-- Per-device fees: $X,000/year
-- Total: Requires quote
+Current Scandit Cost (annual):
+- Enterprise license + per-device fees
+- Multi-year contract terms typical
+- Total: Requires direct quote — no published list price
 
 IronBarcode Migration (if use case fits):
 - Professional License: $2,399 one-time

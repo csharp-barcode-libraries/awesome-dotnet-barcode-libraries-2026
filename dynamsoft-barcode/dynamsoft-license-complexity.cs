@@ -66,36 +66,26 @@ namespace DynamsoftLicensing
         }
 
         /// <summary>
-        /// For air-gapped or offline deployments, Dynamsoft requires a
-        /// device-bound licence file obtained from their support team.
+        /// For air-gapped or offline deployments, Dynamsoft uses a saved
+        /// license-content blob obtained from a prior online activation.
         /// </summary>
-        public static void InitializeOffline(string licenseKey, string licenseFileContent)
+        public static void InitializeOffline(string licenseFileContent)
         {
-            // Offline licensing requires:
-            // 1. Contact Dynamsoft support to obtain an offline licence
-            // 2. Receive a licence file bound to the target device fingerprint
-            // 3. Pass it to the LicenseManager APIs documented for your SDK
-            //    version (the exact method names have moved across versions)
-            // 4. Files have an expiry date and need periodic renewal
+            // Offline workflow:
+            // 1. On a connected machine, call InitLicenseFromServer(...) once
+            //    to fetch the license bundle from the Dynamsoft License Server.
+            // 2. Persist the bundle via OutputLicenseToString().
+            // 3. On the offline machine, replay it via InitLicenseFromLicenseContent.
+            // 4. Bundles have an expiry (typically 3-365 days) and must be refreshed.
 
-            try
-            {
-                // Method shape varies by SDK version; consult the current
-                // Dynamsoft.License.LicenseManager API reference for your build.
-                int errorCode = LicenseManager.InitLicenseFromDevice(
-                    licenseKey, licenseFileContent, out string errorMsg);
+            int errorCode = LicenseManager.InitLicenseFromLicenseContent(
+                licenseFileContent, out string errorMsg);
 
-                if (errorCode != (int)EnumErrorCode.EC_OK)
-                    throw new DynamsoftLicenseException(
-                        $"Offline license activation failed: {errorMsg}");
-
-                Console.WriteLine("Offline license activated");
-            }
-            catch (Exception ex)
-            {
+            if (errorCode != (int)EnumErrorCode.EC_OK)
                 throw new DynamsoftLicenseException(
-                    $"Offline license activation failed: {ex.Message}");
-            }
+                    $"Offline license activation failed: {errorMsg}");
+
+            Console.WriteLine("Offline license activated");
         }
     }
 

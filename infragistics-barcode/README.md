@@ -64,7 +64,7 @@ Infragistics sells products primarily through the Ultimate subscription:
 | Infragistics Professional | ~$1,599/year per developer | Web/desktop UI components (no design tools) |
 | Ignite UI | Separate web-only bundle | Angular/React/Web Components/Blazor |
 
-*Pricing as of early 2026 from ComponentSource. The Infragistics public pricing page does not display per-developer figures — confirm with sales for your tier.*
+*Pricing as of early 2026 from ComponentSource. Infragistics does not publish per-developer figures on its public pricing page.*
 
 Individual platform packages (like WPF-only) are available but often not much cheaper than Ultimate, pushing developers toward the full bundle.
 

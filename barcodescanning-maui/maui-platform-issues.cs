@@ -80,7 +80,6 @@ namespace PlatformIssuesExample
             if (DeviceInfo.Platform == DevicePlatform.Android)
             {
                 // ML Kit returns consistent formatting
-                // But verify against your expected formats
             }
 
             return value;
